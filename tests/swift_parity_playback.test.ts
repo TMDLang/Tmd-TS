@@ -114,6 +114,26 @@ Intro:Piano@|0|{
     expect(conflicts[0].tempos).toEqual([90, 100]);
   });
 
+  it("keeps meter modifiers local to the containing entry", () => {
+    const sheet = TmdParser.parse(`::SCORE::
+A:Piano@|0|{
+<4*>
+{<3/4>} 1
+}
+B:Piano@|0|{
+<4*>
+3
+}
+-> A -> B ->#
+`);
+
+    const timeline = TMDPlaybackRenderer.render(sheet, "Piano");
+    const notes = timeline.events.filter((event) => event.content.type === "note");
+    expect(notes).toHaveLength(2);
+    expect(notes[0].state.timeSignature).toEqual({ count: 3, noteValue: 4 });
+    expect(notes[1].state.timeSignature).toEqual({ count: 4, noteValue: 4 });
+  });
+
   it("normalizes a negative pickup globally while retaining later section content", () => {
     const sheet = TmdParser.parse(`::SCORE::
 ** Pickup **

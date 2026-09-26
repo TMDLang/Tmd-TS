@@ -177,7 +177,12 @@ export class TMDPlaybackRenderer {
           for (const paragraph of matchingParagraphs) {
             const start = timelinePosition + paragraph.start * TMDPlaybackRenderer.measureDuration(state.timeSignature);
             const paragraphState = paragraph.pitchMode === "fixed" ? { ...state, keyOffset: 0 } : state;
-            state = TMDPlaybackRenderer.renderParagraph(paragraph, start, paragraphState, paragraph.pitchMode === "fixed").state;
+            const rendered = TMDPlaybackRenderer.renderParagraph(paragraph, start, paragraphState, paragraph.pitchMode === "fixed");
+            state = {
+              ...rendered.state,
+              keyOffset: paragraph.pitchMode === "fixed" ? state.keyOffset : rendered.state.keyOffset,
+              timeSignature: state.timeSignature
+            };
           }
           continue;
         }
@@ -193,7 +198,11 @@ export class TMDPlaybackRenderer {
           const rendered = TMDPlaybackRenderer.renderParagraph(paragraph, start, paragraphState, paragraph.pitchMode === "fixed");
           events.push(...rendered.events);
           directives.push(...rendered.directives);
-          state = rendered.state;
+          state = {
+            ...rendered.state,
+            keyOffset: paragraph.pitchMode === "fixed" ? state.keyOffset : rendered.state.keyOffset,
+            timeSignature: state.timeSignature
+          };
         }
         timelinePosition += paragraphDuration;
       }
