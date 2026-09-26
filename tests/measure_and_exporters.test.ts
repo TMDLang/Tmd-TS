@@ -7,6 +7,7 @@ import {
   TMDMeasureRenderer,
   TMDMeasureChecker,
   NotationDuration,
+  TMDMIDIGenerator,
 } from '../src/index.js';
 
 describe('NotationDuration and Measure Decomposition', () => {
@@ -164,6 +165,28 @@ A:Drums@|0|{
     expect(xml).toContain('<actual-notes>3</actual-notes>');
     expect(xml).toContain('<normal-notes>2</normal-notes>');
     expect(xml).toContain('</time-modification>');
+  });
+});
+
+describe('MIDI Exporter Invariants', () => {
+  it('does not create a playback track for a rest-only assignment', () => {
+    const sheet = TmdParser.parse(`::SCORE::
+** Rest Only **
+!= 120
+?= C
+<4/4>
+
+Piano:Piano@|0|{
+  <4*>
+  0 0 0 0
+}
+
+-> Piano ->#
+`);
+
+    const midi = TMDMIDIGenerator.generateMIDI(sheet);
+    const trackCount = (midi[10] << 8) | midi[11];
+    expect(trackCount).toBe(1);
   });
 });
 
@@ -544,4 +567,3 @@ A:Piano@|0|{
     });
   });
 });
-
