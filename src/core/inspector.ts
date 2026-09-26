@@ -516,7 +516,7 @@ export class TMDSongInspector {
   }
 
   private static collectTimelineDirectives(sheet: Sheet): PlaybackDirectiveEvent[] {
-    const instruments = new Set(sheet.paragraphs.map((paragraph) => paragraph.instrument || "Piano"));
+    const instruments = new Set(sheet.paragraphs.map((paragraph) => paragraph.instrument).filter((instrument) => instrument.trim().length > 0));
     const directives: PlaybackDirectiveEvent[] = [];
     for (const instrument of instruments) {
       directives.push(...TMDPlaybackRenderer.render(sheet, instrument).directives);

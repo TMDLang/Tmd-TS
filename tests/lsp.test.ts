@@ -201,15 +201,22 @@ verse:`;
     const allLabels = all.map((item) => item.label);
 
     expect(allLabels).toEqual(expect.arrayContaining([
-      "!= 120", "!+ 10", "?= C", "?+ 2", "?- 2", "?= fixed",
+      "!= 120", "!+ 10", "?= C", "?+ 2", "?- 2",
       "key= Bm", "ppp", "pp", "p", "mp", "mf", "f", "ff", "fff", "<4/4>",
     ]));
+    expect(allLabels).not.toContain("?= fixed");
     expect(allLabels).not.toContain("intro");
 
     const partial = "A:Piano@|0|{\n  <4*>\n  {key";
     const partialLine = partial.split("\n").length - 1;
     const keyItems = TMDLSPCompletionEngine.complete(partial, new TMDLSPPosition(partialLine, 6));
     expect(keyItems.map((item) => item.label)).toEqual(["key= Bm"]);
+  });
+
+  it("offers the canonical fixed-pitch entry attribute", () => {
+    const source = "A:Timpani[";
+    const items = TMDLSPCompletionEngine.complete(source, new TMDLSPPosition(0, source.length));
+    expect(items.map((item) => item.label)).toContain("pitchMode=fixed");
   });
 
   it("provides diatonic chords when opening bracket '[' inside paragraph", () => {

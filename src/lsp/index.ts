@@ -247,7 +247,6 @@ export class TMDLSPCompletionEngine {
     { label: "?= C", kind: TMDLSPCompletionItemKind.Snippet, detail: "Movable-do Base", insertText: "?= ${1:C}}", insertTextFormat: 2 },
     { label: "?+ 2", kind: TMDLSPCompletionItemKind.Snippet, detail: "Relative Movable-do Transposition (+semitones)", insertText: "?+ ${1:2}}", insertTextFormat: 2 },
     { label: "?- 2", kind: TMDLSPCompletionItemKind.Snippet, detail: "Relative Movable-do Transposition (-semitones)", insertText: "?- ${1:2}}", insertTextFormat: 2 },
-    { label: "?= fixed", kind: TMDLSPCompletionItemKind.Value, detail: "Fixed Pitch (Immune to song transpositions)", insertText: "?= fixed}" },
     { label: "key= Bm", kind: TMDLSPCompletionItemKind.Snippet, detail: "Explicit Tonality (B minor)", insertText: "key= ${1:Bm}}", insertTextFormat: 2 },
     ...["ppp", "pp", "p", "mp", "mf", "f", "ff", "fff"].map((mark) => ({
       label: mark,
@@ -269,6 +268,16 @@ export class TMDLSPCompletionEngine {
 
     const remainder = currentLine.slice(position.character);
     const nextChar = remainder.length > 0 ? remainder[0] : "";
+
+    if (/:\s*[A-Za-z][A-Za-z0-9_-]*\[$/.test(prefix)) {
+      return [{
+        label: "pitchMode=fixed",
+        kind: TMDLSPCompletionItemKind.Value,
+        detail: "Fixed Pitch Entry Attribute",
+        documentation: "Keep this entry at its written pitch during playback transposition.",
+        insertText: "pitchMode=fixed]",
+      }];
+    }
 
     if (isInsideMacro) {
       return this.macroSnippets.map((m) => {
