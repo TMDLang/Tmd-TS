@@ -1,4 +1,6 @@
 import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import {
   TMDRefactor,
   TMDMeasureChecker,
@@ -8,6 +10,22 @@ import {
 } from "../src/index.js";
 
 describe("TMDRefactor (TDD)", () => {
+  it("matches the shared structured measure diagnostic fixture", () => {
+    const source = readFileSync(join(process.cwd(), "docs/conformance/diagnostic-measure-fixture.tmd"), "utf8");
+    const issue = TMDMeasureChecker.check(source)[0];
+
+    expect(issue).toMatchObject({
+      paragraphName: "Intro",
+      instrument: "Piano",
+      measureIndex: 1,
+      expectedUnits: 4,
+      actualUnits: 3,
+      deltaUnits: -1,
+      noteLength: 4,
+      beat: { count: 4, noteValue: 4 },
+    });
+  });
+
   it("formats TMD document preserving comments and normalizing layout", () => {
     const input = `::SCORE::
 /* Header Comment */
