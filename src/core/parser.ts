@@ -817,7 +817,23 @@ export class TmdParser {
       }
     }
 
-    return { name, speed, keySignature, declaredKey, beat, paragraphs, orders, metadata };
+    const entries = paragraphs.map((entry) => ({
+      ...entry,
+      assignment: entry.instrument || undefined,
+      isPrototype: entry.instrument.length === 0,
+      pitchMode: entry.pitchMode ?? "transposing"
+    }));
+    return {
+      name, speed, keySignature, declaredKey, beat, paragraphs: entries, entries, orders, metadata,
+      distinctAssignments: () => {
+        const canonical = new Map<string, string>();
+        for (const assignment of entries.map((entry) => entry.assignment).filter((value): value is string => Boolean(value))) {
+          const key = assignment.toLowerCase();
+          if (!canonical.has(key)) canonical.set(key, assignment);
+        }
+        return Array.from(canonical.values()).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+      }
+    };
   }
 
   private parseParagraph(): Paragraph | null {
@@ -829,6 +845,7 @@ export class TmdParser {
     }
 
     let instrument = "";
+    let pitchMode: "transposing" | "fixed" = "transposing";
     let start = 0;
     let executionTime: string | undefined;
 
@@ -836,6 +853,11 @@ export class TmdParser {
       this.advance();
       if ((this.currentToken().type as string) === "identifier") {
         instrument = this.advance().value;
+      }
+
+      if (this.currentToken().type === "chord" && this.currentToken().value.trim().toLowerCase() === "pitchmode=fixed") {
+        pitchMode = "fixed";
+        this.advance();
       }
 
       if (!this.require("at")) {
@@ -874,7 +896,7 @@ export class TmdParser {
     if (this.current.type === "programText") {
       const showProgram = this.advance().value;
       this.match("closeBrace");
-      return { name, instrument, start, sections: [], executionTime, showProgram, line: startLine, column: startCol };
+      return { name, instrument, assignment: instrument || undefined, isPrototype: instrument.length === 0, pitchMode, start, sections: [], executionTime, showProgram, line: startLine, column: startCol };
     }
 
     const sections: Section[] = [];
@@ -963,7 +985,7 @@ export class TmdParser {
     }
     this.match("closeBrace");
 
-    return { name, instrument, start, sections, executionTime, line: startLine, column: startCol };
+    return { name, instrument, assignment: instrument || undefined, isPrototype: instrument.length === 0, pitchMode, start, sections, executionTime, line: startLine, column: startCol };
   }
 
   private parseUnits(): Unit[] {

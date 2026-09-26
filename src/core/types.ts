@@ -300,17 +300,28 @@ export interface Section {
   directives: SectionDirective[];
 }
 
+export type EntryPitchMode = "transposing" | "fixed";
+
 export const DEFAULT_INSTRUMENT = "Piano";
 
 export interface Paragraph {
   name: string;
   instrument: string;
+  assignment?: string;
+  isPrototype?: boolean;
+  pitchMode?: EntryPitchMode;
   start: number;
   sections: Section[];
   executionTime?: string;
   showProgram?: string;
   line?: number;
   column?: number;
+}
+
+export type Entry = Paragraph;
+
+export function entryAssignment(entry: Entry): string | undefined {
+  return entry.instrument || undefined;
 }
 
 export type SExprAtom = string | number;
@@ -331,6 +342,8 @@ export interface Sheet {
   paragraphs: Paragraph[];
   orders: Order[];
   metadata: Record<string, string>;
+  entries?: Entry[];
+  distinctAssignments?: () => string[];
 }
 
 export const PitchMapping = {
