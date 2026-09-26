@@ -2,8 +2,27 @@ import { describe, expect, it } from "vitest";
 import { TmdParser } from "../src/core/parser.js";
 import { formatSheet } from "../src/core/format.js";
 import { TMDPlaybackRenderer } from "../src/core/playback.js";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
 describe("Swift playback parity", () => {
+  it("matches the shared canonical playback fixture", () => {
+    const fixturePath = join(process.cwd(), "docs/conformance/canonical-playback.tmd");
+    const sheet = TmdParser.parse(readFileSync(fixturePath, "utf8"));
+    const piano = TMDPlaybackRenderer.render(sheet, "Piano");
+    const timpani = TMDPlaybackRenderer.render(sheet, "Timpani");
+
+    expect(sheet.name).toBe("Canonical Playback Fixture");
+    expect(sheet.entries?.map((entry) => [entry.name, entry.assignment, entry.pitchMode])).toEqual([
+      ["Theme", undefined, "transposing"],
+      ["Intro", "Piano", "transposing"],
+      ["Intro", "Timpani", "fixed"],
+    ]);
+    expect(piano.events.map((event) => event.position)).toEqual([0, 1, 2, 3]);
+    expect(piano.events.map((event) => event.state.keyOffset)).toEqual([9, 9, 9, 9]);
+    expect(timpani.events.map((event) => event.position)).toEqual([4, 5, 6, 7]);
+    expect(timpani.events.map((event) => event.state.keyOffset)).toEqual([0, 0, 0, 0]);
+  });
   it("merges conductor directives from all instruments", () => {
     const sheet = TmdParser.parse(`::SCORE::
 ** Conductor Directives **
