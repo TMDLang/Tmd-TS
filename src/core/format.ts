@@ -203,15 +203,15 @@ export function formatSummary(sheet: Sheet): string {
     lines.push(`DeclaredKey:  ${sheet.declaredKey}`);
   }
   lines.push(`Beat:         ${sheet.beat.count}/${sheet.beat.noteValue}`);
-  lines.push(`Paragraphs:   ${sheet.paragraphs.length}`);
+  lines.push(`Entries:      ${sheet.paragraphs.length}`);
 
   sheet.paragraphs.forEach((p, idx) => {
     const secCount = p.sections.length;
     const totalUnits = p.sections.reduce((acc, s) => acc + s.unitGroups.length, 0);
-    lines.push(`  [${idx + 1}] ${p.name} (Instrument: ${p.instrument}, Start: ${p.start}, Sections: ${secCount}, UnitGroups: ${totalUnits})`);
+    lines.push(`  [${idx + 1}] ${p.name} (Assignment: ${p.instrument}, Start: ${p.start}, Sections: ${secCount}, UnitGroups: ${totalUnits})`);
   });
 
-  lines.push(`Orders:       ${sheet.orders.length}`);
+  lines.push(`Playback:     ${sheet.orders.length}`);
   sheet.orders.forEach((order, idx) => {
     lines.push(`  [${idx + 1}] -> ${formatOrder(order)}`);
   });

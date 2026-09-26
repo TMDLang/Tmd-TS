@@ -98,7 +98,7 @@ describe('TmdParser and Format', () => {
     const summary = formatSummary(sheet);
     expect(summary).toContain('Name:         Sample Song');
     expect(summary).toContain('KeySignature: C');
-    expect(summary).toContain('Paragraphs:   4');
+    expect(summary).toContain('Entries:      4');
   });
 
   it('includes an explicit declared key separately from the key signature', () => {
