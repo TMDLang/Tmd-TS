@@ -190,6 +190,31 @@ Piano:Piano@|0|{
   });
 });
 
+describe('Percussion assignment identity', () => {
+  it('matches lowercase percussion assignments in LilyPond and ABC exporters', () => {
+    const sheet = TmdParser.parse(`::SCORE::
+** Lowercase Drums **
+!= 120
+?= C
+<4/4>
+
+A:drums@|0|{
+  <4*>
+  D S X O
+}
+
+-> A ->#
+`);
+
+    const ly = TMDLilyPondGenerator.generateLilyPond(sheet);
+    const abc = TMDABCGenerator.generateABC(sheet);
+
+    expect(ly).toContain('\\drummode');
+    expect(ly).toContain('\\new DrumStaff');
+    expect(abc).toContain('%%MIDI channel 10');
+  });
+});
+
 describe('LilyPond Exporter Invariants', () => {
   it('generates only valid power-of-2 duration tokens with bar checks', () => {
     const tmd = `
