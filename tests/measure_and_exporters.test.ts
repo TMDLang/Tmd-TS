@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import {
   TmdParser,
   TMDABCGenerator,
@@ -88,6 +90,15 @@ A:Piano@|0|{
 });
 
 describe('MusicXML Exporter Invariants', () => {
+  it('matches the shared MusicXML exporter fixture', () => {
+    const source = readFileSync(join(process.cwd(), "docs/conformance/musicxml-export-fixture.tmd"), "utf8");
+    const sheet = TmdParser.parse(source);
+    const xml = TMDMusicXMLGenerator.generateMusicXML(sheet);
+
+    expect(xml).toContain("<part-name>Piano</part-name>");
+    expect(xml).not.toContain("<part-name>Theme</part-name>");
+    expect((xml.match(/<note>/g) ?? []).length).toBe(4);
+  });
   it('does not create an implicit Piano part for a prototype-only sheet', () => {
     const tmd = `
 ::SCORE::
