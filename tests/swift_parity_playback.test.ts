@@ -50,6 +50,8 @@ A:Piano@|0|{
     expect(formatSheet(sheet)).toContain("1+3");
 
     const timeline = TMDPlaybackRenderer.render(sheet, "Piano");
+    expect(timeline.track?.assignment).toBe("Piano");
+    expect(timeline.track?.events).toEqual(timeline.events);
     const notes = timeline.events.filter((event) => event.content.type === "note");
     expect(notes).toHaveLength(5);
     expect(notes.filter((event) => event.position === 0)).toHaveLength(2);

@@ -44,6 +44,15 @@ export interface PlaybackTimeline {
   events: PlaybackEvent[];
   directives: PlaybackDirectiveEvent[];
   duration: number;
+  assignment?: string;
+  track?: PlaybackTrack;
+}
+
+export interface PlaybackTrack {
+  assignment: string;
+  events: PlaybackEvent[];
+  directives: PlaybackDirectiveEvent[];
+  duration: number;
 }
 
 export interface PlaybackValidationIssue {
@@ -187,11 +196,21 @@ export class TMDPlaybackRenderer {
     adjustedEvents.sort((a, b) => a.position - b.position);
     adjustedDirectives.sort((a, b) => a.position - b.position);
 
-    return {
+    const timeline: PlaybackTimeline = {
       events: adjustedEvents,
       directives: adjustedDirectives,
       duration: timelinePosition + offset
     };
+    if (paragraphs.length > 0 || instrument) {
+      timeline.assignment = paragraphs[0]?.instrument || instrument;
+      timeline.track = {
+        assignment: timeline.assignment,
+        events: timeline.events,
+        directives: timeline.directives,
+        duration: timeline.duration
+      };
+    }
+    return timeline;
   }
 
   /** Renders a score-level conductor timeline by merging directives from every concrete instrument. */
