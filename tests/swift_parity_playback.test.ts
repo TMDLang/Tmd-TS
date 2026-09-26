@@ -109,4 +109,22 @@ A:Piano@|0|{
     expect(notes.slice(0, 4).map((event) => event.position)).toEqual([0, 1, 2, 3]);
     expect(notes.slice(4).map((event) => event.position)).toEqual([4, 5, 6, 7]);
   });
+
+  it("reports overlapping entries for one assignment", () => {
+    const sheet = TmdParser.parse(`::SCORE::
+A:Piano@|0|{ <4*> 1 2 3 4 }
+A:piano@|0|{ <4*> 5 6 7 1^ }`);
+
+    const issues = TMDPlaybackRenderer.validate(sheet);
+    expect(issues).toHaveLength(1);
+    expect(issues[0].assignment.toLowerCase()).toBe("piano");
+  });
+
+  it("allows adjacent entries for one assignment", () => {
+    const sheet = TmdParser.parse(`::SCORE::
+A:Piano@|0|{ <4*> 1 2 3 4 }
+A:piano@|1|{ <4*> 5 6 7 1^ }`);
+
+    expect(TMDPlaybackRenderer.validate(sheet)).toEqual([]);
+  });
 });

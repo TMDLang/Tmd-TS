@@ -46,11 +46,60 @@ export interface PlaybackTimeline {
   duration: number;
 }
 
+export interface PlaybackValidationIssue {
+  sectionName: string;
+  assignment: string;
+  firstOffset: number;
+  secondOffset: number;
+  description: string;
+}
+
 export interface TMDPlaybackRendererOptions {
   startOrderIndex?: number;
 }
 
 export class TMDPlaybackRenderer {
+  public static validate(inputSheet: Sheet): PlaybackValidationIssue[] {
+    const sheet = TMDMacroEvaluator.expand(inputSheet);
+    const grouped = new Map<string, Paragraph[]>();
+    for (const entry of sheet.paragraphs.filter((paragraph) => paragraph.instrument)) {
+      const key = `${entry.name.toLowerCase()}\u0000${entry.instrument.toLowerCase()}`;
+      const values = grouped.get(key) ?? [];
+      values.push(entry);
+      grouped.set(key, values);
+    }
+
+    const issues: PlaybackValidationIssue[] = [];
+    for (const entries of grouped.values()) {
+      for (let i = 0; i < entries.length; i++) {
+        for (let j = i + 1; j < entries.length; j++) {
+          const first = this.entryRange(entries[i], sheet.beat);
+          const second = this.entryRange(entries[j], sheet.beat);
+          if (Math.max(first.start, second.start) < Math.min(first.end, second.end)) {
+            const entry = entries[i];
+            issues.push({
+              sectionName: entry.name,
+              assignment: entry.instrument,
+              firstOffset: entries[i].start,
+              secondOffset: entries[j].start,
+              description: `Overlapping entries for assignment ${entry.instrument} in section ${entry.name} at offsets ${entries[i].start} and ${entries[j].start}`
+            });
+          }
+        }
+      }
+    }
+    return issues;
+  }
+
+  private static entryRange(entry: Paragraph, beat: Beat): { start: number; end: number } {
+    const duration = entry.sections.reduce((total, section) => {
+      const unitDuration = 4.0 / Math.max(1, section.noteLength);
+      return total + section.unitGroups.reduce((sum, group) => sum + Math.max(0, group.length) * unitDuration, 0);
+    }, 0);
+    const start = entry.start * this.measureDuration(beat);
+    return { start, end: start + duration };
+  }
+
   public static render(
     inputSheet: Sheet,
     instrument: string,
