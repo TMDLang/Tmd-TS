@@ -522,7 +522,7 @@ chorus:Piano@|0|{
     expect(svg).toContain("<svg");
     expect(svg).toContain("Circle of Fifths Trajectory");
     expect(svg).toContain("12-Tone Pitch Class Distribution");
-    expect(svg).toContain("Timeline Keyscape Ribbon");
+    expect(svg).toContain("Playback Keyscape Ribbon");
     expect(svg).toContain("Visualizer Test Song");
 
     // 2. HTML Generation
