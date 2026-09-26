@@ -99,6 +99,21 @@ A:Piano@|0|{
     expect(timeline.events.filter((event) => event.content.type === "note")).toHaveLength(4);
   });
 
+  it("reports conflicting absolute tempo directives at one position", () => {
+    const sheet = TmdParser.parse(`::SCORE::
+Intro:Piano@|0|{
+<4*>
+{!=90}{!=100} 1 2 3 4
+}
+-> Intro ->#
+`);
+
+    const conflicts = TMDPlaybackRenderer.validateTempoConflicts(sheet);
+    expect(conflicts).toHaveLength(1);
+    expect(conflicts[0].position).toBe(0);
+    expect(conflicts[0].tempos).toEqual([90, 100]);
+  });
+
   it("normalizes a negative pickup globally while retaining later section content", () => {
     const sheet = TmdParser.parse(`::SCORE::
 ** Pickup **

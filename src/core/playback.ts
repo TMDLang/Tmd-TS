@@ -63,11 +63,34 @@ export interface PlaybackValidationIssue {
   description: string;
 }
 
+export interface PlaybackTempoConflict {
+  position: number;
+  tempos: number[];
+}
+
 export interface TMDPlaybackRendererOptions {
   startOrderIndex?: number;
 }
 
 export class TMDPlaybackRenderer {
+  public static validateTempoConflicts(inputSheet: Sheet): PlaybackTempoConflict[] {
+    const sheet = TMDMacroEvaluator.expand(inputSheet);
+    const directives = sheet.distinctAssignments?.().flatMap((assignment) => this.render(sheet, assignment).directives) ?? [];
+    const grouped = new Map<number, PlaybackDirectiveEvent[]>();
+    for (const directive of directives) {
+      const values = grouped.get(directive.position) ?? [];
+      values.push(directive);
+      grouped.set(directive.position, values);
+    }
+    return Array.from(grouped.entries())
+      .map(([position, values]) => ({
+        position,
+        tempos: Array.from(new Set(values.flatMap((value) => value.kind.type === "tempo" ? [value.kind.bpm] : []))).sort((a, b) => a - b)
+      }))
+      .filter((conflict) => conflict.tempos.length > 1)
+      .sort((a, b) => a.position - b.position);
+  }
+
   public static validate(inputSheet: Sheet): PlaybackValidationIssue[] {
     const sheet = TMDMacroEvaluator.expand(inputSheet);
     const grouped = new Map<string, Paragraph[]>();
