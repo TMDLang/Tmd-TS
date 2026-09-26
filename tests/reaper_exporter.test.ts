@@ -9,6 +9,24 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 
 describe('TMDReaperGenerator (.rpp export)', () => {
+  it('does not create a REAPER track for a rest-only assignment', () => {
+    const sheet = TmdParser.parse(`::SCORE::
+** Rest Only Reaper **
+!= 120
+?= C
+<4/4>
+
+A:Piano@|0|{
+  <4*>
+  0 0 0 0
+}
+-> A ->#
+`)!;
+    const rpp = TMDReaperGenerator.generateRPP(sheet);
+
+    expect(rpp).not.toContain('NAME "Piano"');
+  });
+
   it('generates a valid REAPER project header, tempo envelope, and section markers', () => {
     const tmd = `
 ::SCORE::
