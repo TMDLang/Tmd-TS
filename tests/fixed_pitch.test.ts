@@ -121,5 +121,6 @@ intro:Timpani@|0|{
     // MusicXML
     const xml = TMDMusicXMLGenerator.generateMusicXML(sheet);
     expect(xml).toContain("<fifths>0</fifths>");
+    expect(xml).toContain("<step>C</step>");
   });
 });
