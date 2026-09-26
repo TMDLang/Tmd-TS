@@ -1049,7 +1049,7 @@ verse:Piano@|0|{
     const issue = issues[0];
     expect(issue.paragraphName).toBe("chorus");
     expect(issue.measureIndex).toBe(0);
-    expect(issue.description).toContain("Undefined section 'chorus' in playback order");
+    expect(issue.description).toContain("Undefined section 'chorus' in playback");
   });
 
   it("reports issue when execution order refers to undefined section following a directive", () => {
@@ -1071,7 +1071,7 @@ verse:Piano@|0|{
     expect(issues).toHaveLength(1);
     const issue = issues[0];
     expect(issue.paragraphName).toBe("ending");
-    expect(issue.description).toContain("Undefined section 'ending' in playback order");
+    expect(issue.description).toContain("Undefined section 'ending' in playback");
   });
 
   it("reports issue when playback order is missing", () => {
@@ -1091,7 +1091,7 @@ verse:Piano@|0|{
     expect(issues).toHaveLength(1);
     const issue = issues[0];
     expect(issue.instrument).toBe("Order");
-    expect(issue.description).toContain("Missing playback order");
+    expect(issue.description).toContain("Missing playback");
   });
 
   it("reports issue when playback order does not terminate with '#'", () => {
@@ -1113,7 +1113,7 @@ verse:Piano@|0|{
     expect(issues).toHaveLength(1);
     const issue = issues[0];
     expect(issue.instrument).toBe("Order");
-    expect(issue.description).toContain("Playback order must terminate with '#'");
+    expect(issue.description).toContain("Playback must terminate with '#'");
   });
 
   it("reports unclosed paragraph instead of missing playback order when closing brace is omitted before order", () => {
@@ -1137,11 +1137,11 @@ Grand_Terminal_Arrival:Piano@|0|{
 
     const issues = TMDMeasureChecker.check(input);
     const orderIssues = issues.filter((i) => i.instrument === "Order");
-    const unclosedParagraph = issues.find((i) => i.snippet.includes("Unclosed paragraph"));
+    const unclosedParagraph = issues.find((i) => i.snippet.includes("Unclosed entry"));
 
     expect(unclosedParagraph).toBeDefined();
     expect(unclosedParagraph?.paragraphName).toBe("Grand_Terminal_Arrival");
-    expect(unclosedParagraph?.description).toContain("Unclosed paragraph");
+    expect(unclosedParagraph?.description).toContain("Unclosed entry");
     // Should NOT report "Missing playback order" because order is clearly present
     expect(orderIssues.some((i) => i.snippet.includes("Missing playback order"))).toBe(false);
   });

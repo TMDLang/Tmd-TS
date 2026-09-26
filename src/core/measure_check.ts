@@ -50,12 +50,12 @@ function formatIssueDescription(issue: {
 }): string {
   if (issue.instrument === "Order") {
     if (issue.paragraphName) {
-      return `Order (line ${issue.lineNumber}): Undefined section '${issue.paragraphName}' in playback order (${issue.snippet})`;
+      return `Playback (line ${issue.lineNumber}): Undefined section '${issue.paragraphName}' in playback (${issue.snippet})`;
     } else {
-      return `Order (line ${issue.lineNumber}): ${issue.snippet}`;
+      return `Playback (line ${issue.lineNumber}): ${issue.snippet}`;
     }
   }
-  if (issue.snippet.startsWith("Unclosed paragraph")) {
+  if (issue.snippet.startsWith("Unclosed entry")) {
     return `${issue.paragraphName}:${issue.instrument} (line ${issue.lineNumber}): ${issue.snippet}`;
   }
   if (issue.snippet.includes("explicit barlines")) {
@@ -447,7 +447,7 @@ export class TMDMeasureChecker {
             deltaUnits: 0,
             noteLength,
             beat,
-            snippet: `Unclosed paragraph '{' for ${pName}:${instName}`,
+          snippet: `Unclosed entry '{' for ${pName}:${instName}`,
           };
           issues.push({
             ...issueObj,
@@ -544,7 +544,7 @@ export class TMDMeasureChecker {
         deltaUnits: 0,
         noteLength: 4,
         beat,
-        snippet: "Missing playback order",
+        snippet: "Missing playback",
       };
       issues.push({
         ...issueObj,
@@ -561,7 +561,7 @@ export class TMDMeasureChecker {
         deltaUnits: 0,
         noteLength: 4,
         beat,
-        snippet: "Playback order must terminate with '#'",
+        snippet: "Playback must terminate with '#'",
       };
       issues.push({
         ...issueObj,
