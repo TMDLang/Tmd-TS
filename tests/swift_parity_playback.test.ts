@@ -83,6 +83,20 @@ A:Piano@|1|{
     expect(notes.slice(4).map((event) => event.position)).toEqual([4, 5, 6, 7]);
   });
 
+  it("matches assignment names case-insensitively when rendering playback", () => {
+    const sheet = TmdParser.parse(`::SCORE::
+A:Piano@|0|{
+<4*>
+| 1 2 3 4 |
+}
+
+-> A ->#
+`);
+
+    const timeline = TMDPlaybackRenderer.render(sheet, "pIaNo");
+    expect(timeline.events.filter((event) => event.content.type === "note")).toHaveLength(4);
+  });
+
   it("normalizes a negative pickup globally while retaining later section content", () => {
     const sheet = TmdParser.parse(`::SCORE::
 ** Pickup **

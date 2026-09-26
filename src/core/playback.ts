@@ -109,7 +109,8 @@ export class TMDPlaybackRenderer {
     const targetInst = instrument || DEFAULT_INSTRUMENT;
     const paragraphs = sheet.paragraphs.filter((p) => {
       const pInst = p.instrument || DEFAULT_INSTRUMENT;
-      return pInst === targetInst || p.instrument === instrument;
+      return pInst.toLocaleLowerCase() === targetInst.toLocaleLowerCase()
+        || p.instrument.toLocaleLowerCase() === instrument.toLocaleLowerCase();
     });
     const orders: Order[] = sheet.orders.length > 0
       ? sheet.orders
