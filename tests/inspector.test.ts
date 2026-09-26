@@ -3,6 +3,25 @@ import { TmdParser } from "../src/core/parser.js";
 import { TMDSongInspector } from "../src/core/inspector.js";
 
 describe("TMDSongInspector (TDD port from TmdSwift)", () => {
+  it("does not create an Inspector Piano track for a prototype-only score", () => {
+    const sheet = TmdParser.parse(`::SCORE::
+** Prototype Only **
+!= 120
+?= C
+<4/4>
+
+Theme{
+  <4*>
+  1 2 3 4
+}
+`);
+
+    const profile = TMDSongInspector.inspect(sheet);
+
+    expect(profile.instrumentRanges).toHaveLength(0);
+    expect(profile.density.sectionDensities.every((section) => !section.instruments.includes(""))).toBe(true);
+  });
+
   it("uses section tempo directives for timing duration and note timestamps", () => {
     const sheet = TmdParser.parse(`::SCORE::
 ** Inspector Tempo **

@@ -610,6 +610,7 @@ export class TMDSongInspector {
   private static buildDensityProfile(sheet: Sheet): TMDArrangementDensityProfile {
     const sectionDict: Record<string, string[]> = {};
     for (const p of sheet.paragraphs) {
+      if (!p.instrument.trim()) continue;
       if (!sectionDict[p.name]) {
         sectionDict[p.name] = [];
       }
@@ -658,7 +659,7 @@ export class TMDSongInspector {
     locale: TMDLocale
   ): TMDTonalityProfile {
     const localizer = new TMDLocalizer(locale);
-    const distinctInsts = SheetInstrumentHelper.distinctInstruments(sheet, true);
+    const distinctInsts = SheetInstrumentHelper.distinctInstruments(sheet, false);
     const allEvents: PlaybackEvent[] = [];
     for (const inst of distinctInsts) {
       const timeline = TMDPlaybackRenderer.render(sheet, inst);
