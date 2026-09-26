@@ -43,4 +43,17 @@ intro:Piano@|0|{
     expect(sheet.entries?.[0].sections[0].barlinePositions).toEqual([0, 4, 8]);
     expect(formatSheet(sheet)).toContain("| 1 2 3 4 | 5 6 7 1 |");
   });
+
+  it("preserves canonical fixed-pitch entry attributes through formatting", () => {
+    const sheet = TmdParser.parse(`::SCORE::
+Intro:Timpani[pitchMode=fixed]@|0|{ <4*> 2__ - - - }`);
+
+    const formatted = formatSheet(sheet);
+    const reparsed = TmdParser.parse(formatted);
+    const timpani = reparsed.entries?.[0];
+
+    expect(formatted).toContain("Intro:Timpani[pitchMode=fixed]");
+    expect(timpani?.assignment).toBe("Timpani");
+    expect(timpani?.pitchMode).toBe("fixed");
+  });
 });

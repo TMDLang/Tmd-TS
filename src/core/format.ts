@@ -131,7 +131,9 @@ export function formatParagraph(p: Paragraph, beat?: Beat): string {
   if (!p.instrument) {
     result = `${p.name} {\n`;
   } else {
-    result = `${p.name}:${p.instrument}@|`;
+    result = `${p.name}:${p.instrument}`;
+    if (p.pitchMode === "fixed") result += "[pitchMode=fixed]";
+    result += "@|";
     if (p.start > 0) result += `+${p.start}`;
     else result += `${p.start}`;
     result += "|{\n";
