@@ -744,7 +744,7 @@ export class TmdParser {
           const currType = this.currentToken().type as string;
           if (currType === "arrowEnd") {
             this.advance();
-            return { name, speed, keySignature, declaredKey, beat, paragraphs, orders, metadata };
+            return { name, speed, keySignature, declaredKey, beat, paragraphs, orders, playback: orders, metadata };
           } else if (currType === "relativeOrderPrefix") {
             this.advance();
             let val = "";
@@ -824,7 +824,7 @@ export class TmdParser {
       pitchMode: entry.pitchMode ?? "transposing"
     }));
     return {
-      name, speed, keySignature, declaredKey, beat, paragraphs: entries, entries, orders, metadata,
+      name, speed, keySignature, declaredKey, beat, paragraphs: entries, entries, orders, playback: orders, metadata,
       distinctAssignments: () => {
         const canonical = new Map<string, string>();
         for (const assignment of entries.map((entry) => entry.assignment).filter((value): value is string => Boolean(value))) {

@@ -334,6 +334,9 @@ export type Order =
   | { type: "absolute"; value: string; line?: number; column?: number }
   | { type: "macro"; expr: SExpr[]; line?: number; column?: number };
 
+/** Canonical name for one source playback expression. */
+export type Playback = Order;
+
 export interface Sheet {
   name: string;
   speed: number;
@@ -344,6 +347,7 @@ export interface Sheet {
   orders: Order[];
   metadata: Record<string, string>;
   entries?: Entry[];
+  playback?: Playback[];
   distinctAssignments?: () => string[];
 }
 

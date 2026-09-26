@@ -56,4 +56,13 @@ Intro:Timpani[pitchMode=fixed]@|0|{ <4*> 2__ - - - }`);
     expect(timpani?.assignment).toBe("Timpani");
     expect(timpani?.pitchMode).toBe("fixed");
   });
+
+  it("exposes the score playback sequence through the canonical view", () => {
+    const sheet = TmdParser.parse(`::SCORE::
+Intro:Piano@|0|{ <4*> 1 2 3 4 }
+-> Intro ->#`);
+
+    expect(sheet.playback).toEqual(sheet.orders);
+    expect(sheet.playback).toEqual([{ type: "name", name: "Intro" }]);
+  });
 });
