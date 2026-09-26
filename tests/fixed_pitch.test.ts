@@ -75,6 +75,20 @@ verse:Piano@|0|{
     }
   });
 
+  it("entry pitchMode=fixed ignores playback key modifiers", () => {
+    const sheet = TmdParser.parse(`
+::SCORE::
+?= G
+<4/4>
+Intro:Timpani[pitchMode=fixed]@|0|{ <4*> 1 2 3 4 }
+-> {?+3} -> Intro ->#
+`);
+
+    const timeline = TMDPlaybackRenderer.render(sheet, "Timpani");
+    expect(timeline.events.length).toBeGreaterThan(0);
+    expect(timeline.events.every((event) => event.state.keyOffset === 0)).toBe(true);
+  });
+
   it("exports correctly to MIDI, ABC, LilyPond, and MusicXML", () => {
     const tmd = `
 ::SCORE::

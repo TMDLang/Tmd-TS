@@ -153,7 +153,8 @@ export class TMDPlaybackRenderer {
           // If before startOrderIndex, accumulate directives and key/tempo/meter state from paragraph
           for (const paragraph of matchingParagraphs) {
             const start = timelinePosition + paragraph.start * TMDPlaybackRenderer.measureDuration(state.timeSignature);
-            state = TMDPlaybackRenderer.renderParagraph(paragraph, start, state).state;
+            const paragraphState = paragraph.pitchMode === "fixed" ? { ...state, keyOffset: 0 } : state;
+            state = TMDPlaybackRenderer.renderParagraph(paragraph, start, paragraphState, paragraph.pitchMode === "fixed").state;
           }
           continue;
         }
@@ -165,7 +166,8 @@ export class TMDPlaybackRenderer {
 
         for (const paragraph of matchingParagraphs) {
           const start = timelinePosition + paragraph.start * TMDPlaybackRenderer.measureDuration(state.timeSignature);
-          const rendered = TMDPlaybackRenderer.renderParagraph(paragraph, start, state);
+          const paragraphState = paragraph.pitchMode === "fixed" ? { ...state, keyOffset: 0 } : state;
+          const rendered = TMDPlaybackRenderer.renderParagraph(paragraph, start, paragraphState, paragraph.pitchMode === "fixed");
           events.push(...rendered.events);
           directives.push(...rendered.directives);
           state = rendered.state;
@@ -257,7 +259,8 @@ export class TMDPlaybackRenderer {
   private static renderParagraph(
     paragraph: Paragraph,
     start: number,
-    initialState: PlaybackState
+    initialState: PlaybackState,
+    fixedPitch = false
   ): { events: PlaybackEvent[]; directives: PlaybackDirectiveEvent[]; state: PlaybackState; duration: number } {
     let state = { ...initialState };
     const events: PlaybackEvent[] = [];
@@ -273,7 +276,7 @@ export class TMDPlaybackRenderer {
       for (const group of section.unitGroups) {
         while (directiveIndex < sortedDirectives.length && sortedDirectives[directiveIndex].position <= sectionPosition) {
           const dir = sortedDirectives[directiveIndex];
-          state = TMDPlaybackRenderer.applyDirective(dir.kind, state);
+          state = TMDPlaybackRenderer.applyDirective(dir.kind, state, fixedPitch);
           directives.push({ position, kind: dir.kind, state });
           directiveIndex++;
         }
@@ -350,7 +353,10 @@ export class TMDPlaybackRenderer {
     }
   }
 
-  private static applyDirective(kind: SectionDirectiveKind, state: PlaybackState): PlaybackState {
+  private static applyDirective(kind: SectionDirectiveKind, state: PlaybackState, fixedPitch = false): PlaybackState {
+    if (fixedPitch && (kind.type === "absoluteKey" || kind.type === "relativeKey" || kind.type === "explicitKey" || kind.type === "fixedPitch")) {
+      return state;
+    }
     switch (kind.type) {
       case "tempo":
         return { ...state, tempo: Math.max(1, kind.bpm) };
