@@ -64,5 +64,7 @@ Intro:Piano@|0|{ <4*> 1 2 3 4 }
 
     expect(sheet.playback).toEqual(sheet.orders);
     expect(sheet.playback).toEqual([{ type: "name", name: "Intro" }]);
+    expect(sheet.entries?.[0].assignment).toBe("Piano");
+    expect(sheet.entries?.[0].isPrototype).toBe(false);
   });
 });

@@ -744,7 +744,32 @@ export class TmdParser {
           const currType = this.currentToken().type as string;
           if (currType === "arrowEnd") {
             this.advance();
-            return { name, speed, keySignature, declaredKey, beat, paragraphs, orders, playback: orders, metadata };
+            const entries = paragraphs.map((entry) => ({
+              ...entry,
+              assignment: entry.instrument || undefined,
+              isPrototype: entry.instrument.length === 0,
+              pitchMode: entry.pitchMode ?? "transposing"
+            }));
+            return {
+              name,
+              speed,
+              keySignature,
+              declaredKey,
+              beat,
+              paragraphs: entries,
+              entries,
+              orders,
+              playback: orders,
+              metadata,
+              distinctAssignments: () => {
+                const canonical = new Map<string, string>();
+                for (const assignment of entries.map((entry) => entry.assignment).filter((value): value is string => Boolean(value))) {
+                  const key = assignment.toLowerCase();
+                  if (!canonical.has(key)) canonical.set(key, assignment);
+                }
+                return Array.from(canonical.values()).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+              }
+            };
           } else if (currType === "relativeOrderPrefix") {
             this.advance();
             let val = "";
