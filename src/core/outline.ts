@@ -442,7 +442,7 @@ export class TMDOutlineGenerator {
       });
     }
 
-    // 3. Orders Node
+    // 3. Playback Node
     if (orderItems.length > 0 || orderSnippet.length > 0) {
       const oStart = orderStartPos ?? { offset: 0, line: 1, column: 1 };
       const oEnd = orderEndPos ?? oStart;
@@ -462,7 +462,7 @@ export class TMDOutlineGenerator {
       }));
 
       result.push({
-        name: "Orders",
+        name: "Playback",
         detail: orderSnippet.join(" "),
         kind: "event",
         range: oRange,
