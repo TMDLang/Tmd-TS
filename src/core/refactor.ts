@@ -357,6 +357,7 @@ export class TMDRefactor {
     const duplicatedParagraphs: Paragraph[] = matching.map((orig) => {
       const clonedSections = orig.sections.map((sec) => ({
         noteLength: sec.noteLength,
+        barlinePositions: [...(sec.barlinePositions ?? [])],
         directives: [...sec.directives],
         unitGroups: sec.unitGroups.map((g) => ({
           length: g.length,
@@ -432,6 +433,7 @@ export class TMDRefactor {
     const harmonizedParagraphs: Paragraph[] = matching.map((orig) => {
       const clonedSections = orig.sections.map((sec) => ({
         noteLength: sec.noteLength,
+        barlinePositions: [...(sec.barlinePositions ?? [])],
         directives: [...sec.directives],
         unitGroups: sec.unitGroups.map((g) => ({
           length: g.length,

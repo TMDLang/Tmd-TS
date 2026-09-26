@@ -502,6 +502,7 @@ verse:Vocal@|0|{
     expect(harmonized).toContain("verse:Vocal@|0|{");
     expect(harmonized).toContain("verse:Backing@|0|{");
     expect(harmonized).toContain("3 4 5 3");
+    expect(harmonized).toContain("| 3 4 5 3 |");
 
     const issues = TMDMeasureChecker.check(harmonized);
     expect(issues).toHaveLength(0);
