@@ -161,6 +161,36 @@ A:Violin@|0|{
     expect(violinNotes[0].state).toMatchObject({ tempo: 120, keyOffset: 0, dynamicLevel: "mf" });
   });
 
+  it("applies playback and entry key modifiers in reading order per assignment", () => {
+    const sheet = TmdParser.parse(`::SCORE::
+A:Piano@|0|{
+<4*>
+{?=E} 1
+}
+A:Violin@|0|{
+<4*>
+3
+}
+B:Piano@|0|{
+<4*>
+3
+}
+B:Violin@|0|{
+<4*>
+3
+}
+-> {?+3} -> A -> B ->#
+`);
+
+    const piano = TMDPlaybackRenderer.render(sheet, "Piano");
+    const violin = TMDPlaybackRenderer.render(sheet, "Violin");
+    const pianoNotes = piano.events.filter((event) => event.content.type === "note");
+    const violinNotes = violin.events.filter((event) => event.content.type === "note");
+
+    expect(pianoNotes.map((event) => event.state.keyOffset)).toEqual([4, 4]);
+    expect(violinNotes.map((event) => event.state.keyOffset)).toEqual([3, 3]);
+  });
+
   it("normalizes a negative pickup globally while retaining later section content", () => {
     const sheet = TmdParser.parse(`::SCORE::
 ** Pickup **
