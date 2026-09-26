@@ -156,6 +156,27 @@ Verse:Vocal@|0|{
 }
 `;
 
+  it('does not select a prototype as the vocal assignment', () => {
+    const sheet = TmdParser.parse(`::SCORE::
+** Prototype Before Bass **
+!= 120
+?= C
+<4/4>
+Theme{
+  <4*>
+  1 2 3 4
+}
+Verse:Bass@|0|{
+  <4*>
+  1 2 3 4
+}
+`)!;
+
+    const vsqx = TMDVSQXGenerator.generateVSQX(sheet);
+
+    expect(vsqx).toContain('<note>');
+  });
+
   it('generates valid VOCALOID4 XML document with correct root and schema', () => {
     const sheet = TmdParser.parse(tmdSource)!;
     const vsqx = TMDVSQXGenerator.generateVSQX(sheet, { singerName: 'Hatsune Miku' });

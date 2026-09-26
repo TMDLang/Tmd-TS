@@ -590,9 +590,12 @@ export class TMDVSQXGenerator {
   }
 
   private static resolveTargetInstrument(sheet: Sheet, requested?: string): string {
-    const distinct = Array.from(new Set(sheet.paragraphs.map((p) => p.instrument))).sort();
-    if (requested && distinct.includes(requested)) {
-      return requested;
+    const distinct = Array.from(new Set(
+      sheet.paragraphs.map((p) => p.instrument).filter((instrument) => instrument.trim().length > 0)
+    )).sort();
+    if (requested) {
+      const matched = distinct.find((instrument) => instrument.toLocaleLowerCase() === requested.toLocaleLowerCase());
+      if (matched) return matched;
     }
     const regex = /vocal|voice|miku|sing|lead|melody/i;
     const matched = distinct.find((inst) => regex.test(inst));
