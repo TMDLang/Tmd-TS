@@ -134,6 +134,33 @@ B:Piano@|0|{
     expect(notes[1].state.timeSignature).toEqual({ count: 4, noteValue: 4 });
   });
 
+  it("persists tempo and dynamics per assignment across entries", () => {
+    const sheet = TmdParser.parse(`::SCORE::
+A:Piano@|0|{
+<4*>
+{!=90} {f} 1
+}
+B:Piano@|0|{
+<4*>
+3
+}
+A:Violin@|0|{
+<4*>
+3
+}
+-> A -> B ->#
+`);
+
+    const piano = TMDPlaybackRenderer.render(sheet, "Piano");
+    const violin = TMDPlaybackRenderer.render(sheet, "Violin");
+    const pianoNotes = piano.events.filter((event) => event.content.type === "note");
+    const violinNotes = violin.events.filter((event) => event.content.type === "note");
+
+    expect(pianoNotes.map((event) => event.state.tempo)).toEqual([90, 90]);
+    expect(pianoNotes.map((event) => event.state.dynamicLevel)).toEqual(["f", "f"]);
+    expect(violinNotes[0].state).toMatchObject({ tempo: 120, keyOffset: 0, dynamicLevel: "mf" });
+  });
+
   it("normalizes a negative pickup globally while retaining later section content", () => {
     const sheet = TmdParser.parse(`::SCORE::
 ** Pickup **
