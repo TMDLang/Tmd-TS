@@ -296,7 +296,7 @@ export class TMDLSPCompletionEngine {
       });
     }
 
-    // 2. Playback Order section completion: after "->"
+    // 2. Playback section completion: after "->"
     if (prefix.includes("->")) {
       const sectionNames = TMDOutlineGenerator.extractSectionNames(source);
       return sectionNames.map((name) => ({
@@ -307,7 +307,7 @@ export class TMDLSPCompletionEngine {
       }));
     }
 
-    // 3. Instrument completion: after ":" (e.g. "verse:" or "verse:Pi")
+    // 3. Assignment completion: after ":" (e.g. "verse:" or "verse:Pi")
     const lastColonIndex = prefix.lastIndexOf(":");
     if (lastColonIndex !== -1) {
       const afterColon = prefix.slice(lastColonIndex + 1);
@@ -316,7 +316,7 @@ export class TMDLSPCompletionEngine {
         return this.standardInstruments.map((inst) => ({
           label: inst,
           kind: TMDLSPCompletionItemKind.Keyword,
-          detail: `General MIDI Instrument: ${inst}`,
+          detail: `General MIDI Assignment: ${inst}`,
           documentation: "Standard instrument sound assignment",
         }));
       }

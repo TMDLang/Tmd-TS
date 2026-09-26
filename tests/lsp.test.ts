@@ -76,6 +76,15 @@ Theme {
     expect(labels).toContain("Theme");
   });
 
+  it("describes instrument-name completions as assignments", () => {
+    const source = "verse:Pi";
+    const items = TMDLSPCompletionEngine.complete(
+      source,
+      new TMDLSPPosition(0, source.length)
+    );
+    expect(items.find((item) => item.label === "Piano")?.detail).toBe("General MIDI Assignment: Piano");
+  });
+
   it("provides section completions after '->' even with draft score or unclosed braces", () => {
     const draftSource = `intro:Piano { 1 2 3 4
 verse:Guitar { 5 6 7 1
