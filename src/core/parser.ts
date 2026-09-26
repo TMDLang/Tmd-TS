@@ -920,9 +920,13 @@ export class TmdParser {
 
         const unitGroups: UnitGroup[] = [];
         const directives: SectionDirective[] = [];
+        const barlinePositions: number[] = [];
 
         while (this.current.type !== "openAngle" && this.current.type !== "closeBrace" && this.current.type !== "eof") {
-          this.skipPipes();
+          while (this.current.type === "pipe") {
+            barlinePositions.push(unitGroups.reduce((acc, group) => acc + group.length, 0));
+            this.advance();
+          }
           if (this.current.type === "openAngle" || this.current.type === "closeBrace" || this.current.type === "eof") break;
 
           if (
@@ -977,7 +981,7 @@ export class TmdParser {
             }
           }
         }
-        sections.push({ noteLength, unitGroups, directives });
+        sections.push({ noteLength, unitGroups, directives, barlinePositions });
       } else {
         this.recordFailure(this.pos, [tokenExpectedDescription("openAngle")]);
         return null;

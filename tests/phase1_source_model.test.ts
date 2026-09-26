@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { TmdParser } from "../src/core/parser.js";
+import { formatSheet } from "../src/core/format.js";
 
 describe("Phase 1 canonical source model", () => {
   it("exposes assignments, prototypes, and fixed-pitch entry attributes", () => {
@@ -28,5 +29,18 @@ A:Piano@|0|{ <4*> 1 2 3 4 }
 B:piano@|0|{ <4*> 5 6 7 1^ }`);
 
     expect(sheet.distinctAssignments?.().map((name) => name.toLowerCase())).toEqual(["piano"]);
+  });
+
+  it("preserves explicit barline positions through formatting", () => {
+    const sheet = TmdParser.parse(`::SCORE::
+intro:Piano@|0|{
+<4*>
+| 1 2 3 4 | 5 6 7 1 |
+}
+-> intro ->#
+`);
+
+    expect(sheet.entries?.[0].sections[0].barlinePositions).toEqual([0, 4, 8]);
+    expect(formatSheet(sheet)).toContain("| 1 2 3 4 | 5 6 7 1 |");
   });
 });

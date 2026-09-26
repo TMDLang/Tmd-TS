@@ -298,6 +298,7 @@ export interface Section {
   noteLength: number;
   unitGroups: UnitGroup[];
   directives: SectionDirective[];
+  barlinePositions?: number[];
 }
 
 export type EntryPitchMode = "transposing" | "fixed";
