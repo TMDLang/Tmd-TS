@@ -1331,8 +1331,7 @@ intro:CHORD@|0|{
 |[1] - | - [7,] |
 
 <4*>
-[1]-----[7,]-
-[1]-----[7,]-
+| 1 2 3 4 | 5 6 7 1 |
 }
 
 -> intro ->#
@@ -1342,6 +1341,19 @@ intro:CHORD@|0|{
     // total 10 measures. Should have 0 issues.
     const issues = TMDMeasureChecker.check(code);
     expect(issues).toHaveLength(0);
+  });
+
+  it("requires explicit barlines when one section spans multiple measures", () => {
+    const code = `::SCORE::
+<4/4>
+intro:Piano@|0|{
+<4*>
+1 2 3 4 5 6 7 1
+}
+-> intro ->#
+`;
+    const issues = TMDMeasureChecker.check(code);
+    expect(issues.some((issue) => issue.snippet.includes("explicit barlines") && issue.description.includes("explicit barlines"))).toBe(true);
   });
 
   it("accepts Aguai's Three Days and Three Nights layered intro pattern without false errors", () => {
@@ -1359,32 +1371,31 @@ intro:CHORD@|0|{
 |[1] - | - [7,] |
 
 <4*>
-[1]-----[7,]-
-[1]-----[7,]-
+| 1 2 3 4 | 5 6 7 1 |
 }
 intro:Chorus-1@|+4|{
 <16*>
-1_- 1_ - 1_ - - 1_ - 1_ - 1_ 1_ - - -
-1_- 1_ - 1_ - - 1_ - 1_ - 1_ 1_ - - -
+| 1_- 1_ - 1_ - - 1_ - 1_ - 1_ 1_ - - - |
+1_- 1_ - 1_ - - 1_ - 1_ - 1_ 1_ - - - |
 1_- 1_ - 1_ - - 1_ - 1_ - 1_ 1_ - - -
 1_- 1_ - 1_ - - 1_ - 1_ - 1_ 1_ - - -
 }
 
 intro:Chorus-2@|+6|{
 <16*>
-3_- 3_ - 3_ - - 3_ - 3_ - 3_ 3_ - - -
+| 3_- 3_ - 3_ - - 3_ - 3_ - 3_ 3_ - - - |
 3_- 3_ - 3_ - - 3_ - 3_ - 3_ 3_ - - -
 3_- 3_ - 3_ - - 3_ - 3_ - 3_ 3_ - - -
 }
 intro:Chorus-3@|+8|{
 <16*>
-5_- 5_ - 5_ - - 5_ - 5_ - 5_ 5_ - - -
+| 5_- 5_ - 5_ - - 5_ - 5_ - 5_ 5_ - - - |
 5_- 5_ - 5_ - - 5_ - 5_ - 5_ 5_ - - -
 }
 
 intro:Guitar@{
 <16*>
-(7,1)%(--) 1 (7,1)%(--) 1 (7,1)%(--)1 (7,1)%(--) 6 7, 6 7, 6 
+| (7,1)%(--) 1 (7,1)%(--) 1 (7,1)%(--)1 (7,1)%(--) 6 7, 6 7, 6 |
 (7,1)%(--) 1 (7,1)%(--) 1 (7,1)%(--)1 (7,1)%(--) 6 7, 6 7, 6  
 (7,1)%(--) 1 (7,1)%(--) 1 (7,1)%(--)1 (7,1)%(--) 6 7, 6 7, 6 
 (7,1)%(--) 1 (7,1)%(--) 1 (7,1)%(--)1 (7,1)%(--) 6 7, 6 7, 6 

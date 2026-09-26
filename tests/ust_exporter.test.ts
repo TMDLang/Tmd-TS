@@ -15,8 +15,8 @@ describe("TMDUSTGenerator (UTAU .ust Export)", () => {
 
 verse:Vocal@|0|{
     <4*>
-    1 2 3 4
-    [C] - - -
+    | 1 2 3 4 |
+    | [C] - - - |
 }
 -> verse ->#
 `;
@@ -96,9 +96,9 @@ melody:Vocal@|+1|{
 
 part1:Vocal@|0|{
     <4*>
-    1 - - -
+    | 1 - - - |
     {!= 120}
-    2 - - -
+    | 2 - - - |
 }
 -> part1 ->#
 `;
@@ -154,4 +154,3 @@ verse:Vocal@|0|{
     expect(noteHeaders.length).toBe(4);
   });
 });
-
