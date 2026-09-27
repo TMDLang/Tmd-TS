@@ -18,7 +18,7 @@ export interface TMDOutlineNode {
 
 interface TrackOccurrence {
   sectionName: string;
-  instrument: string;
+  assignment: string;
   range: TMDOutlineRange;
   selectionRange: TMDOutlineRange;
   detail?: string;
@@ -203,7 +203,7 @@ export class TMDOutlineGenerator {
 
           trackOccurrences.push({
             sectionName: secName,
-            instrument: instName,
+            assignment: instName,
             range,
             selectionRange,
             detail,
@@ -408,7 +408,7 @@ export class TMDOutlineGenerator {
       };
 
       const trackNodes: TMDOutlineNode[] = tracks.map((track) => ({
-        name: track.instrument,
+        name: track.assignment,
         detail: track.detail,
         kind: "field",
         range: track.range,
