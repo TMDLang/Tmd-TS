@@ -26,7 +26,7 @@ main:Piano@|0|{
     expect(sheet.keySignature.toString()).toBe("D");
     expect(sheet.declaredKey).toBe("Bm");
 
-    const directives = sheet.paragraphs[0].sections[0].directives;
+    const directives = sheet.entries[0].sections[0].directives;
     expect(directives.map((directive) => directive.kind)).toEqual([
       { type: "explicitKey", key: "F#m" },
       { type: "dynamics", mark: "ppp" },
@@ -42,7 +42,7 @@ main:Piano@|0|{
 
   it("formats explicit key and dynamics directives without changing their meaning", () => {
     const sheet = TmdParser.parse(score);
-    const directives = sheet.paragraphs[0].sections[0].directives;
+    const directives = sheet.entries[0].sections[0].directives;
 
     expect(formatSectionDirective(directives[0])).toBe("{key= F#m}");
     expect(formatSectionDirective(directives[1])).toBe("{ppp}");

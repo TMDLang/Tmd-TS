@@ -49,7 +49,7 @@ export class TMDLilyPondGenerator {
 
     instruments.forEach((inst) => {
       const varName = identifierMap.get(inst) || "Track";
-      const isDrum = TMDLilyPondGenerator.paragraphsContainPercussion(sheet.paragraphs, inst);
+      const isDrum = TMDLilyPondGenerator.paragraphsContainPercussion(sheet.entries, inst);
       ly += `${varName} = ${isDrum ? "\\drummode " : ""}{\n  \\global\n`;
       ly += TMDLilyPondGenerator.generateTrackMusic(inst, sheet, isDrum);
       ly += `}\n\n`;
@@ -58,7 +58,7 @@ export class TMDLilyPondGenerator {
     ly += `\\score {\n  <<\n`;
     instruments.forEach((inst) => {
       const varName = identifierMap.get(inst) || "Track";
-      const isDrum = TMDLilyPondGenerator.paragraphsContainPercussion(sheet.paragraphs, inst);
+      const isDrum = TMDLilyPondGenerator.paragraphsContainPercussion(sheet.entries, inst);
       const staffType = isDrum ? "DrumStaff" : "Staff";
       ly += `    \\new ${staffType} = "${TMDLilyPondGenerator.escapeLilyPond(inst)}" \\with {\n`;
       ly += `      instrumentName = "${TMDLilyPondGenerator.escapeLilyPond(inst)}"\n`;
@@ -278,7 +278,7 @@ export class TMDLilyPondGenerator {
 
   private static paragraphsContainPercussion(paragraphs: Entry[], instrument: string): boolean {
     return paragraphs
-      .filter((p) => (p.assignment ?? p.instrument).toLocaleLowerCase() === instrument.toLocaleLowerCase())
+      .filter((p) => p.assignment?.toLocaleLowerCase() === instrument.toLocaleLowerCase())
       .some((p) =>
         p.sections.some((s) =>
           s.unitGroups.some((g) => g.units.some((u) => u.type === "percussion"))

@@ -14,7 +14,7 @@ describe("TMDSongInspector (TDD port from TmdSwift)", () => {
     expect(profile.timing.totalDurationSeconds).toBeCloseTo(2, 5);
     expect(profile.timing.sections).toHaveLength(1);
     expect(profile.instrumentRanges).toHaveLength(1);
-    expect(profile.instrumentRanges[0].instrument).toBe("Piano");
+    expect(profile.instrumentRanges[0].assignment).toBe("Piano");
     expect(profile.instrumentRanges[0].totalNotes).toBe(4);
     expect(profile.density.maxConcurrentTracks).toBe(1);
     expect(profile.density.sectionDensities.map((section) => section.trackCount)).toEqual([1]);
@@ -136,7 +136,7 @@ chorus:Bass@|0|{
     //   5^ in D = 79 + 2 = 81 (A5)
     expect(profile.vocalRange).toBeDefined();
     const vocal = profile.vocalRange!;
-    expect(vocal.instrument).toBe("Vocal");
+    expect(vocal.assignment).toBe("Vocal");
     expect(vocal.lowestNote.midiPitch).toBe(60); // C4
     expect(vocal.lowestNote.noteName).toBe("C4");
     expect(vocal.highestNote.midiPitch).toBe(81); // A5
@@ -149,7 +149,7 @@ chorus:Bass@|0|{
 
     // 4. Track Ranges
     expect(profile.instrumentRanges.length).toBeGreaterThanOrEqual(2);
-    const bassRange = profile.instrumentRanges.find((r) => r.instrument === "Bass");
+    const bassRange = profile.instrumentRanges.find((r) => r.assignment === "Bass");
     expect(bassRange).toBeDefined();
     expect(bassRange!.lowestNote.midiPitch).toBeLessThan(60);
 
@@ -204,7 +204,7 @@ Bass {
     const profile = TMDSongInspector.inspect(sheet!);
 
     // Should not contain empty string instrument
-    const instruments = profile.instrumentRanges.map(r => r.instrument);
+    const instruments = profile.instrumentRanges.map(r => r.assignment);
     expect(instruments).not.toContain("");
 
     // Should contain expanded instruments V1, V2, Cello
@@ -213,14 +213,14 @@ Bass {
     expect(instruments).toContain("Cello");
 
     // V1 range should be calculated
-    const v1Range = profile.instrumentRanges.find(r => r.instrument === "V1");
+    const v1Range = profile.instrumentRanges.find(r => r.assignment === "V1");
     expect(v1Range).toBeDefined();
     expect(v1Range!.totalNotes).toBeGreaterThan(0);
     expect(v1Range!.lowestNote.noteName).toBe("D4");
     expect(v1Range!.highestNote.noteName).toBe("G4");
 
     // Cello range should be calculated
-    const celloRange = profile.instrumentRanges.find(r => r.instrument === "Cello");
+    const celloRange = profile.instrumentRanges.find(r => r.assignment === "Cello");
     expect(celloRange).toBeDefined();
     expect(celloRange!.totalNotes).toBeGreaterThan(0);
   });

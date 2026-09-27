@@ -58,8 +58,8 @@ intro:Piano@|0|{
     const origSheet = TmdParser.parse(input);
     const newSheet = TmdParser.parse(formatted);
     expect(origSheet.name).toBe(newSheet.name);
-    expect(origSheet.paragraphs.length).toBe(newSheet.paragraphs.length);
-    expect(origSheet.orders.length).toBe(newSheet.orders.length);
+    expect(origSheet.entries.length).toBe(newSheet.entries.length);
+    expect(origSheet.playback.length).toBe(newSheet.playback.length);
   });
 
   it("formats multi-line block comments with correct indentation on all lines", () => {
@@ -126,9 +126,9 @@ outro:Piano@|0|{
     expect(result).not.toContain(":Piano@");
 
     const sheet = TmdParser.parse(result);
-    expect(sheet.paragraphs[0].instrument).toBe("GrandPiano");
-    expect(sheet.paragraphs[1].instrument).toBe("Guitar");
-    expect(sheet.paragraphs[2].instrument).toBe("GrandPiano");
+    expect(sheet.entries[0].assignment).toBe("GrandPiano");
+    expect(sheet.entries[1].assignment).toBe("Guitar");
+    expect(sheet.entries[2].assignment).toBe("GrandPiano");
   });
 
   it("renames section in TMD document updating paragraphs and orders", () => {
@@ -165,9 +165,9 @@ verse:Bass@|0|{
     expect(result).toContain("-> intro -> A -> {?+2} -> A ->#");
 
     const sheet = TmdParser.parse(result);
-    expect(sheet.paragraphs[1].name).toBe("A");
-    expect(sheet.paragraphs[2].name).toBe("A");
-    expect(sheet.orders).toEqual([
+    expect(sheet.entries[1].name).toBe("A");
+    expect(sheet.entries[2].name).toBe("A");
+    expect(sheet.playback).toEqual([
       { type: "name", name: "intro" },
       { type: "name", name: "A" },
       { type: "relative", value: "+2" },
@@ -219,9 +219,9 @@ XsTt
 
     const sheet = TmdParser.parse(extracted);
     expect(sheet.name).toBe("Full Band Song");
-    expect(sheet.paragraphs.length).toBe(2);
-    expect(sheet.paragraphs.every((p) => p.instrument === "Piano")).toBe(true);
-    expect(sheet.orders).toEqual([
+    expect(sheet.entries.length).toBe(2);
+    expect(sheet.entries.every((p) => p.assignment === "Piano")).toBe(true);
+    expect(sheet.playback).toEqual([
       { type: "name", name: "intro" },
       { type: "name", name: "verse" },
     ]);
@@ -675,8 +675,8 @@ verse:Piano@|0|{
     expect(inlined).toContain("| 5 6 7 1^ |");
 
     const sheet = TmdParser.parse(inlined);
-    expect(sheet.paragraphs).toHaveLength(1);
-    expect(sheet.paragraphs[0].sections[0].unitGroups.length).toBe(12); // 4 + 4 + 4
+    expect(sheet.entries).toHaveLength(1);
+    expect(sheet.entries[0].sections[0].unitGroups.length).toBe(12); // 4 + 4 + 4
   });
 
   describe("TMDRefactor.transpose (TDD)", () => {

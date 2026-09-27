@@ -84,9 +84,9 @@ export const buildTmdWebMcpTools = (ctx: TmdWebMcpContext): WebMcpTool[] => [
           tonic = `${letter}${acc}`;
         }
 
-        const paragraphs = sheet.paragraphs.map((p) => ({
+        const entries = sheet.entries.map((p) => ({
           name: p.name,
-          instrument: p.instrument,
+          assignment: p.assignment,
           start: p.start || 0,
           sectionCount: p.sections.length,
         }));
@@ -102,9 +102,9 @@ export const buildTmdWebMcpTools = (ctx: TmdWebMcpContext): WebMcpTool[] => [
               timeSignature: sheet.beat
                 ? `${sheet.beat.count}/${sheet.beat.noteValue}`
                 : "4/4",
-              orders: sheet.orders,
-              paragraphCount: sheet.paragraphs.length,
-              paragraphs,
+              playback: sheet.playback,
+              entryCount: sheet.entries.length,
+              entries,
             },
             null,
             2

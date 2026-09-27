@@ -42,7 +42,7 @@ export class TMDABCGenerator {
     instruments.forEach((inst, idx) => {
       const vId = `V${idx + 1}`;
       abc += `[V:${vId}]\n`;
-      if (TMDABCGenerator.paragraphsContainPercussion(sheet.paragraphs, inst)) {
+      if (TMDABCGenerator.paragraphsContainPercussion(sheet.entries, inst)) {
         abc += "%%MIDI channel 10\n";
       }
       abc += TMDABCGenerator.generateTrackMusic(inst, sheet);
@@ -293,7 +293,7 @@ export class TMDABCGenerator {
 
   private static paragraphsContainPercussion(paragraphs: Entry[], instrument: string): boolean {
     return paragraphs
-      .filter((p) => (p.assignment ?? p.instrument).toLocaleLowerCase() === instrument.toLocaleLowerCase())
+      .filter((p) => p.assignment?.toLocaleLowerCase() === instrument.toLocaleLowerCase())
       .some((p) =>
         p.sections.some((s) =>
           s.unitGroups.some((g) => g.units.some((u) => u.type === "percussion"))

@@ -88,9 +88,9 @@ export class TMDReaperGenerator {
     };
 
     // Calculate section markers
-    const orders: Playback[] = sheet.orders.length > 0
-      ? sheet.orders
-      : Array.from(new Set(sheet.paragraphs.map((p) => p.name))).map((n) => ({ type: "name" as const, name: n }));
+    const orders: Playback[] = sheet.playback.length > 0
+      ? sheet.playback
+      : Array.from(new Set(sheet.entries.map((p) => p.name))).map((n) => ({ type: "name" as const, name: n }));
 
     let currentQuarter = 0.0;
     let markerId = 1;

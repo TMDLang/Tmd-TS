@@ -746,8 +746,7 @@ export class TmdParser {
             this.advance();
             const entries = paragraphs.map((entry) => ({
               ...entry,
-              assignment: entry.assignment ?? (entry.instrument || undefined),
-              isPrototype: entry.instrument.length === 0,
+              isPrototype: !entry.assignment,
               pitchMode: entry.pitchMode ?? "transposing"
             }));
             return {
@@ -756,9 +755,7 @@ export class TmdParser {
               keySignature,
               declaredKey,
               beat,
-              paragraphs: entries,
               entries,
-              orders,
               playback: orders,
               metadata,
               distinctAssignments: () => {
@@ -844,12 +841,11 @@ export class TmdParser {
 
     const entries = paragraphs.map((entry) => ({
       ...entry,
-      assignment: entry.assignment ?? (entry.instrument || undefined),
-      isPrototype: entry.instrument.length === 0,
+      isPrototype: !entry.assignment,
       pitchMode: entry.pitchMode ?? "transposing"
     }));
     return {
-      name, speed, keySignature, declaredKey, beat, paragraphs: entries, entries, orders, playback: orders, metadata,
+      name, speed, keySignature, declaredKey, beat, entries, playback: orders, metadata,
       distinctAssignments: () => {
         const canonical = new Map<string, string>();
         for (const assignment of entries.map((entry) => entry.assignment).filter((value): value is string => Boolean(value))) {
@@ -869,7 +865,7 @@ export class TmdParser {
       name = this.advance().value;
     }
 
-    let instrument = "";
+    let assignment: string | undefined;
     let pitchMode: "transposing" | "fixed" = "transposing";
     let start = 0;
     let executionTime: string | undefined;
@@ -877,7 +873,7 @@ export class TmdParser {
     if ((this.currentToken().type as string) === "colon") {
       this.advance();
       if ((this.currentToken().type as string) === "identifier") {
-        instrument = this.advance().value;
+        assignment = this.advance().value;
       }
 
       if (this.currentToken().type === "chord" && this.currentToken().value.trim().toLowerCase() === "pitchmode=fixed") {
@@ -921,7 +917,7 @@ export class TmdParser {
     if (this.current.type === "programText") {
       const showProgram = this.advance().value;
       this.match("closeBrace");
-      return { name, instrument, assignment: instrument || undefined, isPrototype: instrument.length === 0, pitchMode, start, sections: [], executionTime, showProgram, line: startLine, column: startCol };
+      return { name, assignment, isPrototype: !assignment, pitchMode, start, sections: [], executionTime, showProgram, line: startLine, column: startCol };
     }
 
     const sections: Section[] = [];
@@ -1014,7 +1010,7 @@ export class TmdParser {
     }
     this.match("closeBrace");
 
-    return { name, instrument, assignment: instrument || undefined, isPrototype: instrument.length === 0, pitchMode, start, sections, executionTime, line: startLine, column: startCol };
+    return { name, assignment, isPrototype: !assignment, pitchMode, start, sections, executionTime, line: startLine, column: startCol };
   }
 
   private parseUnits(): Unit[] {

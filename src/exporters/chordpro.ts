@@ -62,9 +62,9 @@ export class TMDChordProGenerator {
 
     // Group sections by order
     const orders: Playback[] =
-      sheet.orders.length > 0
-        ? sheet.orders
-        : Array.from(new Set(sheet.paragraphs.map((p) => p.name))).map((n) => ({
+      sheet.playback.length > 0
+        ? sheet.playback
+        : Array.from(new Set(sheet.entries.map((p) => p.name))).map((n) => ({
             type: 'name' as const,
             name: n,
           }));
@@ -87,9 +87,7 @@ export class TMDChordProGenerator {
         const pName = order.name;
         const sectionSheet: Sheet = {
           ...sheet,
-          paragraphs: sheet.paragraphs.filter((p) => p.name === pName),
           entries: sheet.entries.filter((p) => p.name === pName),
-          orders: [{ type: 'name', name: pName }],
           playback: [{ type: 'name', name: pName }],
           keySignature: keySignatureForOffset(currentKeyOffset),
         };

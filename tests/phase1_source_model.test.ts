@@ -3,19 +3,28 @@ import { TmdParser } from "../src/core/parser.js";
 import { formatSheet } from "../src/core/format.js";
 
 describe("Phase 1 canonical source model", () => {
-  it("exposes Entry as the primary source-model type with Paragraph compatibility", () => {
+  it("exposes only canonical source-model fields", () => {
     const entry: import("../src/core/types.js").Entry = {
       name: "Theme",
-      instrument: "",
       assignment: undefined,
       isPrototype: true,
       pitchMode: "transposing",
       start: 0,
       sections: [],
     };
-    const paragraph: import("../src/core/types.js").Paragraph = entry;
-    expect(paragraph.name).toBe("Theme");
-    expect(paragraph.isPrototype).toBe(true);
+    expect(entry.name).toBe("Theme");
+    expect(entry.isPrototype).toBe(true);
+  });
+
+  it("does not expose removed compatibility fields at runtime", () => {
+    const sheet = TmdParser.parse(`::SCORE::
+Theme{
+  <4*> 1 2 3 4
+}`);
+
+    expect(sheet.entries[0]).not.toHaveProperty("instrument");
+    expect(sheet).not.toHaveProperty("paragraphs");
+    expect(sheet).not.toHaveProperty("orders");
   });
 
   it("exposes assignments, prototypes, and fixed-pitch entry attributes", () => {
@@ -50,10 +59,9 @@ B:piano@|0|{ <4*> 5 6 7 1^ }`);
     const sheet = TmdParser.parse(`::SCORE::
 Theme:Piano@|0|{
   <4*> 1 2 3 4
-}`);
-    const entry = sheet.paragraphs[0];
+    }`);
+    const entry = sheet.entries[0];
     entry.assignment = "Guitar";
-    entry.instrument = "Piano";
     const { TMDPlaybackRenderer } = await import("../src/core/playback");
     expect(TMDPlaybackRenderer.render(sheet, "Guitar").assignment).toBe("Guitar");
   });
@@ -89,7 +97,6 @@ Intro:Timpani[pitchMode=fixed]@|0|{ <4*> 2__ - - - }`);
 Intro:Piano@|0|{ <4*> 1 2 3 4 }
 -> Intro ->#`);
 
-    expect(sheet.playback).toEqual(sheet.orders);
     expect(sheet.playback).toEqual([{ type: "name", name: "Intro" }]);
     expect(sheet.entries?.[0].assignment).toBe("Piano");
     expect(sheet.entries?.[0].isPrototype).toBe(false);

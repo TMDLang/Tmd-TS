@@ -16,8 +16,8 @@ export class SheetInstrumentHelper {
     const distinct = Array.from(
       new Set(
         sheet.entries
-          .map((p) => p.assignment ?? p.instrument)
-          .filter((inst) => Boolean(inst && inst.trim()))
+          .map((p) => p.assignment)
+          .filter((inst): inst is string => Boolean(inst && inst.trim()))
       )
     ).sort();
     if (distinct.length === 0 && fallbackToDefault) {
