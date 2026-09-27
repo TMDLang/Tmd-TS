@@ -305,7 +305,7 @@ export type EntryPitchMode = "transposing" | "fixed";
 
 export const DEFAULT_INSTRUMENT = "Piano";
 
-export interface Paragraph {
+export interface Entry {
   name: string;
   instrument: string;
   assignment?: string;
@@ -319,7 +319,8 @@ export interface Paragraph {
   column?: number;
 }
 
-export type Entry = Paragraph;
+/** Source compatibility name retained for existing TypeScript consumers. */
+export type Paragraph = Entry;
 
 export function entryAssignment(entry: Entry): string | undefined {
   return entry.instrument || undefined;

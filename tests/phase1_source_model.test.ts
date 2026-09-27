@@ -3,6 +3,21 @@ import { TmdParser } from "../src/core/parser.js";
 import { formatSheet } from "../src/core/format.js";
 
 describe("Phase 1 canonical source model", () => {
+  it("exposes Entry as the primary source-model type with Paragraph compatibility", () => {
+    const entry: import("../src/core/types.js").Entry = {
+      name: "Theme",
+      instrument: "",
+      assignment: undefined,
+      isPrototype: true,
+      pitchMode: "transposing",
+      start: 0,
+      sections: [],
+    };
+    const paragraph: import("../src/core/types.js").Paragraph = entry;
+    expect(paragraph.name).toBe("Theme");
+    expect(paragraph.isPrototype).toBe(true);
+  });
+
   it("exposes assignments, prototypes, and fixed-pitch entry attributes", () => {
     const sheet = TmdParser.parse(`::SCORE::
 Intro:Timpani[pitchMode=fixed]@|0|{
