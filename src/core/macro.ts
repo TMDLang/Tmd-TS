@@ -3,8 +3,8 @@ import {
   accidentalToSemitone,
   Beat,
   Note,
-  Order,
-  Paragraph,
+  Playback,
+  Entry,
   ScaleDegree,
   scaleDegreeSemitoneOffset,
   Section,
@@ -16,8 +16,8 @@ import {
 import { TMDPlaybackRenderer } from "./playback.js";
 
 export interface MacroExpansionResult {
-  paragraphs: Paragraph[];
-  orders: Order[];
+  paragraphs: Entry[];
+  orders: Playback[];
 }
 
 /**
@@ -228,15 +228,15 @@ export class TMDMacroEvaluator {
       return sheet;
     }
 
-    const abstractMap = new Map<string, Paragraph>();
+    const abstractMap = new Map<string, Entry>();
     for (const p of sheet.paragraphs) {
-      if (!p.instrument) {
+      if (!(p.assignment ?? p.instrument)) {
         abstractMap.set(p.name, p);
       }
     }
 
-    const concreteParagraphs: Paragraph[] = sheet.paragraphs.filter((p) => Boolean(p.instrument));
-    const newOrders: Order[] = [];
+    const concreteParagraphs: Entry[] = sheet.paragraphs.filter((p) => Boolean(p.assignment ?? p.instrument));
+    const newOrders: Playback[] = [];
     let genCounter = 0;
     let currentOrderLoc: { line?: number; column?: number } = {};
 
@@ -249,12 +249,13 @@ export class TMDMacroEvaluator {
       instrument: string,
       startOffset: number,
       sections: Section[]
-    ): Paragraph => {
+    ): Entry => {
       genCounter++;
       const uniqueName = `__macro_${baseName}_${genCounter}`;
-      const p: Paragraph = {
+      const p: Entry = {
         name: uniqueName,
         instrument,
+        assignment: instrument,
         start: startOffset,
         sections: JSON.parse(JSON.stringify(sections)),
       };
