@@ -331,14 +331,16 @@ export function entryAssignment(entry: Entry): string | undefined {
 export type SExprAtom = string | number;
 export type SExpr = SExprAtom | SExpr[];
 
-export type Order =
+/** Canonical playback expression used to sequence sections and modifiers. */
+export type Playback =
   | { type: "name"; name: string; line?: number; column?: number }
   | { type: "relative"; value: string; line?: number; column?: number }
   | { type: "absolute"; value: string; line?: number; column?: number }
   | { type: "macro"; expr: SExpr[]; line?: number; column?: number };
 
 /** Canonical name for one source playback expression. */
-export type Playback = Order;
+/** @deprecated Use Playback. */
+export type Order = Playback;
 
 export interface Sheet {
   name: string;
