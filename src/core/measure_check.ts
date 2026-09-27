@@ -192,6 +192,7 @@ export class TMDMeasureChecker {
 
         // Parse inside paragraph
         let noteLength = 4;
+        let currentBeat = beat;
         let currentMeasureUnits = 0;
         let currentMeasureSnippet: string[] = [];
         let measureCount = 0;
@@ -200,8 +201,8 @@ export class TMDMeasureChecker {
         let paragraphQuarterNotes = 0.0;
 
         function expectedUnitsForMeasure(): number {
-          const numerator = beat.count * noteLength;
-          return Math.max(1, Math.floor(numerator / beat.noteValue));
+          const numerator = currentBeat.count * noteLength;
+          return Math.max(1, Math.floor(numerator / currentBeat.noteValue));
         }
 
         let unclosedParagraph = false;
@@ -284,6 +285,54 @@ export class TMDMeasureChecker {
               currentMeasureUnits = 0;
               currentMeasureSnippet = [];
               measureStartLine = pipeLine;
+            }
+            continue;
+          }
+
+          // Section directives do not consume musical time. Tempo and dynamics
+          // may occur anywhere; a time signature must begin at a measure
+          // boundary so all consumers agree on the following meter.
+          if (item.token.type === "openBrace") {
+            const directiveLine = item.range.start.line;
+            advance(); // {
+
+            let timeSignature: Beat | undefined;
+            if (current()?.token.type === "openAngle") {
+              advance(); // <
+              const count = current() ? intValueOfToken(current()!.token) : undefined;
+              if (count !== undefined) advance();
+              if (current()?.token.type === "slash") advance();
+              const noteValue = current() ? intValueOfToken(current()!.token) : undefined;
+              if (noteValue !== undefined) advance();
+              if (current()?.token.type === "closeAngle") advance();
+              if (count !== undefined && noteValue !== undefined && count > 0 && noteValue > 0) {
+                timeSignature = { count, noteValue };
+              }
+            }
+
+            while (pos < tokensWithRanges.length && current()?.token.type !== "closeBrace") {
+              advance();
+            }
+            if (current()?.token.type === "closeBrace") advance();
+
+            if (timeSignature) {
+              if (currentMeasureUnits !== 0) {
+                const issueObj = {
+                  paragraphName: pName,
+                  instrument: instName,
+                  lineNumber: directiveLine,
+                  measureIndex: measureCount + 1,
+                  expectedUnits: expectedUnitsForMeasure(),
+                  actualUnits: currentMeasureUnits,
+                  deltaUnits: currentMeasureUnits - expectedUnitsForMeasure(),
+                  noteLength,
+                  beat: currentBeat,
+                  snippet: `Time signature directive must occur at a measure boundary: <${timeSignature.count}/${timeSignature.noteValue}>`,
+                };
+                issues.push({ ...issueObj, description: formatIssueDescription(issueObj) });
+              } else {
+                currentBeat = timeSignature;
+              }
             }
             continue;
           }
@@ -403,7 +452,7 @@ export class TMDMeasureChecker {
           });
         }
 
-        const nominalMeasureDur = (Math.max(1, beat.count) * 4.0) / Math.max(1, beat.noteValue);
+        const nominalMeasureDur = (Math.max(1, currentBeat.count) * 4.0) / Math.max(1, currentBeat.noteValue);
         const calculatedMeasures = Math.round(paragraphQuarterNotes / nominalMeasureDur);
         const actualMeasures = Math.max(measureCount, calculatedMeasures, 1);
 

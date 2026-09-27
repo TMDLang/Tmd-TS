@@ -241,6 +241,23 @@ export class TMDLSPCompletionEngine {
     { label: "play", insertText: "(play ${1:Theme} ${2:Violin})", detail: "Track Binding: (play <theme> <instrument>)" }
   ];
 
+  public static readonly sectionDirectiveCompletions: TMDLSPCompletionItem[] = [
+    { label: "!= 120", kind: TMDLSPCompletionItemKind.Snippet, detail: "Absolute Tempo (BPM)", insertText: "!= ${1:120}}", insertTextFormat: 2 },
+    { label: "!+ 10", kind: TMDLSPCompletionItemKind.Snippet, detail: "Relative Tempo Change (+BPM)", insertText: "!+ ${1:10}}", insertTextFormat: 2 },
+    { label: "?= C", kind: TMDLSPCompletionItemKind.Snippet, detail: "Movable-do Base", insertText: "?= ${1:C}}", insertTextFormat: 2 },
+    { label: "?+ 2", kind: TMDLSPCompletionItemKind.Snippet, detail: "Relative Movable-do Transposition (+semitones)", insertText: "?+ ${1:2}}", insertTextFormat: 2 },
+    { label: "?- 2", kind: TMDLSPCompletionItemKind.Snippet, detail: "Relative Movable-do Transposition (-semitones)", insertText: "?- ${1:2}}", insertTextFormat: 2 },
+    { label: "?= fixed", kind: TMDLSPCompletionItemKind.Value, detail: "Fixed Pitch (Immune to song transpositions)", insertText: "?= fixed}" },
+    { label: "key= Bm", kind: TMDLSPCompletionItemKind.Snippet, detail: "Explicit Tonality (B minor)", insertText: "key= ${1:Bm}}", insertTextFormat: 2 },
+    ...["ppp", "pp", "p", "mp", "mf", "f", "ff", "fff"].map((mark) => ({
+      label: mark,
+      kind: TMDLSPCompletionItemKind.Value,
+      detail: `Dynamics (${mark})`,
+      insertText: `${mark}}`,
+    })),
+    { label: "<4/4>", kind: TMDLSPCompletionItemKind.Snippet, detail: "Time Signature Change", insertText: "<${1:4}/${2:4}>}", insertTextFormat: 2 },
+  ];
+
   public static complete(source: string, position: TMDLSPPosition): TMDLSPCompletionItem[] {
     const lines = source.split("\n");
     if (position.line >= lines.length) return [];
@@ -324,22 +341,11 @@ export class TMDLSPCompletionEngine {
     const lastBraceIndex = prefix.lastIndexOf("{");
     if (lastBraceIndex !== -1) {
       const afterBrace = prefix.slice(lastBraceIndex + 1);
-      if (!afterBrace.includes("}") && afterBrace.length <= 10) {
-        return [
-          { label: "!= 120", kind: TMDLSPCompletionItemKind.Snippet, detail: "Absolute Tempo (BPM)", insertText: "!= ${1:120}}" },
-          { label: "!+ 10", kind: TMDLSPCompletionItemKind.Snippet, detail: "Relative Tempo Change (+BPM)", insertText: "!+ ${1:10}}" },
-          { label: "?= C", kind: TMDLSPCompletionItemKind.Snippet, detail: "Absolute Key Signature", insertText: "?= ${1:C}}" },
-          { label: "key= Bm", kind: TMDLSPCompletionItemKind.Snippet, detail: "Explicit Tonality (B minor)", insertText: "key= ${1:Bm}}" },
-          { label: "?+ 2", kind: TMDLSPCompletionItemKind.Snippet, detail: "Relative Key Transposition (+semitones)", insertText: "?+ ${1:2}}" },
-          { label: "?= fixed", kind: TMDLSPCompletionItemKind.Value, detail: "Fixed Pitch (Immune to song transpositions)", insertText: "?= fixed}" },
-          ...["ppp", "pp", "p", "mp", "mf", "f", "ff", "fff"].map((mark) => ({
-            label: mark,
-            kind: TMDLSPCompletionItemKind.Value,
-            detail: `Dynamics (${mark})`,
-            insertText: `${mark}}`,
-          })),
-          { label: "<4/4>", kind: TMDLSPCompletionItemKind.Snippet, detail: "Time Signature Change", insertText: "<${1:4}/${2:4}>}" }
-        ];
+      if (!afterBrace.includes("}") && afterBrace.length <= 16) {
+        const typed = afterBrace.trim().toLowerCase();
+        return this.sectionDirectiveCompletions.filter((item) =>
+          typed.length === 0 || item.label.toLowerCase().startsWith(typed)
+        );
       }
     }
 

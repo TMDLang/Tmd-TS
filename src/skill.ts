@@ -224,7 +224,7 @@ You can place inline directives anywhere inside a section between notes:
 - \`{?- 2}\`: Relative key transposition down 2 semitones.
 - \`{?= fixed}\` (or \`{? fixed}\`): Forces **Fixed Pitch** for this track section (locks \`keyOffset = 0\`, immune to song-level playback transpositions like \`-> {?+3} -> ...\`). Ideal for Timpani, Sound FX, or non-transposing tracks.
 - \`{ppp}\`, \`{pp}\`, \`{p}\`, \`{mp}\`, \`{mf}\`, \`{f}\`, \`{ff}\`, \`{fff}\`: Set playback velocity and emit engraved dynamic marks.
-- \`{<3/4>}\`: Time signature change to 3/4.
+- \`{<3/4>}\`: Time signature change to 3/4; place it at a measure boundary. Tempo and dynamics may still change within a measure.
 
 Example:
 \`\`\`tmd

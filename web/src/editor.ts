@@ -162,7 +162,7 @@ export function createTmdCompletionSource(lspClient: TMDWebLSPClient) {
     // Chord completion after `[`
     const bracketMatch = prefix.match(/\[([\w\d#b]*)$/);
     // Section directive after `{`
-    const braceMatch = prefix.match(/\{([!?<][\w\d+=\s\/]*)$/);
+    const braceMatch = prefix.match(/\{([A-Za-z!?<][\w\d+=\s\/-]*)$/);
     const bareBraceMatch = prefix.match(/\{$/);
 
     let from = pos;

@@ -757,6 +757,61 @@ chorus:Lead@|0|{
 });
 
 describe("TMDMeasureChecker (TDD)", () => {
+  it("reports time-signature directives placed mid-measure", () => {
+    const input = `::SCORE::
+** Mid-Measure Time Signature **
+!= 120
+?= C
+<4/4>
+
+verse:Piano@|0|{
+    <4*>
+    | 1 2 {<3/4>} 3 4 |
+}
+
+-> verse ->#
+`;
+
+    const issues = TMDMeasureChecker.check(input);
+    expect(issues.some((issue) => issue.snippet.includes("Time signature directive"))).toBe(true);
+  });
+
+  it("applies a boundary time-signature change to the following measure", () => {
+    const input = `::SCORE::
+** Boundary Time Signature **
+!= 120
+?= C
+<4/4>
+
+verse:Piano@|0|{
+    <4*>
+    | 1 2 3 4 | {<3/4>} | 1 2 3 |
+}
+
+-> verse ->#
+`;
+
+    expect(TMDMeasureChecker.check(input)).toHaveLength(0);
+  });
+
+  it("allows tempo and dynamics directives within a measure", () => {
+    const input = `::SCORE::
+** Inline Tempo and Dynamics **
+!= 120
+?= C
+<4/4>
+
+verse:Piano@|0|{
+    <4*>
+    | 1 {!= 140} 2 {p} 3 4 |
+}
+
+-> verse ->#
+`;
+
+    expect(TMDMeasureChecker.check(input)).toHaveLength(0);
+  });
+
   it("reports no errors for valid measures", () => {
     const input = `::SCORE::
 ** Valid Song **

@@ -96,10 +96,10 @@ async function callGemini(
 
       const toolResult = await executeAiTool(fn.name, fn.args || {}, options.toolContext);
 
-      // Append model assistant turn and function response turn
+      // Gemini represents a function response as a user turn containing a functionResponse part.
       contents.push(candidate.content);
       contents.push({
-        role: "function",
+        role: "user",
         parts: [
           {
             functionResponse: {

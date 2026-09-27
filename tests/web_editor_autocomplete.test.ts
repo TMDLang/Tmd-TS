@@ -97,4 +97,22 @@ describe("TMD Autocomplete Integration", () => {
     // from should point to start of 'ca'
     expect(result!.from).toBe(pos - 2);
   });
+
+  it("resolves section directives after a partial brace prefix", async () => {
+    const lspClient = new TMDWebLSPClient();
+    const doc = `theme {
+  <4*>
+  {p`;
+    lspClient.openDocument(doc);
+    const pos = doc.length;
+    const state = EditorState.create({ doc, selection: { anchor: pos } });
+    const completionSource = createTmdCompletionSource(lspClient);
+    const result = await completionSource(new CompletionContext(state, pos, false));
+
+    expect(result).not.toBeNull();
+    expect(result!.from).toBe(pos - 1);
+    expect(result!.options.some((o) => o.label === "p")).toBe(true);
+    expect(result!.options.some((o) => o.label === "ppp")).toBe(true);
+    expect(result!.options.some((o) => o.label === "f")).toBe(false);
+  });
 });

@@ -194,6 +194,24 @@ verse:`;
     expect(labels).toContain("fff");
   });
 
+  it("offers every section directive and filters by the typed directive prefix", () => {
+    const fullSource = "A:Piano@|0|{\n  <4*>\n  {";
+    const fullLine = fullSource.split("\n").length - 1;
+    const all = TMDLSPCompletionEngine.complete(fullSource, new TMDLSPPosition(fullLine, 3));
+    const allLabels = all.map((item) => item.label);
+
+    expect(allLabels).toEqual(expect.arrayContaining([
+      "!= 120", "!+ 10", "?= C", "?+ 2", "?- 2", "?= fixed",
+      "key= Bm", "ppp", "pp", "p", "mp", "mf", "f", "ff", "fff", "<4/4>",
+    ]));
+    expect(allLabels).not.toContain("intro");
+
+    const partial = "A:Piano@|0|{\n  <4*>\n  {key";
+    const partialLine = partial.split("\n").length - 1;
+    const keyItems = TMDLSPCompletionEngine.complete(partial, new TMDLSPPosition(partialLine, 6));
+    expect(keyItems.map((item) => item.label)).toEqual(["key= Bm"]);
+  });
+
   it("provides diatonic chords when opening bracket '[' inside paragraph", () => {
     const source = `::SCORE::
 ** Test Score **

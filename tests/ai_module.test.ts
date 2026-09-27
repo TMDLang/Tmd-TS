@@ -1,6 +1,7 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { buildSystemPrompt, buildUserPrompt, extractTmdCode } from '../web/src/ai/prompt.js';
 import { MODEL_PRESETS, DEFAULT_MODELS } from '../web/src/ai/presets.js';
+import { callAI } from '../web/src/ai/client.js';
 
 describe('AI Module Prompt and Parsing', () => {
   it('builds system prompt containing TMD specification', () => {
@@ -303,5 +304,36 @@ verse:Piano@|0|{
     // Test execution of getCurrentScore
     const currentScore = await executeAiTool('getCurrentScore', {}, mockContext);
     expect(currentScore).toContain('** Current **');
+  });
+
+  it('uses a Gemini-supported role for function responses in the tool loop', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        candidates: [{
+          content: {
+            role: 'model',
+            parts: [{ functionCall: { name: 'checkTmd', args: { text: 'score' } } }],
+          },
+        }],
+      }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        candidates: [{ content: { role: 'model', parts: [{ text: 'done' }] } }],
+      }), { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await callAI('gemini', { apiKey: 'test-key', model: 'gemini-test' }, {
+      prompt: 'compose',
+      toolContext: {
+        getCurrentScore: () => 'score',
+        loadScoreToEditor: vi.fn(),
+      },
+    });
+
+    expect(result).toBe('done');
+    const secondBody = JSON.parse(fetchMock.mock.calls[1][1].body);
+    expect(secondBody.contents.map((content: any) => content.role)).toEqual(['user', 'model', 'user']);
+    expect(secondBody.contents[2].parts[0].functionResponse.name).toBe('checkTmd');
+    expect(secondBody.contents.some((content: any) => content.role === 'function')).toBe(false);
+    vi.unstubAllGlobals();
   });
 });
