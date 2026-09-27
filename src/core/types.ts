@@ -348,11 +348,15 @@ export interface Sheet {
   keySignature: KeySignature;
   declaredKey?: string;
   beat: Beat;
+  /** Canonical source entries. */
+  entries: Entry[];
+  /** Canonical playback expressions. */
+  playback: Playback[];
+  /** @deprecated Use entries. */
   paragraphs: Paragraph[];
+  /** @deprecated Use playback. */
   orders: Order[];
   metadata: Record<string, string>;
-  entries?: Entry[];
-  playback?: Playback[];
   distinctAssignments?: () => string[];
 }
 
