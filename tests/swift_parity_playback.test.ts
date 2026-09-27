@@ -2,13 +2,33 @@ import { describe, expect, it } from "vitest";
 import { TmdParser } from "../src/core/parser.js";
 import { formatSheet } from "../src/core/format.js";
 import { TMDPlaybackRenderer } from "../src/core/playback.js";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
+
+const canonicalPlaybackFixture = `::SCORE::
+** Canonical Playback Fixture **
+!=120
+?=G
+<4/4>
+
+Theme{
+    <4*>
+    1 2 3 4
+}
+
+Intro:Piano@|0|{
+    <4*>
+    1 2 3 4
+}
+
+Intro:Timpani[pitchMode=fixed]@|+1|{
+    <4*>
+    1 2 3 4
+}
+
+-> {?+2} -> Intro ->#`;
 
 describe("Swift playback parity", () => {
   it("matches the shared canonical playback fixture", () => {
-    const fixturePath = join(process.cwd(), "docs/conformance/canonical-playback.tmd");
-    const sheet = TmdParser.parse(readFileSync(fixturePath, "utf8"));
+    const sheet = TmdParser.parse(canonicalPlaybackFixture);
     const piano = TMDPlaybackRenderer.render(sheet, "Piano");
     const timpani = TMDPlaybackRenderer.render(sheet, "Timpani");
 
