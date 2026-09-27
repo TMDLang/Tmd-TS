@@ -105,7 +105,9 @@
 html, body {
   width: 100%;
   height: 100%;
+  min-height: 100%;
   overflow: hidden;
+  overflow-x: hidden;
   background-color: var(--bg-primary);
   color: var(--text-primary);
   font-family: var(--font-sans);
@@ -116,6 +118,7 @@ html, body {
   flex-direction: column;
   width: 100%;
   height: 100%;
+  min-height: 100dvh;
   position: relative;
 }
 
@@ -1822,13 +1825,13 @@ details[open] > summary .outline-chevron {
   color: #e6edf3;
   font-size: 13px;
   cursor: grab;
-  touch-action: none;
   user-select: none;
   animation: slideDown 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .tmd-player-bar.dragging {
   cursor: grabbing;
+  touch-action: none;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.7), 0 0 18px rgba(88, 166, 255, 0.4);
 }
 
@@ -2292,6 +2295,96 @@ dialog.modal.modal-lg .modal-body {
 /* ==========================================================================
    Responsive Breakpoints for Smaller Screens
    ========================================================================== */
+
+@media (min-width: 600px) and (max-width: 1024px) {
+  :root {
+    --tablet-touch-target: 44px;
+    --tablet-panel-width: min(320px, calc(100vw - 24px));
+  }
+
+  .navbar {
+    min-height: 88px;
+    height: auto;
+    padding: 8px max(12px, env(safe-area-inset-left)) 8px max(12px, env(safe-area-inset-right));
+    flex-wrap: wrap;
+    align-content: center;
+  }
+
+  .nav-left,
+  .nav-right {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .nav-right {
+    justify-content: flex-end;
+  }
+
+  .nav-center {
+    flex: 1 0 100%;
+    order: 3;
+    justify-content: center;
+    min-width: 0;
+  }
+
+  .navbar .btn,
+  .navbar .btn-icon-only,
+  .navbar .dropdown > .btn,
+  .virtual-keyboard-header .btn,
+  .problems-panel-header .btn {
+    min-width: var(--tablet-touch-target);
+    min-height: var(--tablet-touch-target);
+    padding: 8px 10px;
+  }
+
+  .workspace {
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .library-drawer,
+  .inspector-panel {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    z-index: 60;
+    width: var(--tablet-panel-width);
+    max-width: calc(100vw - 24px);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  }
+
+  .library-drawer {
+    left: 0;
+  }
+
+  .inspector-panel {
+    right: 0;
+  }
+
+  .text-control,
+  .select-control,
+  .player-synth-select {
+    font-size: 16px;
+  }
+
+  .virtual-keyboard {
+    max-height: min(260px, 34dvh);
+  }
+
+  .status-bar {
+    min-height: 36px;
+    height: auto;
+    padding: 6px max(16px, env(safe-area-inset-right)) calc(6px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  }
+
+  .tmd-player-bar {
+    top: calc(96px + env(safe-area-inset-top));
+    left: max(12px, env(safe-area-inset-left));
+    right: max(12px, env(safe-area-inset-right));
+    max-width: calc(100vw - 24px);
+    justify-content: center;
+  }
+}
 
 @media (max-width: 992px) {
   .navbar {

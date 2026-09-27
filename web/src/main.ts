@@ -674,6 +674,15 @@ async function init() {
   }
 }
 
+function registerServiceWorker() {
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("./sw.js").catch((error) => {
+      console.warn("Service worker registration failed:", error);
+    });
+  }
+}
+
 window.addEventListener("DOMContentLoaded", () => {
+  registerServiceWorker();
   init().catch((err) => console.error("Initialization failed:", err));
 });
