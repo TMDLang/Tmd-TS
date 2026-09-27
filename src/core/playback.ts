@@ -4,8 +4,8 @@ import {
   DEFAULT_INSTRUMENT,
   KeySignature,
   Note,
-  Order,
-  Paragraph,
+  Playback,
+  Entry,
   SectionDirective,
   SectionDirectiveKind,
   Sheet,
@@ -93,7 +93,7 @@ export class TMDPlaybackRenderer {
 
   public static validate(inputSheet: Sheet): PlaybackValidationIssue[] {
     const sheet = TMDMacroEvaluator.expand(inputSheet);
-    const grouped = new Map<string, Paragraph[]>();
+    const grouped = new Map<string, Entry[]>();
     for (const entry of sheet.paragraphs.filter((paragraph) => paragraph.assignment ?? paragraph.instrument)) {
       const assignment = entry.assignment ?? entry.instrument;
       const key = `${entry.name.toLowerCase()}\u0000${assignment.toLowerCase()}`;
@@ -125,7 +125,7 @@ export class TMDPlaybackRenderer {
     return issues;
   }
 
-  private static entryRange(entry: Paragraph, beat: Beat): { start: number; end: number } {
+  private static entryRange(entry: Entry, beat: Beat): { start: number; end: number } {
     const duration = entry.sections.reduce((total, section) => {
       const unitDuration = 4.0 / Math.max(1, section.noteLength);
       return total + section.unitGroups.reduce((sum, group) => sum + Math.max(0, group.length) * unitDuration, 0);
@@ -146,7 +146,7 @@ export class TMDPlaybackRenderer {
       return pInst.toLocaleLowerCase() === targetInst.toLocaleLowerCase()
         || (p.assignment ?? p.instrument).toLocaleLowerCase() === instrument.toLocaleLowerCase();
     });
-    const orders: Order[] = sheet.orders.length > 0
+    const orders: Playback[] = sheet.orders.length > 0
       ? sheet.orders
       : Array.from(new Set(sheet.paragraphs.map((p) => p.name))).map((n) => ({ type: "name", name: n }));
 
@@ -291,7 +291,7 @@ export class TMDPlaybackRenderer {
   }
 
   private static renderParagraph(
-    paragraph: Paragraph,
+    paragraph: Entry,
     start: number,
     initialState: PlaybackState,
     fixedPitch = false

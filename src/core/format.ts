@@ -4,8 +4,8 @@ import {
   UnitGroup,
   Section,
   SectionDirective,
-  Paragraph,
-  Order,
+  Entry,
+  Playback,
   SExpr,
   Sheet,
   Accidental,
@@ -121,7 +121,7 @@ export function formatSection(sec: Section, beat: Beat = { count: 4, noteValue: 
   return result;
 }
 
-export function formatParagraph(p: Paragraph, beat?: Beat): string {
+export function formatParagraph(p: Entry, beat?: Beat): string {
   if (p.showProgram) {
     const time = p.executionTime ?? "";
     return `${p.name}:${p.assignment ?? p.instrument}@${time}{\n"""${p.showProgram}"""\n}\n\n`;
@@ -153,7 +153,7 @@ export function formatSExpr(expr: SExpr): string {
   return String(expr);
 }
 
-export function formatOrder(order: Order): string {
+export function formatOrder(order: Playback): string {
   switch (order.type) {
     case "name": return order.name;
     case "relative": return `{?${order.value}}`;
