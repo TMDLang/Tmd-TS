@@ -51,6 +51,9 @@ export type VocalClassification = "soprano" | "mezzo-soprano" | "contralto" | "t
  * Vocal or instrument pitch range and tessitura summary.
  */
 export interface TMDPitchRangeProfile {
+  /** Canonical assignment represented by this pitch profile. */
+  assignment: string;
+  /** @deprecated Use assignment. */
   instrument: string;
   lowestNote: TMDNotePitchInfo;
   highestNote: TMDNotePitchInfo;
@@ -271,7 +274,7 @@ export class TMDSongInspector {
     const targetInst = targetInstrument && distinctInsts.includes(targetInstrument)
       ? targetInstrument
       : SheetInstrumentHelper.resolveVocalInstrument(effectiveSheet);
-    const vocalRange = instrumentRanges.find((r) => r.instrument === targetInst);
+    const vocalRange = instrumentRanges.find((r) => r.assignment === targetInst);
 
     // 4. Harmony & Chord Profile
     const harmonyProfile = this.buildHarmonyProfile(effectiveSheet);
@@ -487,6 +490,7 @@ export class TMDSongInspector {
     const suitableVoiceTypes = this.evaluateSuitableVoiceTypes(lowest.midi, highest.midi);
 
     return {
+      assignment: instrument,
       instrument,
       lowestNote: {
         midiPitch: lowest.midi,
@@ -1264,7 +1268,7 @@ export class TMDSongInspector {
     lines.push("--------------------------------------------------------------------------------");
     lines.push(localizer.text(TMDLocalizationKey.instrumentRanges));
     for (const inst of profile.instrumentRanges) {
-      const padded = inst.instrument.padEnd(14, " ");
+      const padded = inst.assignment.padEnd(14, " ");
       const octaves = inst.spanOctaves.toFixed(1);
       lines.push(
         `  - ${padded}: ${inst.lowestNote.noteName} – ${inst.highestNote.noteName} (${inst.spanSemitones} semitones / ${octaves} octaves, ${inst.totalNotes} notes)`
