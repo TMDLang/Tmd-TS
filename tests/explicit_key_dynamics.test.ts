@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { TMDPlaybackRenderer, TmdParser, formatSectionDirective, formatSheet, TMDABCGenerator, TMDLilyPondGenerator, TMDMusicXMLGenerator } from "../src/index.js";
+
 import { MIDIInstrument, TMDMIDIGenerator } from "../src/exporters/midi.js";
+import { formatSectionDirective, formatSheet, TMDABCGenerator, TMDLilyPondGenerator, TMDMusicXMLGenerator,TmdParser, TMDPlaybackRenderer } from "../src/index.js";
 
 describe("explicit key and dynamics syntax", () => {
   const score = `

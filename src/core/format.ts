@@ -1,15 +1,15 @@
 import {
-  Note,
-  Unit,
-  UnitGroup,
-  Section,
-  SectionDirective,
-  Entry,
-  Playback,
-  SExpr,
-  Sheet,
   Accidental,
   Beat,
+  Entry,
+  Note,
+  Playback,
+  Section,
+  SectionDirective,
+  SExpr,
+  Sheet,
+  Unit,
+  UnitGroup,
 } from "./types";
 
 export function formatNote(note: Note): string {

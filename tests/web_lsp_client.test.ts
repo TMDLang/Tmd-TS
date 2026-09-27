@@ -1,4 +1,5 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect,it } from "vitest";
+
 import { TMDWebLSPClient } from "../web/src/lsp/client.js";
 
 describe("TMDWebLSPClient (In-Memory LSP Client for Web Studio)", () => {

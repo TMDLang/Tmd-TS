@@ -1,5 +1,6 @@
-import { describe, it, expect } from "vitest";
-import { updateProblemsPanel, setupProblemsPanelEvents } from "../web/src/ui/problemsPanel.js";
+import { describe, expect,it } from "vitest";
+
+import { setupProblemsPanelEvents,updateProblemsPanel } from "../web/src/ui/problemsPanel.js";
 
 describe("Problems Panel UI (TDD)", () => {
   it("displays accurate line:column, separating main message and hint", () => {

@@ -1,9 +1,9 @@
 // web/src/services/scoreService.ts
 // Handles score auto-saving, hash-based sharing, and score title extraction
 
-import { TmdStorage, SavedScore, extractTmdTitle } from "../storage/db.js";
-import { decodeShareHash } from "../share.js";
 import { t } from "../i18n.js";
+import { decodeShareHash } from "../share.js";
+import { extractTmdTitle,SavedScore, TmdStorage } from "../storage/db.js";
 
 export class TMDScoreService {
   private autoSaveTimer: any = null;

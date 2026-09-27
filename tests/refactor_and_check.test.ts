@@ -1,10 +1,11 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect,it } from "vitest";
+
 import {
-  TMDRefactor,
+  Lexer,
   TMDMeasureChecker,
   TMDMeasureIssue,
   TmdParser,
-  Lexer,
+  TMDRefactor,
 } from "../src/index.js";
 import { diagnosticMeasureFixture } from "./conformanceFixtures.js";
 

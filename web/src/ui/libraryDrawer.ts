@@ -1,10 +1,10 @@
-import { SavedScore, TmdStorage, extractTmdTitle } from "../storage/db.js";
-import { SAMPLES } from "../samples.js";
-import { escapeHtml } from "../html.js";
-import { t } from "../i18n.js";
-import { fetchGistTmd } from "../gist.js";
 import { TMDCanonGenerator } from "../../../src/core/canon_gen.js";
 import type { TMDWebEditor } from "../editor.js";
+import { fetchGistTmd } from "../gist.js";
+import { escapeHtml } from "../html.js";
+import { t } from "../i18n.js";
+import { SAMPLES } from "../samples.js";
+import { extractTmdTitle,SavedScore, TmdStorage } from "../storage/db.js";
 
 export interface LibraryDrawerElements {
   libraryDrawer: HTMLElement;

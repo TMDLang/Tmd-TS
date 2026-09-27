@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import { TMDLocalizationKey, TMDLocalizer } from "../src/core/index.js";
 
 describe("TMD core localization", () => {

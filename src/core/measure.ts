@@ -1,5 +1,5 @@
-import { Beat, Sheet } from './types.js';
 import { PlaybackContent, PlaybackDirectiveEvent, PlaybackEvent, PlaybackState, TMDPlaybackRenderer } from './playback.js';
+import { Beat, Sheet } from './types.js';
 
 export interface NotationDurationAtom {
   baseDenominator: number; // 1, 2, 4, 8, 16, 32, 64

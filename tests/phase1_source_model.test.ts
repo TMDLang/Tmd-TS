@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { TmdParser } from "../src/core/parser.js";
+
 import { formatSheet } from "../src/core/format.js";
+import { TmdParser } from "../src/core/parser.js";
 
 describe("Phase 1 canonical source model", () => {
   it("exposes only canonical source-model fields", () => {

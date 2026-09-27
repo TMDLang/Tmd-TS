@@ -1,14 +1,15 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect,it } from 'vitest';
+
 import {
-  TmdParser,
   formatOrder,
   formatSheet,
-  TMDPlaybackRenderer,
+  TMDMacroError,
+  TMDMacroEvaluator,
   TMDMeasureChecker,
   TMDMIDIGenerator,
+  TmdParser,
+  TMDPlaybackRenderer,
   TMDWAVRenderer,
-  TMDMacroEvaluator,
-  TMDMacroError,
 } from '../src/index.js';
 import { macroPlayFixture } from './conformanceFixtures.js';
 

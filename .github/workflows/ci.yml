@@ -17,6 +17,7 @@ jobs:
       - run: npm ci
       - run: npm --prefix web ci
       - run: npm run build
+      - run: npm run eslint
       - run: npm test
       - run: node -e "const { TmdParser } = require('./dist'); const sheet = TmdParser.parse('::SCORE::\\n** CI **\\n!=120\\n?=C\\n<4/4>\\nintro:Piano@|0|{\\n<4*>\\n1 2 3 4\\n}\\n-> intro ->#'); if (sheet.name !== 'CI') process.exit(1)"
 

@@ -1,10 +1,12 @@
-import { describe, it, expect } from 'vitest';
-import { TmdParser } from '../src/core/index.js';
-import { TMDChordProGenerator } from '../src/exporters/chordpro.js';
-import { main } from '../src/cli.js';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
+
+import { describe, expect,it } from 'vitest';
+
+import { main } from '../src/cli.js';
+import { TmdParser } from '../src/core/index.js';
+import { TMDChordProGenerator } from '../src/exporters/chordpro.js';
 
 describe('TMDChordProGenerator', () => {
   it('generates standard ChordPro metadata directives', () => {

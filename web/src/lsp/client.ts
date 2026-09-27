@@ -1,10 +1,10 @@
 import {
-  TMDLSPServer,
   TMDJSONRPCCodec,
   TMDJSONRPCFrame,
-  TMDLSPPosition,
   TMDLSPCompletionItem,
   TMDLSPDiagnostic,
+  TMDLSPPosition,
+  TMDLSPServer,
 } from "../../../src/lsp/index.js";
 
 export interface TMDWebLSPClientOptions {

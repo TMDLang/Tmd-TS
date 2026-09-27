@@ -1,6 +1,7 @@
-import { describe, it, expect } from "vitest";
-import { encodeShareHash, decodeShareHash, MAX_SHARED_CHARS } from "../web/src/share.js";
+import { describe, expect,it } from "vitest";
+
 import { escapeHtml } from "../web/src/html.js";
+import { decodeShareHash, encodeShareHash, MAX_SHARED_CHARS } from "../web/src/share.js";
 
 // Builds a share hash without the size check of encodeShareHash, to test the decoder.
 async function deflateHash(input: string | Uint8Array): Promise<string> {

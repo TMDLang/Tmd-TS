@@ -1,7 +1,8 @@
-import { describe, it, expect, vi } from 'vitest';
-import { buildSystemPrompt, buildUserPrompt, extractTmdCode } from '../web/src/ai/prompt.js';
-import { MODEL_PRESETS, DEFAULT_MODELS } from '../web/src/ai/presets.js';
+import { describe, expect, it, vi } from 'vitest';
+
 import { callAI } from '../web/src/ai/client.js';
+import { DEFAULT_MODELS,MODEL_PRESETS } from '../web/src/ai/presets.js';
+import { buildSystemPrompt, buildUserPrompt, extractTmdCode } from '../web/src/ai/prompt.js';
 
 describe('AI Module Prompt and Parsing', () => {
   it('builds system prompt containing TMD specification', () => {

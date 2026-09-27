@@ -1,5 +1,5 @@
-import { Sheet } from './types.js';
 import { TMDMacroEvaluator } from './macro.js';
+import { Sheet } from './types.js';
 
 /**
  * Common helper functions for querying and resolving instruments from a TMD Sheet.

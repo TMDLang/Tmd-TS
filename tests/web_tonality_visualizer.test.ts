@@ -1,8 +1,10 @@
-import { describe, expect, it } from "vitest";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { TmdParser } from "../src/core/parser.js";
+
+import { describe, expect, it } from "vitest";
+
 import { TMDSongInspector } from "../src/core/inspector.js";
+import { TmdParser } from "../src/core/parser.js";
 import { renderTonalityProfileHtml } from "../web/src/ui/tonality.js";
 
 

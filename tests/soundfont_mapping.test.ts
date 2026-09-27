@@ -1,11 +1,12 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect,it } from "vitest";
+
+import { MIDIEvent,TMDMIDIEncoder } from "../src/exporters/midi_encoder.js";
 import {
-  gmProgramToSoundfontName,
-  getDrumSoundfontName,
-  scanMidiProgramsAndDrums,
   formatSoundfontLoadingStatus,
+  getDrumSoundfontName,
+  gmProgramToSoundfontName,
+  scanMidiProgramsAndDrums,
 } from "../web/src/audio/soundfont-mapping.js";
-import { TMDMIDIEncoder, MIDIEvent } from "../src/exporters/midi_encoder.js";
 
 describe("Soundfont Instrument Mapping & MIDI Scanning (TDD)", () => {
   describe("gmProgramToSoundfontName", () => {

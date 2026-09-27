@@ -1,6 +1,6 @@
-import { TMDSongProfile, TMDTonalityProfile, TMDSongInspector } from "./inspector.js";
-import { TMDLocalizationKey, TMDLocalizer } from "./localization.js";
+import { TMDSongInspector,TMDSongProfile, TMDTonalityProfile } from "./inspector.js";
 import type { TMDLocale } from "./localization.js";
+import { TMDLocalizationKey, TMDLocalizer } from "./localization.js";
 
 /**
  * SVG and HTML interactive dashboard visualizer for TMD tonality profiles.

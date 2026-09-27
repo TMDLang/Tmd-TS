@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest';
-import { TmdParser, TMDParseError } from '../src/core/parser.js';
+import { describe, expect,it } from 'vitest';
+
+import { TMDParseError,TmdParser } from '../src/core/parser.js';
 
 describe('Expected tokens on TMD parse syntax errors', () => {
   it('reports expected tokens when ::SCORE:: is missing', () => {

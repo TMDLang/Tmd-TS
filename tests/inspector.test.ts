@@ -1,6 +1,7 @@
-import { describe, it, expect } from "vitest";
-import { TmdParser } from "../src/core/parser.js";
+import { describe, expect,it } from "vitest";
+
 import { TMDSongInspector } from "../src/core/inspector.js";
+import { TmdParser } from "../src/core/parser.js";
 import { inspectorBasicFixture } from "./conformanceFixtures.js";
 
 describe("TMDSongInspector (TDD port from TmdSwift)", () => {

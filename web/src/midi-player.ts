@@ -1,17 +1,18 @@
 // @ts-ignore
 import JZZModule from "jzz";
 // @ts-ignore
-import synthTiny from "jzz-synth-tiny";
-// @ts-ignore
 import smf from "jzz-midi-smf";
 // @ts-ignore
+import synthTiny from "jzz-synth-tiny";
+// @ts-ignore
 import Soundfont from "soundfont-player";
+
 import {
-  scanMidiProgramsAndDrums,
-  gmProgramToSoundfontName,
-  getDrumSoundfontName,
-  SoundfontLoadingProgress,
   formatSoundfontLoadingStatus,
+  getDrumSoundfontName,
+  gmProgramToSoundfontName,
+  scanMidiProgramsAndDrums,
+  SoundfontLoadingProgress,
 } from "./audio/soundfont-mapping.js";
 
 const JZZ: any = JZZModule;

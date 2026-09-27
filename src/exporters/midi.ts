@@ -1,17 +1,17 @@
 import {
-  Sheet,
-  Note,
   Accidental,
-  ChordSymbol,
-  chordQualityIntervals,
   Beat,
-  PlaybackTimeline,
-  TMDPlaybackRenderer,
-  TMDMacroEvaluator,
-  SheetInstrumentHelper,
+  chordQualityIntervals,
+  ChordSymbol,
   DEFAULT_INSTRUMENT,
+  Note,
+  PlaybackTimeline,
+  Sheet,
+  SheetInstrumentHelper,
+  TMDMacroEvaluator,
+  TMDPlaybackRenderer,
 } from '../core/index.js';
-import { TMDMIDIEncoder, type MIDIEvent, type MIDIMessage } from './midi_encoder.js';
+import { type MIDIEvent, type MIDIMessage,TMDMIDIEncoder } from './midi_encoder.js';
 
 export enum MIDIInstrument {
   // 0-7: Piano
@@ -833,8 +833,8 @@ export namespace MIDIInstrument {
   }
 }
 
+export type { MIDIEvent,MIDIMessage } from './midi_encoder.js';
 export { TMDMIDIEncoder } from './midi_encoder.js';
-export type { MIDIMessage, MIDIEvent } from './midi_encoder.js';
 
 export interface TMDMIDIGeneratorOptions {
   targetParagraph?: string;

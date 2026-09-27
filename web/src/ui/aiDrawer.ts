@@ -1,22 +1,22 @@
 import { TmdSkill } from "../../../src/skill.js";
 import {
-  loadAISettings,
-  saveAISettings,
-  looksLikeApiKey,
-  callAI,
-  extractTmdCode,
-  buildRepairPrompt,
-  validateTmdCode,
-  validateTmdCodeWithIssues,
-  buildProblemsFixPrompt,
-  MODEL_PRESETS,
-  DEFAULT_MODELS,
   AIProviderType,
   AISettingsState,
+  buildProblemsFixPrompt,
+  buildRepairPrompt,
+  callAI,
+  DEFAULT_MODELS,
+  extractTmdCode,
+  loadAISettings,
+  looksLikeApiKey,
+  MODEL_PRESETS,
+  saveAISettings,
+  validateTmdCode,
+  validateTmdCodeWithIssues,
 } from "../ai/index.js";
+import type { TMDWebEditor } from "../editor.js";
 import { escapeHtml } from "../html.js";
 import { getCurrentLocale, t } from "../i18n.js";
-import type { TMDWebEditor } from "../editor.js";
 
 export interface AIDrawerElements {
   aiDrawer: HTMLElement;

@@ -1,16 +1,16 @@
 import {
+  chordQualityIntervals,
   ChordSymbol,
-  Note,
   Entry,
+  MeasureEvent,
+  NotationDuration,
+  Note,
   PitchMapping,
   PlaybackDirectiveEvent,
   Sheet,
-  chordQualityIntervals,
-  TMDMeasureRenderer,
-  MeasureEvent,
-  NotationDuration,
   SheetInstrumentHelper,
   TMDMacroEvaluator,
+  TMDMeasureRenderer,
 } from "../core";
 
 export class TMDLilyPondGenerator {

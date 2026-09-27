@@ -1,10 +1,11 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
 import {
   TMDJSONRPCCodec,
   TMDLSPCompletionEngine,
   TMDLSPDiagnosticEngine,
-  TMDLSPServer,
   TMDLSPPosition,
+  TMDLSPServer,
 } from "../src/lsp/index.js";
 
 describe("TMD LSP Protocol & Completion Tests (TDD)", () => {

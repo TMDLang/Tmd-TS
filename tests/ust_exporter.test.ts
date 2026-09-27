@@ -1,10 +1,12 @@
-import { describe, it, expect } from "vitest";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+
+import { describe, expect,it } from "vitest";
+
+import { main } from "../src/cli.js";
 import { TmdParser } from "../src/core/index.js";
 import { TMDUSTGenerator } from "../src/exporters/ust.js";
-import { main } from "../src/cli.js";
 
 describe("TMDUSTGenerator (UTAU .ust Export)", () => {
   const sampleTmd = `::SCORE::

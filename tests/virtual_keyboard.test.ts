@@ -1,10 +1,11 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect,it } from "vitest";
+
 import {
-  midiToNoteLabel,
-  midiToTmdNote,
-  generateKeyboardKeys,
   calculateWhiteKeyCountForWidth,
   generateDynamicKeyboardKeys,
+  generateKeyboardKeys,
+  midiToNoteLabel,
+  midiToTmdNote,
   type VirtualKeyInfo,
 } from "../web/src/ui/virtualKeyboardHelper.js";
 

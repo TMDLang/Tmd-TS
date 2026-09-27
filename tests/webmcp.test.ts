@@ -1,4 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
 import { buildTmdWebMcpTools, initTmdWebMcp } from '../web/src/mcp/webmcpIntegration.js';
 
 describe('TMD Web MCP Tools (TDD)', () => {

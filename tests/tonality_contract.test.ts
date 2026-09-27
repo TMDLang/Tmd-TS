@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { TmdParser } from "../src/core/parser.js";
+
 import { TMDSongInspector } from "../src/core/inspector.js";
+import { TmdParser } from "../src/core/parser.js";
 
 const inferentialScore = (movableDoBase: string, playback = "", declaredKey = "") => TmdParser.parse(`::SCORE::
 ** Inference Contract **

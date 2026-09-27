@@ -1,13 +1,13 @@
 import {
-  Note,
   Entry,
+  KeySignature,
+  MeasureEvent,
+  Note,
   PlaybackDirectiveEvent,
   Sheet,
-  TMDMeasureRenderer,
-  MeasureEvent,
-  KeySignature,
   SheetInstrumentHelper,
   TMDMacroEvaluator,
+  TMDMeasureRenderer,
 } from "../core";
 
 interface ABCKeyInfo {

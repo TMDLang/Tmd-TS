@@ -1,10 +1,11 @@
+import { TMDPlaybackRenderer } from "./playback.js";
 import {
   Accidental,
   accidentalToSemitone,
   Beat,
+  Entry,
   Note,
   Playback,
-  Entry,
   ScaleDegree,
   scaleDegreeSemitoneOffset,
   Section,
@@ -13,7 +14,6 @@ import {
   Unit,
   UnitGroup,
 } from "./types.js";
-import { TMDPlaybackRenderer } from "./playback.js";
 
 export interface MacroExpansionResult {
   paragraphs: Entry[];

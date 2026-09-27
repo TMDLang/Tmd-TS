@@ -1,11 +1,11 @@
 import {
-  Sheet,
-  Playback,
   ChordSymbol,
   KeySignature,
-  TMDMeasureRenderer,
+  Playback,
+  Sheet,
   SheetInstrumentHelper,
   TMDMacroEvaluator,
+  TMDMeasureRenderer,
 } from '../core/index.js';
 
 export interface ChordProOptions {

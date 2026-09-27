@@ -1,5 +1,5 @@
-import { t } from "../../i18n.js";
 import type { TMDWebEditor } from "../../editor.js";
+import { t } from "../../i18n.js";
 
 export interface InsertSectionModalElements {
   insertSectionModal: HTMLDialogElement;

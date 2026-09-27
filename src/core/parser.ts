@@ -1,13 +1,14 @@
 import * as fs from "node:fs";
+
 import { FilePathNormalizer, TextEncodingDetector } from "../utils/index.js";
 import {
   Accidental,
   Beat,
   ChordSymbol,
+  Entry,
   KeySignature,
   Note,
   Playback,
-  Entry,
   ScaleDegree,
   Section,
   SectionDirective,

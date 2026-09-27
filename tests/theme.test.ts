@@ -1,9 +1,11 @@
-import { describe, it, expect, beforeEach } from "vitest";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { getTheme, setTheme, toggleTheme, THEME_STORAGE_KEY, Theme } from "../web/src/ui/theme.js";
-import { zhTW } from "../web/src/locales/zh-TW.js";
+
+import { beforeEach,describe, expect, it } from "vitest";
+
 import { en } from "../web/src/locales/en.js";
+import { zhTW } from "../web/src/locales/zh-TW.js";
+import { getTheme, setTheme, Theme,THEME_STORAGE_KEY, toggleTheme } from "../web/src/ui/theme.js";
 
 describe("Theme Controller & Light Mode (TDD)", () => {
   let mockStorage: Record<string, string> = {};

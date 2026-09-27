@@ -1,5 +1,7 @@
-import { describe, it, expect, beforeEach } from "vitest";
 import "fake-indexeddb/auto";
+
+import { beforeEach,describe, expect, it } from "vitest";
+
 import { TmdStorage } from "../web/src/storage/db.js";
 import { parseImportedScoreFile } from "../web/src/ui/libraryDrawer.js";
 

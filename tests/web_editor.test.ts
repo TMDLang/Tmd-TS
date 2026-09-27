@@ -1,8 +1,10 @@
-import { describe, it, expect } from "vitest";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { zhTW } from "../web/src/locales/zh-TW.js";
+
+import { describe, expect,it } from "vitest";
+
 import { en } from "../web/src/locales/en.js";
+import { zhTW } from "../web/src/locales/zh-TW.js";
 
 describe("Web Studio Editor Configuration (TDD)", () => {
   it("allows typing tab by binding indentWithTab in keymap", () => {

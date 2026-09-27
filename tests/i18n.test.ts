@@ -1,7 +1,9 @@
-import { describe, it, expect, beforeEach } from "vitest";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { detectLanguage, applyI18n, getCurrentLocale, Locale } from "../web/src/i18n.js";
+
+import { beforeEach,describe, expect, it } from "vitest";
+
+import { applyI18n, detectLanguage, getCurrentLocale, Locale } from "../web/src/i18n.js";
 import { en } from "../web/src/locales/en.js";
 import { zhTW } from "../web/src/locales/zh-TW.js";
 

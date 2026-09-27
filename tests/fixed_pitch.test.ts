@@ -1,8 +1,9 @@
-import { describe, it, expect } from "vitest";
-import { TmdParser, formatSectionDirective, TMDPlaybackRenderer, SectionDirective } from "../src/core/index.js";
-import { TMDMIDIGenerator } from "../src/exporters/midi.js";
+import { describe, expect,it } from "vitest";
+
+import { formatSectionDirective, SectionDirective,TmdParser, TMDPlaybackRenderer } from "../src/core/index.js";
 import { TMDABCGenerator } from "../src/exporters/abc.js";
 import { TMDLilyPondGenerator } from "../src/exporters/lilypond.js";
+import { TMDMIDIGenerator } from "../src/exporters/midi.js";
 import { TMDMusicXMLGenerator } from "../src/exporters/musicxml.js";
 
 describe("Fixed Pitch Section Directive ({?=fixed}) (TDD)", () => {

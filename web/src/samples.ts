@@ -1,8 +1,8 @@
-import starter from "./samples/starter.tmd?raw";
-import sandiansanye from "./samples/sandiansanye.tmd?raw";
 import canon from "./samples/canon_in_d_macro.tmd?raw";
 import landingAtTaoyuan from "./samples/landing-at-taoyuan.tmd?raw";
 import legacy from "./samples/legacy.tmd?raw";
+import sandiansanye from "./samples/sandiansanye.tmd?raw";
+import starter from "./samples/starter.tmd?raw";
 
 export interface TMDSample {
   id: string;

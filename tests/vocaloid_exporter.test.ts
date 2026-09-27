@@ -1,15 +1,17 @@
-import { describe, it, expect } from 'vitest';
 import * as fs from 'node:fs';
-import * as path from 'node:path';
 import * as os from 'node:os';
+import * as path from 'node:path';
+
+import { describe, expect,it } from 'vitest';
+
+import { main } from '../src/cli.js';
 import { TmdParser } from '../src/core/index.js';
 import {
-  VocaloidPhoneme,
   TMDVSQGenerator,
   TMDVSQXGenerator,
   VocaloidExportOptions,
+  VocaloidPhoneme,
 } from '../src/exporters/vocaloid.js';
-import { main } from '../src/cli.js';
 import { TmdMcpServer } from '../src/mcp/index.js';
 
 describe('VocaloidPhoneme (Japanese to X-SAMPA)', () => {

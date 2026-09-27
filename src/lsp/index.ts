@@ -1,9 +1,9 @@
 import {
-  TmdParser,
   TMDMeasureChecker,
-  TMDRefactor,
   TMDOutlineGenerator,
   TMDOutlineNode,
+  TmdParser,
+  TMDRefactor,
 } from "../core/index.js";
 
 // MARK: - LSP Data Structures

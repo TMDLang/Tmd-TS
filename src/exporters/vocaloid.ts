@@ -1,8 +1,8 @@
 import {
-  Sheet,
-  TMDPlaybackRenderer,
   PlaybackTimeline,
+  Sheet,
   SheetInstrumentHelper,
+  TMDPlaybackRenderer,
 } from '../core/index.js';
 import {
   MIDIEvent,

@@ -1,6 +1,6 @@
-import { Sheet, Entry, ScaleDegree, UnitGroup, KeySignature } from "./types.js";
+import { formatParagraph,formatSheet } from "./format.js";
 import { TmdParser } from "./parser.js";
-import { formatSheet, formatParagraph } from "./format.js";
+import { Entry, KeySignature,ScaleDegree, Sheet, UnitGroup } from "./types.js";
 
 export class TMDRefactorError extends Error {
   constructor(message: string) {

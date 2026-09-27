@@ -1,6 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
 import * as fs from "node:fs";
 import * as path from "node:path";
+
+import { beforeEach,describe, expect, it, vi } from "vitest";
 const { mockJZZ, mockJZZInstance } = vi.hoisted(() => {
   const instance = {
     synth: { Tiny: vi.fn(() => ({})) },
@@ -21,7 +22,7 @@ vi.mock("jzz-synth-tiny", () => ({ default: () => {} }));
 vi.mock("jzz-midi-smf", () => ({ default: () => {} }));
 vi.mock("soundfont-player", () => ({ default: {} }));
 
-import { tmdPlayer, TMDMidiPlayer } from "../web/src/midi-player.js";
+import { TMDMidiPlayer,tmdPlayer } from "../web/src/midi-player.js";
 
 describe("TMD Player Replay & End-of-Track Invariants (TDD)", () => {
   beforeEach(() => {

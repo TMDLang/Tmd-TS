@@ -1,4 +1,4 @@
-import { TMDLocale, TMDSectionTimingProfile, TMDTonalityProfile, TMDSongInspector } from "../../../src/core/inspector.js";
+import { TMDLocale, TMDSectionTimingProfile, TMDSongInspector,TMDTonalityProfile } from "../../../src/core/inspector.js";
 import { TMDLocalizationKey, TMDLocalizer } from "../../../src/core/localization.js";
 import { escapeHtml } from "../html.js";
 import { en } from "../locales/en.js";

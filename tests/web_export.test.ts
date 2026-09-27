@@ -1,8 +1,10 @@
-import { describe, it, expect } from 'vitest';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { zhTW } from '../web/src/locales/zh-TW.js';
+
+import { describe, expect,it } from 'vitest';
+
 import { en } from '../web/src/locales/en.js';
+import { zhTW } from '../web/src/locales/zh-TW.js';
 
 describe('Web UI Exporters & REAPER support (TDD)', () => {
   it('defines REAPER export i18n labels in zh-TW and en locales', () => {

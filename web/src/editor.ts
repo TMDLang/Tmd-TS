@@ -1,58 +1,58 @@
 import {
-  EditorView,
-  lineNumbers,
-  highlightActiveLineGutter,
-  highlightSpecialChars,
-  drawSelection,
-  dropCursor,
-  rectangularSelection,
-  crosshairCursor,
-  highlightActiveLine,
-  keymap,
-  gutter,
-  GutterMarker,
-  BlockInfo,
-  Decoration,
-  DecorationSet,
-  hoverTooltip,
-  Tooltip,
-} from "@codemirror/view";
-import { EditorState, Compartment, StateEffect, StateField, RangeSetBuilder } from "@codemirror/state";
-import {
-  StreamLanguage,
-  foldGutter,
-  indentOnInput,
-  syntaxHighlighting,
-  defaultHighlightStyle,
-  bracketMatching,
-  foldKeymap,
-} from "@codemirror/language";
-import {
-  history,
-  defaultKeymap,
-  historyKeymap,
-  toggleComment,
-  indentWithTab,
-} from "@codemirror/commands";
-import { highlightSelectionMatches, searchKeymap } from "@codemirror/search";
-import {
   autocompletion,
-  startCompletion,
   closeBrackets,
   closeBracketsKeymap,
-  completionKeymap,
   CompletionContext,
+  completionKeymap,
   CompletionResult,
+  startCompletion,
 } from "@codemirror/autocomplete";
-import { linter, lintKeymap, Diagnostic as CMDiagnostic } from "@codemirror/lint";
+import {
+  defaultKeymap,
+  history,
+  historyKeymap,
+  indentWithTab,
+  toggleComment,
+} from "@codemirror/commands";
+import {
+  bracketMatching,
+  defaultHighlightStyle,
+  foldGutter,
+  foldKeymap,
+  indentOnInput,
+  StreamLanguage,
+  syntaxHighlighting,
+} from "@codemirror/language";
+import { Diagnostic as CMDiagnostic,linter, lintKeymap } from "@codemirror/lint";
+import { highlightSelectionMatches, searchKeymap } from "@codemirror/search";
+import { Compartment, EditorState, RangeSetBuilder,StateEffect, StateField } from "@codemirror/state";
 import { oneDark } from "@codemirror/theme-one-dark";
+import {
+  BlockInfo,
+  crosshairCursor,
+  Decoration,
+  DecorationSet,
+  drawSelection,
+  dropCursor,
+  EditorView,
+  gutter,
+  GutterMarker,
+  highlightActiveLine,
+  highlightActiveLineGutter,
+  highlightSpecialChars,
+  hoverTooltip,
+  keymap,
+  lineNumbers,
+  rectangularSelection,
+  Tooltip,
+} from "@codemirror/view";
+
 import type { TMDMeasureIssue } from "../../src/core/measure_check.js";
 import { DEFAULT_INSTRUMENT } from "../../src/core/types.js";
-import { TMDWebLSPClient } from "./lsp/client.js";
 import { t } from "./i18n.js";
-
-import { tmdStreamParser, type TMDParserState } from "./syntax.js";
-export { tmdStreamParser, type TMDParserState };
+import { TMDWebLSPClient } from "./lsp/client.js";
+import { type TMDParserState,tmdStreamParser } from "./syntax.js";
+export { type TMDParserState,tmdStreamParser };
 
 // Export comment tokens configuration for tests/editor integrations: tmdStreamParser.languageData.commentTokens
 export const tmdLanguage = StreamLanguage.define<TMDParserState>(tmdStreamParser);

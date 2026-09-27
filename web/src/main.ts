@@ -1,34 +1,33 @@
 import { TmdParser } from "../../src/core/parser.js";
-import { Sheet } from "../../src/core/types.js";
 import { TMDRefactor } from "../../src/core/refactor.js";
+import { Sheet } from "../../src/core/types.js";
+import { AIProviderType } from "./ai/index.js";
 import { createTmdEditor, TMDWebEditor } from "./editor.js";
-import { SAMPLES } from "./samples.js";
 import {
   applyI18n,
   detectLanguage,
   getCurrentLocale,
-  onLanguageChange,
   Locale,
+  onLanguageChange,
 } from "./i18n.js";
-import { AIProviderType } from "./ai/index.js";
 import { initTmdWebMcp } from "./mcp/webmcpIntegration.js";
-import { TmdStorage, SavedScore } from "./storage/db.js";
-
-// Extracted UI Controllers, Services & DOM
-import { initAppDOMElements, AppDOMElements } from "./ui/dom.js";
-import { initTheme, toggleTheme, getTheme } from "./ui/theme.js";
+import { SAMPLES } from "./samples.js";
 import { TMDScoreService } from "./services/scoreService.js";
-import { renderInspectorView, setupInspectorPanelEvents } from "./ui/inspector.js";
-import { updateProblemsPanel, setupProblemsPanelEvents } from "./ui/problemsPanel.js";
-import { savePanelsState, applyPanelsState } from "./ui/panelState.js";
-import { TMDPlayerController } from "./ui/playerBar.js";
-import { TMDLibraryDrawerController } from "./ui/libraryDrawer.js";
+import { SavedScore,TmdStorage } from "./storage/db.js";
 import { TMDAIDrawerController } from "./ui/aiDrawer.js";
+// Extracted UI Controllers, Services & DOM
+import { AppDOMElements,initAppDOMElements } from "./ui/dom.js";
 import { setupExportMenu } from "./ui/exportMenu.js";
-import { TMDToolsAndContextMenuController } from "./ui/toolsMenu.js";
-import { setupRefactorModals } from "./ui/modals/refactorModals.js";
-import { setupInsertSectionModal } from "./ui/modals/insertSectionModal.js";
+import { renderInspectorView, setupInspectorPanelEvents } from "./ui/inspector.js";
+import { TMDLibraryDrawerController } from "./ui/libraryDrawer.js";
 import { setupHumModal } from "./ui/modals/humModal.js";
+import { setupInsertSectionModal } from "./ui/modals/insertSectionModal.js";
+import { setupRefactorModals } from "./ui/modals/refactorModals.js";
+import { applyPanelsState,savePanelsState } from "./ui/panelState.js";
+import { TMDPlayerController } from "./ui/playerBar.js";
+import { setupProblemsPanelEvents,updateProblemsPanel } from "./ui/problemsPanel.js";
+import { getTheme,initTheme, toggleTheme } from "./ui/theme.js";
+import { TMDToolsAndContextMenuController } from "./ui/toolsMenu.js";
 import { VirtualKeyboardController } from "./ui/virtualKeyboard.js";
 
 let editor: TMDWebEditor;

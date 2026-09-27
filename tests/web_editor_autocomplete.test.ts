@@ -1,8 +1,9 @@
-import { describe, it, expect } from "vitest";
-import { EditorState } from "@codemirror/state";
 import { CompletionContext } from "@codemirror/autocomplete";
-import { TMDWebLSPClient } from "../web/src/lsp/client.js";
+import { EditorState } from "@codemirror/state";
+import { describe, expect,it } from "vitest";
+
 import { createTmdCompletionSource } from "../web/src/editor.js";
+import { TMDWebLSPClient } from "../web/src/lsp/client.js";
 
 describe("TMD Autocomplete Integration", () => {
   it("resolves section name completions when after '->' without space (explicit: false)", async () => {

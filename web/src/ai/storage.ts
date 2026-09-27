@@ -1,5 +1,5 @@
-import { AISettingsState, AIProviderType } from "./types.js";
 import { DEFAULT_BASE_URLS, DEFAULT_MODELS } from "./presets.js";
+import { AIProviderType,AISettingsState } from "./types.js";
 
 const STORAGE_KEY = "tmd_ai_settings_v1";
 

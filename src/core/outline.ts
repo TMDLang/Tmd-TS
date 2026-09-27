@@ -1,4 +1,4 @@
-import { Lexer, SourcePosition, LexedToken } from "./parser.js";
+import { LexedToken,Lexer, SourcePosition } from "./parser.js";
 
 export interface TMDOutlineRange {
   startLine: number;

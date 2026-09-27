@@ -1,11 +1,11 @@
 import { Sheet } from "../../../../src/core/types.js";
-import { t } from "../../i18n.js";
 import {
-  resampleAudioBuffer,
   detectTonicAndScale,
   quantizeNoteEventsToTmdSection,
+  resampleAudioBuffer,
 } from "../../audio/quantizer.js";
 import type { TMDWebEditor } from "../../editor.js";
+import { t } from "../../i18n.js";
 
 export interface HumModalElements {
   humModal: HTMLDialogElement;

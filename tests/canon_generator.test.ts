@@ -1,7 +1,8 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect,it } from "vitest";
+
 import { TMDCanonGenerator } from "../src/core/canon_gen.js";
-import { TmdParser } from "../src/core/parser.js";
 import { TMDMeasureChecker } from "../src/core/measure_check.js";
+import { TmdParser } from "../src/core/parser.js";
 import { TMDPlaybackRenderer } from "../src/core/playback.js";
 
 describe("TMDCanonGenerator (TDD port from canon_gen.py)", () => {

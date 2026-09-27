@@ -1,5 +1,5 @@
+import { LexedToken, Lexer, TmdParser,Token } from "./parser.js";
 import { Beat } from "./types.js";
-import { Lexer, Token, LexedToken, TmdParser } from "./parser.js";
 
 export interface TMDMeasureIssue {
   paragraphName: string;

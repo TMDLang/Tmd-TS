@@ -1,4 +1,4 @@
-import { ChordSymbol, Note, PitchMapping, PlaybackDirectiveEvent, Sheet, TMDPlaybackRenderer, TMDMeasureRenderer, SheetInstrumentHelper, TMDMacroEvaluator } from "../core";
+import { ChordSymbol, Note, PitchMapping, PlaybackDirectiveEvent, Sheet, SheetInstrumentHelper, TMDMacroEvaluator,TMDMeasureRenderer, TMDPlaybackRenderer } from "../core";
 
 export class TMDMusicXMLGenerator {
   public static generateMusicXML(rawSheet: Sheet): string {

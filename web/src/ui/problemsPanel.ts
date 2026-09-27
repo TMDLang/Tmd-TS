@@ -1,8 +1,8 @@
+import { TMDMeasureChecker, TMDMeasureIssue } from "../../../src/core/measure_check.js";
+import { TmdParser } from "../../../src/core/parser.js";
+import type { TMDWebEditor } from "../editor.js";
 import { escapeHtml } from "../html.js";
 import { t } from "../i18n.js";
-import { TmdParser } from "../../../src/core/parser.js";
-import { TMDMeasureChecker, TMDMeasureIssue } from "../../../src/core/measure_check.js";
-import type { TMDWebEditor } from "../editor.js";
 
 export interface ProblemsPanelElements {
   problemsPanel: HTMLElement;

@@ -20,6 +20,7 @@
   ],
   "scripts": {
     "build": "tsc",
+    "eslint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
     "web:dev": "npm --prefix web run dev",
@@ -27,8 +28,12 @@
     "prepublishOnly": "npm run build && npm test"
   },
   "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^8.63.0",
+    "@typescript-eslint/parser": "^8.63.0",
     "@types/jszip": "^3.4.0",
     "@types/node": "^22.0.0",
+    "eslint": "^10.6.0",
+    "eslint-plugin-simple-import-sort": "^13.0.0",
     "@vitest/coverage-v8": "^2.1.9",
     "fake-indexeddb": "^6.2.5",
     "typescript": "^5.5.0",

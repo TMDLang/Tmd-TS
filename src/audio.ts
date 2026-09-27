@@ -1,4 +1,4 @@
-import { Sheet, TMDPlaybackRenderer, TMDMacroEvaluator, PlaybackEvent, PlaybackDirectiveEvent, Note, Accidental } from "./core/index.js";
+import { Accidental,Note, PlaybackDirectiveEvent, PlaybackEvent, Sheet, TMDMacroEvaluator, TMDPlaybackRenderer } from "./core/index.js";
 
 export class TmdAudioError extends Error {}
 

@@ -1,6 +1,6 @@
-import { t } from "../i18n.js";
-import { escapeHtml } from "../html.js";
 import type { TMDWebEditor } from "../editor.js";
+import { escapeHtml } from "../html.js";
+import { t } from "../i18n.js";
 import { tmdPlayer } from "../midi-player.js";
 import {
   calculateWhiteKeyCountForWidth,

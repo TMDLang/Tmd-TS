@@ -1,18 +1,17 @@
+import { TMDMacroEvaluator } from "./macro.js";
 import {
   Beat,
   ChordSymbol,
   DEFAULT_INSTRUMENT,
+  DynamicMark,
+  Entry,
   KeySignature,
   Note,
   Playback,
-  Entry,
   SectionDirective,
   SectionDirectiveKind,
   Sheet,
-  Unit,
-  DynamicMark
-} from "./types";
-import { TMDMacroEvaluator } from "./macro.js";
+  Unit} from "./types";
 
 export type PlaybackContent =
   | { type: "note"; note: Note }

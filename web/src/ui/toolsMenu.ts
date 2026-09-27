@@ -1,6 +1,6 @@
 import { TMDRefactor } from "../../../src/core/refactor.js";
-import { t } from "../i18n.js";
 import type { TMDWebEditor } from "../editor.js";
+import { t } from "../i18n.js";
 
 export interface ContextMenuElements {
   editorContextMenu: HTMLElement;

@@ -1,11 +1,11 @@
-import { Sheet } from "../../../src/core/types.js";
 import { formatOrder } from "../../../src/core/format.js";
 import { TmdParser } from "../../../src/core/parser.js";
+import { Sheet } from "../../../src/core/types.js";
 import { TMDMIDIGenerator } from "../../../src/exporters/midi.js";
-import { t } from "../i18n.js";
-import { tmdPlayer, TMDMidiSynthType } from "../midi-player.js";
-import { makeDraggable } from "./draggable.js";
 import type { TMDWebEditor } from "../editor.js";
+import { t } from "../i18n.js";
+import { TMDMidiSynthType,tmdPlayer } from "../midi-player.js";
+import { makeDraggable } from "./draggable.js";
 
 export interface PlayerBarElements {
   tmdPlayerBar: HTMLElement;
