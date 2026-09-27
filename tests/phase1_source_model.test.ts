@@ -46,6 +46,18 @@ B:piano@|0|{ <4*> 5 6 7 1^ }`);
     expect(sheet.distinctAssignments?.().map((name) => name.toLowerCase())).toEqual(["piano"]);
   });
 
+  it("uses the canonical assignment field when building playback", async () => {
+    const sheet = TmdParser.parse(`::SCORE::
+Theme:Piano@|0|{
+  <4*> 1 2 3 4
+}`);
+    const entry = sheet.paragraphs[0];
+    entry.assignment = "Guitar";
+    entry.instrument = "Piano";
+    const { TMDPlaybackRenderer } = await import("../src/core/playback");
+    expect(TMDPlaybackRenderer.render(sheet, "Guitar").assignment).toBe("Guitar");
+  });
+
   it("preserves explicit barline positions through formatting", () => {
     const sheet = TmdParser.parse(`::SCORE::
 intro:Piano@|0|{

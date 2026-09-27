@@ -94,8 +94,9 @@ export class TMDPlaybackRenderer {
   public static validate(inputSheet: Sheet): PlaybackValidationIssue[] {
     const sheet = TMDMacroEvaluator.expand(inputSheet);
     const grouped = new Map<string, Paragraph[]>();
-    for (const entry of sheet.paragraphs.filter((paragraph) => paragraph.instrument)) {
-      const key = `${entry.name.toLowerCase()}\u0000${entry.instrument.toLowerCase()}`;
+    for (const entry of sheet.paragraphs.filter((paragraph) => paragraph.assignment ?? paragraph.instrument)) {
+      const assignment = entry.assignment ?? entry.instrument;
+      const key = `${entry.name.toLowerCase()}\u0000${assignment.toLowerCase()}`;
       const values = grouped.get(key) ?? [];
       values.push(entry);
       grouped.set(key, values);
@@ -109,12 +110,13 @@ export class TMDPlaybackRenderer {
           const second = this.entryRange(entries[j], sheet.beat);
           if (Math.max(first.start, second.start) < Math.min(first.end, second.end)) {
             const entry = entries[i];
+            const assignment = entry.assignment ?? entry.instrument;
             issues.push({
               sectionName: entry.name,
-              assignment: entry.instrument,
+              assignment,
               firstOffset: entries[i].start,
               secondOffset: entries[j].start,
-              description: `Overlapping entries for assignment ${entry.instrument} in section ${entry.name} at offsets ${entries[i].start} and ${entries[j].start}`
+              description: `Overlapping entries for assignment ${entry.assignment ?? entry.instrument} in section ${entry.name} at offsets ${entries[i].start} and ${entries[j].start}`
             });
           }
         }
@@ -140,9 +142,9 @@ export class TMDPlaybackRenderer {
     const sheet = TMDMacroEvaluator.expand(inputSheet);
     const targetInst = instrument || DEFAULT_INSTRUMENT;
     const paragraphs = sheet.paragraphs.filter((p) => {
-      const pInst = p.instrument || DEFAULT_INSTRUMENT;
+      const pInst = (p.assignment ?? p.instrument) || DEFAULT_INSTRUMENT;
       return pInst.toLocaleLowerCase() === targetInst.toLocaleLowerCase()
-        || p.instrument.toLocaleLowerCase() === instrument.toLocaleLowerCase();
+        || (p.assignment ?? p.instrument).toLocaleLowerCase() === instrument.toLocaleLowerCase();
     });
     const orders: Order[] = sheet.orders.length > 0
       ? sheet.orders
@@ -236,7 +238,7 @@ export class TMDPlaybackRenderer {
       duration: timelinePosition + offset
     };
     if (paragraphs.length > 0 || instrument) {
-      timeline.assignment = paragraphs[0]?.instrument || instrument;
+      timeline.assignment = (paragraphs[0]?.assignment ?? paragraphs[0]?.instrument) || instrument;
       timeline.track = {
         assignment: timeline.assignment,
         events: timeline.events,
@@ -251,7 +253,7 @@ export class TMDPlaybackRenderer {
   public static renderConductor(inputSheet: Sheet, options?: TMDPlaybackRendererOptions): PlaybackTimeline {
     const sheet = TMDMacroEvaluator.expand(inputSheet);
     const instruments = Array.from(new Set(
-      sheet.paragraphs.map((p) => p.instrument).filter((instrument) => Boolean(instrument && instrument.trim()))
+      sheet.paragraphs.map((p) => p.assignment ?? p.instrument).filter((assignment): assignment is string => Boolean(assignment && assignment.trim()))
     )).sort();
     const sourceTimelines = instruments.map((instrument) => this.render(sheet, instrument, options));
     const merged: PlaybackDirectiveEvent[] = [];
