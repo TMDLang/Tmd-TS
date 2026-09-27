@@ -64,6 +64,8 @@ export interface CanonGeneratorOptions {
   mode?: "tonal" | "pentatonic";
   useMacro?: boolean;
   seed?: number;
+  /** Probability that an eligible variation becomes an eighth-note violin arpeggio texture. */
+  arpeggioProbability?: number;
 }
 
 export class TMDCanonGenerator {
@@ -194,6 +196,7 @@ export class TMDCanonGenerator {
   private voiceInstruments: string[];
   private bassInstrument: string;
   private rng: () => number;
+  private arpeggioProbability: number;
 
   constructor(options: CanonGeneratorOptions = {}) {
     this.title = options.title ?? "Canon";
@@ -206,6 +209,7 @@ export class TMDCanonGenerator {
     this.canonType = options.canonType ?? "standard";
     this.mode = options.mode ?? "tonal";
     this.useMacro = options.useMacro ?? true;
+    this.arpeggioProbability = Math.max(0, Math.min(1, options.arpeggioProbability ?? 0.25));
 
     if (options.seed !== undefined) {
       this.rng = this.createSeededRng(options.seed);
@@ -373,9 +377,19 @@ export class TMDCanonGenerator {
     return this.scale[newIdx];
   }
 
+  private generateArpeggioBar(tones1: string[], tones2: string[]): string {
+    const makeHalf = (tones: string[]): string[] => {
+      const start = Math.floor(this.rng() * tones.length);
+      const direction = this.rng() < 0.5 ? 1 : -1;
+      return Array.from({ length: 4 }, (_, index) => tones[(start + direction * index + tones.length * 2) % tones.length]);
+    };
+    return `${makeHalf(tones1).join(" ")}  ${makeHalf(tones2).join(" ")}`;
+  }
+
   public generateThemeBars(bassNotes: string[], variationIdx: number): Array<[string, string[]]> {
     const style = variationIdx % 5;
     const measures: string[] = [];
+    const useArpeggioTexture = style !== 2 && this.rng() < this.arpeggioProbability;
 
     // Authentic Pachelbel rhythm: Each measure covers 2 bass chords (beats 1-2 and beats 3-4)
     for (let b = 0; b < bassNotes.length; b += 2) {
@@ -383,6 +397,11 @@ export class TMDCanonGenerator {
       const b2 = b + 1 < bassNotes.length ? bassNotes[b + 1] : b1;
       const tones1 = this.getChordTones(b1);
       const tones2 = this.getChordTones(b2);
+
+      if (useArpeggioTexture) {
+        measures.push(this.generateArpeggioBar(tones1, tones2));
+        continue;
+      }
 
       if (style === 0) {
         // Style 0: Lyrical Cantabile (<4*>) - 4 beats per measure:
@@ -464,7 +483,7 @@ export class TMDCanonGenerator {
       }
     }
 
-    const grid = style === 2 ? "<16*>" : style === 0 ? "<4*>" : "<8*>";
+    const grid = useArpeggioTexture ? "<8*>" : style === 2 ? "<16*>" : style === 0 ? "<4*>" : "<8*>";
     return [[grid, measures]];
   }
 
