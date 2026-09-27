@@ -1,4 +1,4 @@
-import { Sheet, Paragraph, ScaleDegree, UnitGroup, KeySignature } from "./types.js";
+import { Sheet, Entry, ScaleDegree, UnitGroup, KeySignature } from "./types.js";
 import { TmdParser } from "./parser.js";
 import { formatSheet, formatParagraph } from "./format.js";
 
@@ -285,7 +285,7 @@ export class TMDRefactor {
 
   public static extractInstrument(source: string, instrument: string): string {
     const sheet = TmdParser.parseThrowing(source);
-    const matchingParagraphs = sheet.paragraphs.filter((p) => p.instrument === instrument);
+    const matchingParagraphs = sheet.paragraphs.filter((p) => (p.assignment ?? p.instrument) === instrument);
     if (matchingParagraphs.length === 0) {
       throw new TMDRefactorError(`Instrument '${instrument}' not found in score`);
     }
@@ -342,7 +342,7 @@ export class TMDRefactor {
     options?: { section?: string; octaveShift?: number }
   ): string {
     const sheet = TmdParser.parseThrowing(source);
-    let matching = sheet.paragraphs.filter((p) => p.instrument === sourceInstrument);
+    let matching = sheet.paragraphs.filter((p) => (p.assignment ?? p.instrument) === sourceInstrument);
     if (options?.section) {
       matching = matching.filter((p) => p.name === options.section);
     }
@@ -354,7 +354,7 @@ export class TMDRefactor {
     }
 
     const shift = options?.octaveShift || 0;
-    const duplicatedParagraphs: Paragraph[] = matching.map((orig) => {
+    const duplicatedParagraphs: Entry[] = matching.map((orig) => {
       const clonedSections = orig.sections.map((sec) => ({
         noteLength: sec.noteLength,
         barlinePositions: [...(sec.barlinePositions ?? [])],
@@ -418,7 +418,7 @@ export class TMDRefactor {
     options: { section?: string; intervalSteps: number }
   ): string {
     const sheet = TmdParser.parseThrowing(source);
-    let matching = sheet.paragraphs.filter((p) => p.instrument === sourceInstrument);
+    let matching = sheet.paragraphs.filter((p) => (p.assignment ?? p.instrument) === sourceInstrument);
     if (options?.section) {
       matching = matching.filter((p) => p.name === options.section);
     }
@@ -430,7 +430,7 @@ export class TMDRefactor {
     }
 
     const steps = options.intervalSteps; // e.g. +2 for 3rd up, -2 for 3rd down
-    const harmonizedParagraphs: Paragraph[] = matching.map((orig) => {
+    const harmonizedParagraphs: Entry[] = matching.map((orig) => {
       const clonedSections = orig.sections.map((sec) => ({
         noteLength: sec.noteLength,
         barlinePositions: [...(sec.barlinePositions ?? [])],
@@ -507,8 +507,8 @@ export class TMDRefactor {
     }
 
     // Map instruments -> combined list of sections in linear playback sequence
-    const instruments = Array.from(new Set(sheet.paragraphs.map((p) => p.instrument)));
-    const linearParagraphs: Paragraph[] = [];
+    const instruments = Array.from(new Set(sheet.paragraphs.map((p) => p.assignment ?? p.instrument)));
+    const linearParagraphs: Entry[] = [];
 
     for (const inst of instruments) {
       const combinedUnitGroups: UnitGroup[] = [];
@@ -516,7 +516,7 @@ export class TMDRefactor {
 
       for (const ord of sheet.orders) {
         if (ord.type !== "name") continue;
-        const para = sheet.paragraphs.find((p) => p.name === ord.name && p.instrument === inst);
+      const para = sheet.paragraphs.find((p) => p.name === ord.name && (p.assignment ?? p.instrument) === inst);
         if (!para) continue;
 
         for (const sec of para.sections) {

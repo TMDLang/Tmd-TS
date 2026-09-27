@@ -1,6 +1,6 @@
 import {
   Sheet,
-  Order,
+  Playback,
   ChordSymbol,
   KeySignature,
   TMDMeasureRenderer,
@@ -61,7 +61,7 @@ export class TMDChordProGenerator {
       distinctInstruments[0];
 
     // Group sections by order
-    const orders: Order[] =
+    const orders: Playback[] =
       sheet.orders.length > 0
         ? sheet.orders
         : Array.from(new Set(sheet.paragraphs.map((p) => p.name))).map((n) => ({

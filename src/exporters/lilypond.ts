@@ -1,7 +1,7 @@
 import {
   ChordSymbol,
   Note,
-  Paragraph,
+  Entry,
   PitchMapping,
   PlaybackDirectiveEvent,
   Sheet,
@@ -276,7 +276,7 @@ export class TMDLilyPondGenerator {
     return str.replace(/"/g, '\\"');
   }
 
-  private static paragraphsContainPercussion(paragraphs: Paragraph[], instrument: string): boolean {
+  private static paragraphsContainPercussion(paragraphs: Entry[], instrument: string): boolean {
     return paragraphs
       .filter((p) => (p.assignment ?? p.instrument).toLocaleLowerCase() === instrument.toLocaleLowerCase())
       .some((p) =>

@@ -2,7 +2,7 @@ import {
   Sheet,
   PlaybackTimeline,
   TMDPlaybackRenderer,
-  Order,
+  Playback,
   Beat,
   SheetInstrumentHelper,
   TMDMacroEvaluator,
@@ -88,7 +88,7 @@ export class TMDReaperGenerator {
     };
 
     // Calculate section markers
-    const orders: Order[] = sheet.orders.length > 0
+    const orders: Playback[] = sheet.orders.length > 0
       ? sheet.orders
       : Array.from(new Set(sheet.paragraphs.map((p) => p.name))).map((n) => ({ type: "name" as const, name: n }));
 

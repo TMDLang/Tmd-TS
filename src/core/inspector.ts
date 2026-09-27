@@ -1,7 +1,7 @@
 import {
   KeySignature,
-  Order,
-  Paragraph,
+  Playback,
+  Entry,
   ScaleDegree,
   scaleDegreeLetter,
   scaleDegreeSemitoneOffset,
@@ -298,7 +298,7 @@ export class TMDSongInspector {
   }
 
   private static buildTimingProfile(sheet: Sheet, timelineDirectives: PlaybackDirectiveEvent[]): TMDTimingProfile {
-    const orders: Order[] =
+    const orders: Playback[] =
       sheet.orders.length > 0
         ? sheet.orders
         : Array.from(new Set(sheet.paragraphs.map((p) => p.name))).map((n) => ({
@@ -516,7 +516,7 @@ export class TMDSongInspector {
   }
 
   private static collectTimelineDirectives(sheet: Sheet): PlaybackDirectiveEvent[] {
-    const instruments = new Set(sheet.paragraphs.map((paragraph) => paragraph.instrument).filter((instrument) => instrument.trim().length > 0));
+    const instruments = new Set(sheet.paragraphs.map((paragraph) => paragraph.assignment ?? paragraph.instrument).filter((instrument) => instrument.trim().length > 0));
     const directives: PlaybackDirectiveEvent[] = [];
     for (const instrument of instruments) {
       directives.push(...TMDPlaybackRenderer.render(sheet, instrument).directives);
@@ -610,11 +610,12 @@ export class TMDSongInspector {
   private static buildDensityProfile(sheet: Sheet): TMDArrangementDensityProfile {
     const sectionDict: Record<string, string[]> = {};
     for (const p of sheet.paragraphs) {
-      if (!p.instrument.trim()) continue;
+      const assignment = p.assignment ?? p.instrument;
+      if (!assignment.trim()) continue;
       if (!sectionDict[p.name]) {
         sectionDict[p.name] = [];
       }
-      sectionDict[p.name].push(p.instrument);
+      sectionDict[p.name].push(assignment);
     }
 
     const sectionDensities: TMDSectionDensity[] = [];
