@@ -132,6 +132,8 @@ export class TMDReaperGenerator {
     let melodyChannel = 0;
 
     for (const instrument of distinctInstruments) {
+      const instTimeline = TMDPlaybackRenderer.render(sheet, instrument);
+      if (!instTimeline.events.some((event) => event.content.type !== 'rest')) continue;
       const midiInst = MIDIInstrument.resolve(instrument);
       let channel: number;
       if (MIDIInstrument.isPercussion(midiInst)) {
@@ -155,7 +157,6 @@ export class TMDReaperGenerator {
       const color = this.getTrackColor(midiInst);
 
       // Render track events
-      const instTimeline = TMDPlaybackRenderer.render(sheet, instrument);
       const events: MIDIEvent[] = TMDMIDIGenerator.instrumentEvents(
         instTimeline,
         instrument,

@@ -1,4 +1,6 @@
 import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import {
   TMDRefactor,
   TMDMeasureChecker,
@@ -8,6 +10,22 @@ import {
 } from "../src/index.js";
 
 describe("TMDRefactor (TDD)", () => {
+  it("matches the shared structured measure diagnostic fixture", () => {
+    const source = readFileSync(join(process.cwd(), "docs/conformance/diagnostic-measure-fixture.tmd"), "utf8");
+    const issue = TMDMeasureChecker.check(source)[0];
+
+    expect(issue).toMatchObject({
+      paragraphName: "Intro",
+      instrument: "Piano",
+      measureIndex: 1,
+      expectedUnits: 4,
+      actualUnits: 3,
+      deltaUnits: -1,
+      noteLength: 4,
+      beat: { count: 4, noteValue: 4 },
+    });
+  });
+
   it("formats TMD document preserving comments and normalizing layout", () => {
     const input = `::SCORE::
 /* Header Comment */
@@ -502,6 +520,7 @@ verse:Vocal@|0|{
     expect(harmonized).toContain("verse:Vocal@|0|{");
     expect(harmonized).toContain("verse:Backing@|0|{");
     expect(harmonized).toContain("3 4 5 3");
+    expect(harmonized).toContain("| 3 4 5 3 |");
 
     const issues = TMDMeasureChecker.check(harmonized);
     expect(issues).toHaveLength(0);
@@ -1048,7 +1067,7 @@ verse:Piano@|0|{
     const issue = issues[0];
     expect(issue.paragraphName).toBe("chorus");
     expect(issue.measureIndex).toBe(0);
-    expect(issue.description).toContain("Undefined section 'chorus' in playback order");
+    expect(issue.description).toContain("Undefined section 'chorus' in playback");
   });
 
   it("reports issue when execution order refers to undefined section following a directive", () => {
@@ -1070,7 +1089,7 @@ verse:Piano@|0|{
     expect(issues).toHaveLength(1);
     const issue = issues[0];
     expect(issue.paragraphName).toBe("ending");
-    expect(issue.description).toContain("Undefined section 'ending' in playback order");
+    expect(issue.description).toContain("Undefined section 'ending' in playback");
   });
 
   it("reports issue when playback order is missing", () => {
@@ -1090,7 +1109,7 @@ verse:Piano@|0|{
     expect(issues).toHaveLength(1);
     const issue = issues[0];
     expect(issue.instrument).toBe("Order");
-    expect(issue.description).toContain("Missing playback order");
+    expect(issue.description).toContain("Missing playback");
   });
 
   it("reports issue when playback order does not terminate with '#'", () => {
@@ -1112,7 +1131,7 @@ verse:Piano@|0|{
     expect(issues).toHaveLength(1);
     const issue = issues[0];
     expect(issue.instrument).toBe("Order");
-    expect(issue.description).toContain("Playback order must terminate with '#'");
+    expect(issue.description).toContain("Playback must terminate with '#'");
   });
 
   it("reports unclosed paragraph instead of missing playback order when closing brace is omitted before order", () => {
@@ -1136,11 +1155,11 @@ Grand_Terminal_Arrival:Piano@|0|{
 
     const issues = TMDMeasureChecker.check(input);
     const orderIssues = issues.filter((i) => i.instrument === "Order");
-    const unclosedParagraph = issues.find((i) => i.snippet.includes("Unclosed paragraph"));
+    const unclosedParagraph = issues.find((i) => i.snippet.includes("Unclosed entry"));
 
     expect(unclosedParagraph).toBeDefined();
     expect(unclosedParagraph?.paragraphName).toBe("Grand_Terminal_Arrival");
-    expect(unclosedParagraph?.description).toContain("Unclosed paragraph");
+    expect(unclosedParagraph?.description).toContain("Unclosed entry");
     // Should NOT report "Missing playback order" because order is clearly present
     expect(orderIssues.some((i) => i.snippet.includes("Missing playback order"))).toBe(false);
   });
@@ -1330,8 +1349,7 @@ intro:CHORD@|0|{
 |[1] - | - [7,] |
 
 <4*>
-[1]-----[7,]-
-[1]-----[7,]-
+| 1 2 3 4 | 5 6 7 1 |
 }
 
 -> intro ->#
@@ -1341,6 +1359,19 @@ intro:CHORD@|0|{
     // total 10 measures. Should have 0 issues.
     const issues = TMDMeasureChecker.check(code);
     expect(issues).toHaveLength(0);
+  });
+
+  it("requires explicit barlines when one section spans multiple measures", () => {
+    const code = `::SCORE::
+<4/4>
+intro:Piano@|0|{
+<4*>
+1 2 3 4 5 6 7 1
+}
+-> intro ->#
+`;
+    const issues = TMDMeasureChecker.check(code);
+    expect(issues.some((issue) => issue.snippet.includes("explicit barlines") && issue.description.includes("explicit barlines"))).toBe(true);
   });
 
   it("accepts Aguai's Three Days and Three Nights layered intro pattern without false errors", () => {
@@ -1358,32 +1389,31 @@ intro:CHORD@|0|{
 |[1] - | - [7,] |
 
 <4*>
-[1]-----[7,]-
-[1]-----[7,]-
+| 1 2 3 4 | 5 6 7 1 |
 }
 intro:Chorus-1@|+4|{
 <16*>
-1_- 1_ - 1_ - - 1_ - 1_ - 1_ 1_ - - -
-1_- 1_ - 1_ - - 1_ - 1_ - 1_ 1_ - - -
+| 1_- 1_ - 1_ - - 1_ - 1_ - 1_ 1_ - - - |
+1_- 1_ - 1_ - - 1_ - 1_ - 1_ 1_ - - - |
 1_- 1_ - 1_ - - 1_ - 1_ - 1_ 1_ - - -
 1_- 1_ - 1_ - - 1_ - 1_ - 1_ 1_ - - -
 }
 
 intro:Chorus-2@|+6|{
 <16*>
-3_- 3_ - 3_ - - 3_ - 3_ - 3_ 3_ - - -
+| 3_- 3_ - 3_ - - 3_ - 3_ - 3_ 3_ - - - |
 3_- 3_ - 3_ - - 3_ - 3_ - 3_ 3_ - - -
 3_- 3_ - 3_ - - 3_ - 3_ - 3_ 3_ - - -
 }
 intro:Chorus-3@|+8|{
 <16*>
-5_- 5_ - 5_ - - 5_ - 5_ - 5_ 5_ - - -
+| 5_- 5_ - 5_ - - 5_ - 5_ - 5_ 5_ - - - |
 5_- 5_ - 5_ - - 5_ - 5_ - 5_ 5_ - - -
 }
 
 intro:Guitar@{
 <16*>
-(7,1)%(--) 1 (7,1)%(--) 1 (7,1)%(--)1 (7,1)%(--) 6 7, 6 7, 6 
+| (7,1)%(--) 1 (7,1)%(--) 1 (7,1)%(--)1 (7,1)%(--) 6 7, 6 7, 6 |
 (7,1)%(--) 1 (7,1)%(--) 1 (7,1)%(--)1 (7,1)%(--) 6 7, 6 7, 6  
 (7,1)%(--) 1 (7,1)%(--) 1 (7,1)%(--)1 (7,1)%(--) 6 7, 6 7, 6 
 (7,1)%(--) 1 (7,1)%(--) 1 (7,1)%(--)1 (7,1)%(--) 6 7, 6 7, 6 

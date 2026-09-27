@@ -882,6 +882,8 @@ export class TMDMIDIGenerator {
     let nextMelodyChannel = 0;
 
     for (const instrument of distinctInstruments) {
+      const instTimeline = TMDPlaybackRenderer.render(effectiveSheet, instrument, renderOpts);
+      if (!instTimeline.events.some((event) => event.content.type !== 'rest')) continue;
       const midiInst = MIDIInstrument.resolve(instrument);
       let channel: number;
       if (MIDIInstrument.isPercussion(midiInst)) {
@@ -900,7 +902,6 @@ export class TMDMIDIGenerator {
         }
       }
 
-      const instTimeline = TMDPlaybackRenderer.render(effectiveSheet, instrument, renderOpts);
       trackData.push(
         TMDMIDIEncoder.encodeTrack(
           this.instrumentEvents(

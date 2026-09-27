@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import {
   TmdParser,
   TMDABCGenerator,
@@ -7,6 +9,7 @@ import {
   TMDMeasureRenderer,
   TMDMeasureChecker,
   NotationDuration,
+  TMDMIDIGenerator,
 } from '../src/index.js';
 
 describe('NotationDuration and Measure Decomposition', () => {
@@ -87,6 +90,15 @@ A:Piano@|0|{
 });
 
 describe('MusicXML Exporter Invariants', () => {
+  it('matches the shared MusicXML exporter fixture', () => {
+    const source = readFileSync(join(process.cwd(), "docs/conformance/musicxml-export-fixture.tmd"), "utf8");
+    const sheet = TmdParser.parse(source);
+    const xml = TMDMusicXMLGenerator.generateMusicXML(sheet);
+
+    expect(xml).toContain("<part-name>Piano</part-name>");
+    expect(xml).not.toContain("<part-name>Theme</part-name>");
+    expect((xml.match(/<note>/g) ?? []).length).toBe(4);
+  });
   it('does not create an implicit Piano part for a prototype-only sheet', () => {
     const tmd = `
 ::SCORE::
@@ -164,6 +176,53 @@ A:Drums@|0|{
     expect(xml).toContain('<actual-notes>3</actual-notes>');
     expect(xml).toContain('<normal-notes>2</normal-notes>');
     expect(xml).toContain('</time-modification>');
+  });
+});
+
+describe('MIDI Exporter Invariants', () => {
+  it('does not create a playback track for a rest-only assignment', () => {
+    const sheet = TmdParser.parse(`::SCORE::
+** Rest Only **
+!= 120
+?= C
+<4/4>
+
+Piano:Piano@|0|{
+  <4*>
+  0 0 0 0
+}
+
+-> Piano ->#
+`);
+
+    const midi = TMDMIDIGenerator.generateMIDI(sheet);
+    const trackCount = (midi[10] << 8) | midi[11];
+    expect(trackCount).toBe(1);
+  });
+});
+
+describe('Percussion assignment identity', () => {
+  it('matches lowercase percussion assignments in LilyPond and ABC exporters', () => {
+    const sheet = TmdParser.parse(`::SCORE::
+** Lowercase Drums **
+!= 120
+?= C
+<4/4>
+
+A:drums@|0|{
+  <4*>
+  D S X O
+}
+
+-> A ->#
+`);
+
+    const ly = TMDLilyPondGenerator.generateLilyPond(sheet);
+    const abc = TMDABCGenerator.generateABC(sheet);
+
+    expect(ly).toContain('\\drummode');
+    expect(ly).toContain('\\new DrumStaff');
+    expect(abc).toContain('%%MIDI channel 10');
   });
 });
 
@@ -544,4 +603,3 @@ A:Piano@|0|{
     });
   });
 });
-

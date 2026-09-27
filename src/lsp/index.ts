@@ -247,7 +247,6 @@ export class TMDLSPCompletionEngine {
     { label: "?= C", kind: TMDLSPCompletionItemKind.Snippet, detail: "Movable-do Base", insertText: "?= ${1:C}}", insertTextFormat: 2 },
     { label: "?+ 2", kind: TMDLSPCompletionItemKind.Snippet, detail: "Relative Movable-do Transposition (+semitones)", insertText: "?+ ${1:2}}", insertTextFormat: 2 },
     { label: "?- 2", kind: TMDLSPCompletionItemKind.Snippet, detail: "Relative Movable-do Transposition (-semitones)", insertText: "?- ${1:2}}", insertTextFormat: 2 },
-    { label: "?= fixed", kind: TMDLSPCompletionItemKind.Value, detail: "Fixed Pitch (Immune to song transpositions)", insertText: "?= fixed}" },
     { label: "key= Bm", kind: TMDLSPCompletionItemKind.Snippet, detail: "Explicit Tonality (B minor)", insertText: "key= ${1:Bm}}", insertTextFormat: 2 },
     ...["ppp", "pp", "p", "mp", "mf", "f", "ff", "fff"].map((mark) => ({
       label: mark,
@@ -270,6 +269,16 @@ export class TMDLSPCompletionEngine {
     const remainder = currentLine.slice(position.character);
     const nextChar = remainder.length > 0 ? remainder[0] : "";
 
+    if (/:\s*[A-Za-z][A-Za-z0-9_-]*\[$/.test(prefix)) {
+      return [{
+        label: "pitchMode=fixed",
+        kind: TMDLSPCompletionItemKind.Value,
+        detail: "Fixed Pitch Entry Attribute",
+        documentation: "Keep this entry at its written pitch during playback transposition.",
+        insertText: "pitchMode=fixed]",
+      }];
+    }
+
     if (isInsideMacro) {
       return this.macroSnippets.map((m) => {
         let cleanInsert = m.insertText.startsWith("(") ? m.insertText.slice(1) : m.insertText;
@@ -287,7 +296,7 @@ export class TMDLSPCompletionEngine {
       });
     }
 
-    // 2. Playback Order section completion: after "->"
+    // 2. Playback section completion: after "->"
     if (prefix.includes("->")) {
       const sectionNames = TMDOutlineGenerator.extractSectionNames(source);
       return sectionNames.map((name) => ({
@@ -298,7 +307,7 @@ export class TMDLSPCompletionEngine {
       }));
     }
 
-    // 3. Instrument completion: after ":" (e.g. "verse:" or "verse:Pi")
+    // 3. Assignment completion: after ":" (e.g. "verse:" or "verse:Pi")
     const lastColonIndex = prefix.lastIndexOf(":");
     if (lastColonIndex !== -1) {
       const afterColon = prefix.slice(lastColonIndex + 1);
@@ -307,7 +316,7 @@ export class TMDLSPCompletionEngine {
         return this.standardInstruments.map((inst) => ({
           label: inst,
           kind: TMDLSPCompletionItemKind.Keyword,
-          detail: `General MIDI Instrument: ${inst}`,
+          detail: `General MIDI Assignment: ${inst}`,
           documentation: "Standard instrument sound assignment",
         }));
       }

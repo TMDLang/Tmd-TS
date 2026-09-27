@@ -298,19 +298,31 @@ export interface Section {
   noteLength: number;
   unitGroups: UnitGroup[];
   directives: SectionDirective[];
+  barlinePositions?: number[];
 }
+
+export type EntryPitchMode = "transposing" | "fixed";
 
 export const DEFAULT_INSTRUMENT = "Piano";
 
 export interface Paragraph {
   name: string;
   instrument: string;
+  assignment?: string;
+  isPrototype?: boolean;
+  pitchMode?: EntryPitchMode;
   start: number;
   sections: Section[];
   executionTime?: string;
   showProgram?: string;
   line?: number;
   column?: number;
+}
+
+export type Entry = Paragraph;
+
+export function entryAssignment(entry: Entry): string | undefined {
+  return entry.instrument || undefined;
 }
 
 export type SExprAtom = string | number;
@@ -322,6 +334,9 @@ export type Order =
   | { type: "absolute"; value: string; line?: number; column?: number }
   | { type: "macro"; expr: SExpr[]; line?: number; column?: number };
 
+/** Canonical name for one source playback expression. */
+export type Playback = Order;
+
 export interface Sheet {
   name: string;
   speed: number;
@@ -331,6 +346,9 @@ export interface Sheet {
   paragraphs: Paragraph[];
   orders: Order[];
   metadata: Record<string, string>;
+  entries?: Entry[];
+  playback?: Playback[];
+  distinctAssignments?: () => string[];
 }
 
 export const PitchMapping = {

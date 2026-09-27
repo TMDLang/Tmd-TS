@@ -44,6 +44,28 @@ export interface PlaybackTimeline {
   events: PlaybackEvent[];
   directives: PlaybackDirectiveEvent[];
   duration: number;
+  assignment?: string;
+  track?: PlaybackTrack;
+}
+
+export interface PlaybackTrack {
+  assignment: string;
+  events: PlaybackEvent[];
+  directives: PlaybackDirectiveEvent[];
+  duration: number;
+}
+
+export interface PlaybackValidationIssue {
+  sectionName: string;
+  assignment: string;
+  firstOffset: number;
+  secondOffset: number;
+  description: string;
+}
+
+export interface PlaybackTempoConflict {
+  position: number;
+  tempos: number[];
 }
 
 export interface TMDPlaybackRendererOptions {
@@ -51,6 +73,65 @@ export interface TMDPlaybackRendererOptions {
 }
 
 export class TMDPlaybackRenderer {
+  public static validateTempoConflicts(inputSheet: Sheet): PlaybackTempoConflict[] {
+    const sheet = TMDMacroEvaluator.expand(inputSheet);
+    const directives = sheet.distinctAssignments?.().flatMap((assignment) => this.render(sheet, assignment).directives) ?? [];
+    const grouped = new Map<number, PlaybackDirectiveEvent[]>();
+    for (const directive of directives) {
+      const values = grouped.get(directive.position) ?? [];
+      values.push(directive);
+      grouped.set(directive.position, values);
+    }
+    return Array.from(grouped.entries())
+      .map(([position, values]) => ({
+        position,
+        tempos: Array.from(new Set(values.flatMap((value) => value.kind.type === "tempo" ? [value.kind.bpm] : []))).sort((a, b) => a - b)
+      }))
+      .filter((conflict) => conflict.tempos.length > 1)
+      .sort((a, b) => a.position - b.position);
+  }
+
+  public static validate(inputSheet: Sheet): PlaybackValidationIssue[] {
+    const sheet = TMDMacroEvaluator.expand(inputSheet);
+    const grouped = new Map<string, Paragraph[]>();
+    for (const entry of sheet.paragraphs.filter((paragraph) => paragraph.instrument)) {
+      const key = `${entry.name.toLowerCase()}\u0000${entry.instrument.toLowerCase()}`;
+      const values = grouped.get(key) ?? [];
+      values.push(entry);
+      grouped.set(key, values);
+    }
+
+    const issues: PlaybackValidationIssue[] = [];
+    for (const entries of grouped.values()) {
+      for (let i = 0; i < entries.length; i++) {
+        for (let j = i + 1; j < entries.length; j++) {
+          const first = this.entryRange(entries[i], sheet.beat);
+          const second = this.entryRange(entries[j], sheet.beat);
+          if (Math.max(first.start, second.start) < Math.min(first.end, second.end)) {
+            const entry = entries[i];
+            issues.push({
+              sectionName: entry.name,
+              assignment: entry.instrument,
+              firstOffset: entries[i].start,
+              secondOffset: entries[j].start,
+              description: `Overlapping entries for assignment ${entry.instrument} in section ${entry.name} at offsets ${entries[i].start} and ${entries[j].start}`
+            });
+          }
+        }
+      }
+    }
+    return issues;
+  }
+
+  private static entryRange(entry: Paragraph, beat: Beat): { start: number; end: number } {
+    const duration = entry.sections.reduce((total, section) => {
+      const unitDuration = 4.0 / Math.max(1, section.noteLength);
+      return total + section.unitGroups.reduce((sum, group) => sum + Math.max(0, group.length) * unitDuration, 0);
+    }, 0);
+    const start = entry.start * this.measureDuration(beat);
+    return { start, end: start + duration };
+  }
+
   public static render(
     inputSheet: Sheet,
     instrument: string,
@@ -60,7 +141,8 @@ export class TMDPlaybackRenderer {
     const targetInst = instrument || DEFAULT_INSTRUMENT;
     const paragraphs = sheet.paragraphs.filter((p) => {
       const pInst = p.instrument || DEFAULT_INSTRUMENT;
-      return pInst === targetInst || p.instrument === instrument;
+      return pInst.toLocaleLowerCase() === targetInst.toLocaleLowerCase()
+        || p.instrument.toLocaleLowerCase() === instrument.toLocaleLowerCase();
     });
     const orders: Order[] = sheet.orders.length > 0
       ? sheet.orders
@@ -94,7 +176,13 @@ export class TMDPlaybackRenderer {
           // If before startOrderIndex, accumulate directives and key/tempo/meter state from paragraph
           for (const paragraph of matchingParagraphs) {
             const start = timelinePosition + paragraph.start * TMDPlaybackRenderer.measureDuration(state.timeSignature);
-            state = TMDPlaybackRenderer.renderParagraph(paragraph, start, state).state;
+            const paragraphState = paragraph.pitchMode === "fixed" ? { ...state, keyOffset: 0 } : state;
+            const rendered = TMDPlaybackRenderer.renderParagraph(paragraph, start, paragraphState, paragraph.pitchMode === "fixed");
+            state = {
+              ...rendered.state,
+              keyOffset: paragraph.pitchMode === "fixed" ? state.keyOffset : rendered.state.keyOffset,
+              timeSignature: state.timeSignature
+            };
           }
           continue;
         }
@@ -106,10 +194,15 @@ export class TMDPlaybackRenderer {
 
         for (const paragraph of matchingParagraphs) {
           const start = timelinePosition + paragraph.start * TMDPlaybackRenderer.measureDuration(state.timeSignature);
-          const rendered = TMDPlaybackRenderer.renderParagraph(paragraph, start, state);
+          const paragraphState = paragraph.pitchMode === "fixed" ? { ...state, keyOffset: 0 } : state;
+          const rendered = TMDPlaybackRenderer.renderParagraph(paragraph, start, paragraphState, paragraph.pitchMode === "fixed");
           events.push(...rendered.events);
           directives.push(...rendered.directives);
-          state = rendered.state;
+          state = {
+            ...rendered.state,
+            keyOffset: paragraph.pitchMode === "fixed" ? state.keyOffset : rendered.state.keyOffset,
+            timeSignature: state.timeSignature
+          };
         }
         timelinePosition += paragraphDuration;
       }
@@ -137,11 +230,21 @@ export class TMDPlaybackRenderer {
     adjustedEvents.sort((a, b) => a.position - b.position);
     adjustedDirectives.sort((a, b) => a.position - b.position);
 
-    return {
+    const timeline: PlaybackTimeline = {
       events: adjustedEvents,
       directives: adjustedDirectives,
       duration: timelinePosition + offset
     };
+    if (paragraphs.length > 0 || instrument) {
+      timeline.assignment = paragraphs[0]?.instrument || instrument;
+      timeline.track = {
+        assignment: timeline.assignment,
+        events: timeline.events,
+        directives: timeline.directives,
+        duration: timeline.duration
+      };
+    }
+    return timeline;
   }
 
   /** Renders a score-level conductor timeline by merging directives from every concrete instrument. */
@@ -188,7 +291,8 @@ export class TMDPlaybackRenderer {
   private static renderParagraph(
     paragraph: Paragraph,
     start: number,
-    initialState: PlaybackState
+    initialState: PlaybackState,
+    fixedPitch = false
   ): { events: PlaybackEvent[]; directives: PlaybackDirectiveEvent[]; state: PlaybackState; duration: number } {
     let state = { ...initialState };
     const events: PlaybackEvent[] = [];
@@ -204,7 +308,7 @@ export class TMDPlaybackRenderer {
       for (const group of section.unitGroups) {
         while (directiveIndex < sortedDirectives.length && sortedDirectives[directiveIndex].position <= sectionPosition) {
           const dir = sortedDirectives[directiveIndex];
-          state = TMDPlaybackRenderer.applyDirective(dir.kind, state);
+          state = TMDPlaybackRenderer.applyDirective(dir.kind, state, fixedPitch);
           directives.push({ position, kind: dir.kind, state });
           directiveIndex++;
         }
@@ -281,7 +385,10 @@ export class TMDPlaybackRenderer {
     }
   }
 
-  private static applyDirective(kind: SectionDirectiveKind, state: PlaybackState): PlaybackState {
+  private static applyDirective(kind: SectionDirectiveKind, state: PlaybackState, fixedPitch = false): PlaybackState {
+    if (fixedPitch && (kind.type === "absoluteKey" || kind.type === "relativeKey" || kind.type === "explicitKey" || kind.type === "fixedPitch")) {
+      return state;
+    }
     switch (kind.type) {
       case "tempo":
         return { ...state, tempo: Math.max(1, kind.bpm) };

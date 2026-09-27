@@ -131,7 +131,9 @@ export function formatParagraph(p: Paragraph, beat?: Beat): string {
   if (!p.instrument) {
     result = `${p.name} {\n`;
   } else {
-    result = `${p.name}:${p.instrument}@|`;
+    result = `${p.name}:${p.instrument}`;
+    if (p.pitchMode === "fixed") result += "[pitchMode=fixed]";
+    result += "@|";
     if (p.start > 0) result += `+${p.start}`;
     else result += `${p.start}`;
     result += "|{\n";
@@ -203,15 +205,15 @@ export function formatSummary(sheet: Sheet): string {
     lines.push(`DeclaredKey:  ${sheet.declaredKey}`);
   }
   lines.push(`Beat:         ${sheet.beat.count}/${sheet.beat.noteValue}`);
-  lines.push(`Paragraphs:   ${sheet.paragraphs.length}`);
+  lines.push(`Entries:      ${sheet.paragraphs.length}`);
 
   sheet.paragraphs.forEach((p, idx) => {
     const secCount = p.sections.length;
     const totalUnits = p.sections.reduce((acc, s) => acc + s.unitGroups.length, 0);
-    lines.push(`  [${idx + 1}] ${p.name} (Instrument: ${p.instrument}, Start: ${p.start}, Sections: ${secCount}, UnitGroups: ${totalUnits})`);
+    lines.push(`  [${idx + 1}] ${p.name} (Assignment: ${p.instrument}, Start: ${p.start}, Sections: ${secCount}, UnitGroups: ${totalUnits})`);
   });
 
-  lines.push(`Orders:       ${sheet.orders.length}`);
+  lines.push(`Playback:     ${sheet.orders.length}`);
   sheet.orders.forEach((order, idx) => {
     lines.push(`  [${idx + 1}] -> ${formatOrder(order)}`);
   });

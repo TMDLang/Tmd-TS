@@ -1,8 +1,44 @@
 import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { TmdParser } from "../src/core/parser.js";
 import { TMDSongInspector } from "../src/core/inspector.js";
 
 describe("TMDSongInspector (TDD port from TmdSwift)", () => {
+  it("matches the shared Inspector fixture's stable profile fields", () => {
+    const source = readFileSync(join(process.cwd(), "docs/conformance/inspector-basic-fixture.tmd"), "utf8");
+    const sheet = TmdParser.parse(source);
+    const profile = TMDSongInspector.inspect(sheet);
+
+    expect(profile.timing.totalMeasures).toBe(1);
+    expect(profile.timing.totalDurationSeconds).toBeCloseTo(2, 5);
+    expect(profile.timing.sections).toHaveLength(1);
+    expect(profile.instrumentRanges).toHaveLength(1);
+    expect(profile.instrumentRanges[0].instrument).toBe("Piano");
+    expect(profile.instrumentRanges[0].totalNotes).toBe(4);
+    expect(profile.density.maxConcurrentTracks).toBe(1);
+    expect(profile.density.sectionDensities.map((section) => section.trackCount)).toEqual([1]);
+  });
+
+  it("does not create an Inspector Piano track for a prototype-only score", () => {
+    const sheet = TmdParser.parse(`::SCORE::
+** Prototype Only **
+!= 120
+?= C
+<4/4>
+
+Theme{
+  <4*>
+  1 2 3 4
+}
+`);
+
+    const profile = TMDSongInspector.inspect(sheet);
+
+    expect(profile.instrumentRanges).toHaveLength(0);
+    expect(profile.density.sectionDensities.every((section) => !section.instruments.includes(""))).toBe(true);
+  });
+
   it("uses section tempo directives for timing duration and note timestamps", () => {
     const sheet = TmdParser.parse(`::SCORE::
 ** Inspector Tempo **
@@ -503,7 +539,7 @@ chorus:Piano@|0|{
     expect(svg).toContain("<svg");
     expect(svg).toContain("Circle of Fifths Trajectory");
     expect(svg).toContain("12-Tone Pitch Class Distribution");
-    expect(svg).toContain("Timeline Keyscape Ribbon");
+    expect(svg).toContain("Playback Keyscape Ribbon");
     expect(svg).toContain("Visualizer Test Song");
 
     // 2. HTML Generation

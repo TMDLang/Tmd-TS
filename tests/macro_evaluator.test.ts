@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import {
   TmdParser,
   formatOrder,
@@ -12,6 +14,16 @@ import {
 } from '../src/index.js';
 
 describe('TMD Macro S-Expression & Abstract Paragraphs (TDD - Red Phase)', () => {
+  it('matches the shared prototype-binding macro fixture', () => {
+    const source = readFileSync(join(process.cwd(), 'docs/conformance/macro-play-fixture.tmd'), 'utf8');
+    const sheet = TmdParser.parse(source);
+    const playback = TMDPlaybackRenderer.render(sheet, 'Violin');
+
+    expect(sheet.entries?.[0].isPrototype).toBe(true);
+    expect(playback.events.map((event) => event.position)).toEqual([0, 1, 2, 3]);
+    expect(playback.duration).toBe(4);
+  });
+
   describe('Lexer & Parser AST Integration', () => {
     it('parses abstract paragraphs declared without instrument bindings (Theme { ... })', () => {
       const input = `::SCORE::
@@ -863,7 +875,5 @@ Theme { <4*> 1 2 3 4 }
     });
   });
 });
-
-
 
 

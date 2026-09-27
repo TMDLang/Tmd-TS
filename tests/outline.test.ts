@@ -73,14 +73,14 @@ verse:CHORD@|0|{
     expect(verseChord.kind).toBe("field");
     expect(verseChord.children).toBeUndefined();
 
-    // 3. Orders node
-    const ordersNode = nodes[2];
-    expect(ordersNode.name).toBe("Orders");
-    expect(ordersNode.kind).toBe("event");
-    expect(ordersNode.children!.length).toBe(3);
-    expect(ordersNode.children![0].name).toBe("intro");
-    expect(ordersNode.children![1].name).toBe("verse");
-    expect(ordersNode.children![2].name).toBe("#");
+    // 3. Playback node
+    const playbackNode = nodes[2];
+    expect(playbackNode.name).toBe("Playback");
+    expect(playbackNode.kind).toBe("event");
+    expect(playbackNode.children!.length).toBe(3);
+    expect(playbackNode.children![0].name).toBe("intro");
+    expect(playbackNode.children![1].name).toBe("verse");
+    expect(playbackNode.children![2].name).toBe("#");
   });
 
   it("accurately tracks line numbers for scores containing metadata comments and multi-line orders", () => {
@@ -105,8 +105,8 @@ verse:CHORD@|0|{
 `;
 
     const nodes = TMDOutlineGenerator.generate(input);
-    const ordersNode = nodes.find((n) => n.name === "Orders");
-    expect(ordersNode).toBeDefined();
+    const playbackNode = nodes.find((n) => n.name === "Playback");
+    expect(playbackNode).toBeDefined();
 
     // In this score:
     // line 13: -> Concourse_Dawn
@@ -115,26 +115,26 @@ verse:CHORD@|0|{
     // line 16: -> Vaulted_Skywalk
     // line 17: -> Grand_Terminal_Arrival
     // line 18: -> #
-    expect(ordersNode!.children).toBeDefined();
-    expect(ordersNode!.children!.length).toBe(6);
+    expect(playbackNode!.children).toBeDefined();
+    expect(playbackNode!.children!.length).toBe(6);
 
-    expect(ordersNode!.children![0].name).toBe("Concourse_Dawn");
-    expect(ordersNode!.children![0].range.startLine).toBe(13);
+    expect(playbackNode!.children![0].name).toBe("Concourse_Dawn");
+    expect(playbackNode!.children![0].range.startLine).toBe(13);
 
-    expect(ordersNode!.children![1].name).toBe("Double_Train_Depart");
-    expect(ordersNode!.children![1].range.startLine).toBe(14);
+    expect(playbackNode!.children![1].name).toBe("Double_Train_Depart");
+    expect(playbackNode!.children![1].range.startLine).toBe(14);
 
-    expect(ordersNode!.children![2].name).toBe("Rush_Hour_Surge");
-    expect(ordersNode!.children![2].range.startLine).toBe(15);
+    expect(playbackNode!.children![2].name).toBe("Rush_Hour_Surge");
+    expect(playbackNode!.children![2].range.startLine).toBe(15);
 
-    expect(ordersNode!.children![3].name).toBe("Vaulted_Skywalk");
-    expect(ordersNode!.children![3].range.startLine).toBe(16);
+    expect(playbackNode!.children![3].name).toBe("Vaulted_Skywalk");
+    expect(playbackNode!.children![3].range.startLine).toBe(16);
 
-    expect(ordersNode!.children![4].name).toBe("Grand_Terminal_Arrival");
-    expect(ordersNode!.children![4].range.startLine).toBe(17);
+    expect(playbackNode!.children![4].name).toBe("Grand_Terminal_Arrival");
+    expect(playbackNode!.children![4].range.startLine).toBe(17);
 
-    expect(ordersNode!.children![5].name).toBe("#");
-    expect(ordersNode!.children![5].range.startLine).toBe(18);
+    expect(playbackNode!.children![5].name).toBe("#");
+    expect(playbackNode!.children![5].range.startLine).toBe(18);
   });
 
   it("supports CLI outline subcommand with --json", async () => {
@@ -242,13 +242,13 @@ intro:Cello@|0|{
     expect(introSec!.children!.length).toBe(1);
     expect(introSec!.children![0].name).toBe("Cello");
 
-    // 2. Orders Node
-    const ordersNode = nodes.find(n => n.name === "Orders");
-    expect(ordersNode).toBeDefined();
-    expect(ordersNode!.children).toBeDefined();
+    // 2. Playback Node
+    const playbackNode = nodes.find(n => n.name === "Playback");
+    expect(playbackNode).toBeDefined();
+    expect(playbackNode!.children).toBeDefined();
 
     // In Orders: intro, canon, layer, #
-    const orderItems = ordersNode!.children!;
+    const orderItems = playbackNode!.children!;
     expect(orderItems[0].name).toBe("intro");
 
     // S-Expression macros: displayed as operator name
