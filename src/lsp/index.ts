@@ -465,7 +465,7 @@ export class TMDLSPServer {
           },
           serverInfo: {
             name: "tmd-lsp",
-            version: "0.1.5",
+            version: "0.2.0",
           },
         };
         const resp = TMDJSONRPCCodec.encode({ id: message.id, result: capabilities });
