@@ -229,7 +229,7 @@ export class TMDLSPCompletionEngine {
 
   public static readonly macroSnippets: Array<{ label: string; insertText: string; detail: string }> = [
     { label: "canon", insertText: "(canon ${1:Theme} (${2:Violin1 Violin2}) ${3:2})", detail: "Polyphonic Canon: (canon <theme> (<instruments...>) <offset_bars>)" },
-    { label: "loop", insertText: "(loop ${1:Theme} ${2:Cello} ${3:4})", detail: "Sequential Loop: (loop <theme> <instrument> <times>) or (loop <section> <times>)" },
+    { label: "loop", insertText: "(loop ${1:Theme} ${2:Cello} ${3:4})", detail: "Sequential Loop: (loop <theme> <assignment> <times>) or (loop <section> <times>)" },
     { label: "layer", insertText: "(layer\n\t${1:expr1}\n\t${2:expr2})", detail: "Parallel Concurrency: (layer <expr1> <expr2> ...)" },
     { label: "seq", insertText: "(seq\n\t${1:expr1}\n\t${2:expr2})", detail: "Sequential Chain: (seq <expr1> <expr2> ...)" },
     { label: "reverse", insertText: "(reverse ${1:Theme})", detail: "Retrograde Inversion: (reverse <theme|expr>)" },
@@ -238,7 +238,7 @@ export class TMDLSPCompletionEngine {
     { label: "vary", insertText: "(vary ${1:Theme} ${2:reverse} ${3:12})", detail: "Chained Transformations: (vary <theme> <trans1> ...)" },
     { label: "minor", insertText: "(minor ${1:Theme})", detail: "Parallel Minor Modal Transform: (minor <theme>)" },
     { label: "major", insertText: "(major ${1:Theme})", detail: "Parallel Major Modal Transform: (major <theme>)" },
-    { label: "play", insertText: "(play ${1:Theme} ${2:Violin})", detail: "Track Binding: (play <theme> <instrument>)" }
+    { label: "play", insertText: "(play ${1:Theme} ${2:Violin})", detail: "Track Binding: (play <theme> <assignment>)" }
   ];
 
   public static readonly sectionDirectiveCompletions: TMDLSPCompletionItem[] = [
@@ -317,7 +317,7 @@ export class TMDLSPCompletionEngine {
           label: inst,
           kind: TMDLSPCompletionItemKind.Keyword,
           detail: `General MIDI Assignment: ${inst}`,
-          documentation: "Standard instrument sound assignment",
+          documentation: "Standard assignment sound",
         }));
       }
     }

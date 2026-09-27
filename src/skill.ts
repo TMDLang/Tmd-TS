@@ -49,7 +49,7 @@ intro:Piano@|0|{
 4. **Movable-do base**: \`?= C\` (sets the pitch of numbered degree \`1\`; it is not a major/minor declaration).
 5. **Explicit tonality**: \`key= Bm\` or \`Key= C\` (stores the actual declared key and mode separately from \`?=\`).
 6. **Time Signature**: \`<4/4>\` (numerator/denominator, e.g. \`<3/4>\`, \`<6/8>\`).
-7. **Paragraphs / Instrument Tracks**: \`name:instrument@|offset|{ ... }\`.
+7. **Entries / Assignment Tracks**: \`name:assignment@|offset|{ ... }\`.
 8. **Playback Flow**: \`-> section1 -> section2 ->#\` (must start with \`->\` and terminate with \`->#\`).
 
 ---
