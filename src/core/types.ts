@@ -307,8 +307,10 @@ export const DEFAULT_INSTRUMENT = "Piano";
 
 export interface Entry {
   name: string;
-  instrument: string;
+  /** Canonical assignment name; undefined identifies a prototype. */
   assignment?: string;
+  /** @deprecated Use assignment. Kept at the compatibility boundary. */
+  instrument: string;
   isPrototype?: boolean;
   pitchMode?: EntryPitchMode;
   start: number;
