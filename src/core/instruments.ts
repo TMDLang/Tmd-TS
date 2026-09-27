@@ -15,7 +15,7 @@ export class SheetInstrumentHelper {
     const sheet = TMDMacroEvaluator.expand(rawSheet);
     const distinct = Array.from(
       new Set(
-        sheet.paragraphs
+        sheet.entries
           .map((p) => p.assignment ?? p.instrument)
           .filter((inst) => Boolean(inst && inst.trim()))
       )

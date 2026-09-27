@@ -285,7 +285,7 @@ export class TMDRefactor {
 
   public static extractInstrument(source: string, instrument: string): string {
     const sheet = TmdParser.parseThrowing(source);
-    const matchingParagraphs = sheet.paragraphs.filter((p) => (p.assignment ?? p.instrument) === instrument);
+    const matchingParagraphs = (sheet.entries ?? sheet.paragraphs).filter((p) => (p.assignment ?? p.instrument) === instrument);
     if (matchingParagraphs.length === 0) {
       throw new TMDRefactorError(`Instrument '${instrument}' not found in score`);
     }
@@ -342,7 +342,7 @@ export class TMDRefactor {
     options?: { section?: string; octaveShift?: number }
   ): string {
     const sheet = TmdParser.parseThrowing(source);
-    let matching = sheet.paragraphs.filter((p) => (p.assignment ?? p.instrument) === sourceInstrument);
+    let matching = (sheet.entries ?? sheet.paragraphs).filter((p) => (p.assignment ?? p.instrument) === sourceInstrument);
     if (options?.section) {
       matching = matching.filter((p) => p.name === options.section);
     }
@@ -418,7 +418,7 @@ export class TMDRefactor {
     options: { section?: string; intervalSteps: number }
   ): string {
     const sheet = TmdParser.parseThrowing(source);
-    let matching = sheet.paragraphs.filter((p) => (p.assignment ?? p.instrument) === sourceInstrument);
+    let matching = (sheet.entries ?? sheet.paragraphs).filter((p) => (p.assignment ?? p.instrument) === sourceInstrument);
     if (options?.section) {
       matching = matching.filter((p) => p.name === options.section);
     }
@@ -507,7 +507,7 @@ export class TMDRefactor {
     }
 
     // Map instruments -> combined list of sections in linear playback sequence
-    const instruments = Array.from(new Set(sheet.paragraphs.map((p) => p.assignment ?? p.instrument)));
+    const instruments = Array.from(new Set((sheet.entries ?? sheet.paragraphs).map((p) => p.assignment ?? p.instrument)));
     const linearParagraphs: Entry[] = [];
 
     for (const inst of instruments) {
@@ -516,7 +516,7 @@ export class TMDRefactor {
 
       for (const ord of sheet.orders) {
         if (ord.type !== "name") continue;
-      const para = sheet.paragraphs.find((p) => p.name === ord.name && (p.assignment ?? p.instrument) === inst);
+      const para = (sheet.entries ?? sheet.paragraphs).find((p) => p.name === ord.name && (p.assignment ?? p.instrument) === inst);
         if (!para) continue;
 
         for (const sec of para.sections) {
@@ -704,7 +704,7 @@ export class TMDRefactor {
     let current = source;
     try {
       const sheet = TmdParser.parseThrowing(current);
-      for (const p of sheet.paragraphs) {
+      for (const p of (sheet.entries ?? sheet.paragraphs)) {
         let paraCurrent = current;
         while (true) {
           try {

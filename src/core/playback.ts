@@ -146,9 +146,9 @@ export class TMDPlaybackRenderer {
       return pInst.toLocaleLowerCase() === targetInst.toLocaleLowerCase()
         || (p.assignment ?? p.instrument).toLocaleLowerCase() === instrument.toLocaleLowerCase();
     });
-    const orders: Playback[] = sheet.orders.length > 0
-      ? sheet.orders
-      : Array.from(new Set(sheet.paragraphs.map((p) => p.name))).map((n) => ({ type: "name", name: n }));
+    const orders: Playback[] = sheet.playback.length > 0
+      ? sheet.playback
+      : Array.from(new Set(sheet.entries.map((p) => p.name))).map((n) => ({ type: "name", name: n }));
 
     let state: PlaybackState = {
       tempo: sheet.speed > 0 ? sheet.speed : 120,
@@ -436,12 +436,12 @@ export class TMDPlaybackRenderer {
     };
     let timelinePosition = 0;
     let earliest = 0;
-    const orders = sheet.orders.length > 0
-      ? sheet.orders
-      : Array.from(new Set(sheet.paragraphs.map((p) => p.name))).map((name) => ({ type: "name" as const, name }));
+    const orders = sheet.playback.length > 0
+      ? sheet.playback
+      : Array.from(new Set(sheet.entries.map((p) => p.name))).map((name) => ({ type: "name" as const, name }));
     for (const order of orders) {
       if (order.type !== "name") continue;
-      const matching = sheet.paragraphs.filter((p) => p.name === order.name);
+      const matching = sheet.entries.filter((p) => p.name === order.name);
       for (const paragraph of matching) {
         earliest = Math.min(earliest, timelinePosition + paragraph.start * TMDPlaybackRenderer.measureDuration(state.timeSignature));
         state = TMDPlaybackRenderer.renderParagraph(paragraph, timelinePosition, state).state;

@@ -182,12 +182,12 @@ export function formatSheet(sheet: Sheet): string {
   }
   if (metaKeys.length > 0) result += "\n";
 
-  for (const p of sheet.paragraphs) {
+  for (const p of (sheet.entries ?? sheet.paragraphs)) {
     result += formatParagraph(p, sheet.beat);
   }
 
   let counter = 0;
-  for (const order of sheet.orders) {
+  for (const order of (sheet.playback ?? sheet.orders)) {
     result += `-> ${formatOrder(order)} `;
     counter++;
     if (counter % 4 === 0) result += "\n";
@@ -205,16 +205,18 @@ export function formatSummary(sheet: Sheet): string {
     lines.push(`DeclaredKey:  ${sheet.declaredKey}`);
   }
   lines.push(`Beat:         ${sheet.beat.count}/${sheet.beat.noteValue}`);
-  lines.push(`Entries:      ${sheet.paragraphs.length}`);
+  const entries = sheet.entries ?? sheet.paragraphs;
+  const playback = sheet.playback ?? sheet.orders;
+  lines.push(`Entries:      ${entries.length}`);
 
-  sheet.paragraphs.forEach((p, idx) => {
+  entries.forEach((p, idx) => {
     const secCount = p.sections.length;
     const totalUnits = p.sections.reduce((acc, s) => acc + s.unitGroups.length, 0);
     lines.push(`  [${idx + 1}] ${p.name} (Assignment: ${p.assignment ?? p.instrument}, Start: ${p.start}, Sections: ${secCount}, UnitGroups: ${totalUnits})`);
   });
 
-  lines.push(`Playback:     ${sheet.orders.length}`);
-  sheet.orders.forEach((order, idx) => {
+  lines.push(`Playback:     ${playback.length}`);
+  playback.forEach((order, idx) => {
     lines.push(`  [${idx + 1}] -> ${formatOrder(order)}`);
   });
 

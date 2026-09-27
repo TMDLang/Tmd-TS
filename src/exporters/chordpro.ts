@@ -88,7 +88,9 @@ export class TMDChordProGenerator {
         const sectionSheet: Sheet = {
           ...sheet,
           paragraphs: sheet.paragraphs.filter((p) => p.name === pName),
+          entries: sheet.entries.filter((p) => p.name === pName),
           orders: [{ type: 'name', name: pName }],
+          playback: [{ type: 'name', name: pName }],
           keySignature: keySignatureForOffset(currentKeyOffset),
         };
 
