@@ -94,7 +94,7 @@ export class TMDPlaybackRenderer {
   public static validate(inputSheet: Sheet): PlaybackValidationIssue[] {
     const sheet = TMDMacroEvaluator.expand(inputSheet);
     const grouped = new Map<string, Entry[]>();
-    for (const entry of sheet.paragraphs.filter((paragraph) => paragraph.assignment ?? paragraph.instrument)) {
+    for (const entry of sheet.entries.filter((paragraph) => paragraph.assignment ?? paragraph.instrument)) {
       const assignment = entry.assignment ?? entry.instrument;
       const key = `${entry.name.toLowerCase()}\u0000${assignment.toLowerCase()}`;
       const values = grouped.get(key) ?? [];
@@ -141,7 +141,7 @@ export class TMDPlaybackRenderer {
   ): PlaybackTimeline {
     const sheet = TMDMacroEvaluator.expand(inputSheet);
     const targetInst = instrument || DEFAULT_INSTRUMENT;
-    const paragraphs = sheet.paragraphs.filter((p) => {
+      const paragraphs = sheet.entries.filter((p) => {
       const pInst = (p.assignment ?? p.instrument) || DEFAULT_INSTRUMENT;
       return pInst.toLocaleLowerCase() === targetInst.toLocaleLowerCase()
         || (p.assignment ?? p.instrument).toLocaleLowerCase() === instrument.toLocaleLowerCase();
@@ -253,7 +253,7 @@ export class TMDPlaybackRenderer {
   public static renderConductor(inputSheet: Sheet, options?: TMDPlaybackRendererOptions): PlaybackTimeline {
     const sheet = TMDMacroEvaluator.expand(inputSheet);
     const instruments = Array.from(new Set(
-      sheet.paragraphs.map((p) => p.assignment ?? p.instrument).filter((assignment): assignment is string => Boolean(assignment && assignment.trim()))
+      sheet.entries.map((p) => p.assignment ?? p.instrument).filter((assignment): assignment is string => Boolean(assignment && assignment.trim()))
     )).sort();
     const sourceTimelines = instruments.map((instrument) => this.render(sheet, instrument, options));
     const merged: PlaybackDirectiveEvent[] = [];

@@ -516,7 +516,7 @@ export class TMDSongInspector {
   }
 
   private static collectTimelineDirectives(sheet: Sheet): PlaybackDirectiveEvent[] {
-    const instruments = new Set(sheet.paragraphs.map((paragraph) => paragraph.assignment ?? paragraph.instrument).filter((instrument) => instrument.trim().length > 0));
+    const instruments = new Set(sheet.entries.map((paragraph) => paragraph.assignment ?? paragraph.instrument).filter((instrument) => instrument.trim().length > 0));
     const directives: PlaybackDirectiveEvent[] = [];
     for (const instrument of instruments) {
       directives.push(...TMDPlaybackRenderer.render(sheet, instrument).directives);
@@ -576,7 +576,7 @@ export class TMDSongInspector {
 
   private static buildHarmonyProfile(sheet: Sheet): TMDHarmonyProfile {
     const chords: string[] = [];
-    for (const p of sheet.paragraphs) {
+    for (const p of sheet.entries) {
       for (const sec of p.sections) {
         for (const group of sec.unitGroups) {
           for (const unit of group.units) {

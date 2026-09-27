@@ -229,13 +229,13 @@ export class TMDMacroEvaluator {
     }
 
     const abstractMap = new Map<string, Entry>();
-    for (const p of sheet.paragraphs) {
+    for (const p of sheet.entries) {
       if (!(p.assignment ?? p.instrument)) {
         abstractMap.set(p.name, p);
       }
     }
 
-    const concreteParagraphs: Entry[] = sheet.paragraphs.filter((p) => Boolean(p.assignment ?? p.instrument));
+    const concreteParagraphs: Entry[] = sheet.entries.filter((p) => Boolean(p.assignment ?? p.instrument));
     const newOrders: Playback[] = [];
     let genCounter = 0;
     let currentOrderLoc: { line?: number; column?: number } = {};
@@ -500,7 +500,7 @@ export class TMDMacroEvaluator {
           if (expr.length === 3 && (typeof expr[2] === "number" || (!isNaN(Number(expr[2])) && typeof expr[2] === "string" && /^\d+$/.test(expr[2])))) {
             times = Number(expr[2]);
             const targetName = String(themeTarget);
-            const concreteMatch = sheet.paragraphs.find((p) => p.name === targetName && Boolean(p.assignment ?? p.instrument));
+            const concreteMatch = sheet.entries.find((p) => p.name === targetName && Boolean(p.assignment ?? p.instrument));
             if (concreteMatch) {
               instrument = concreteMatch.assignment ?? concreteMatch.instrument;
             } else {
@@ -801,6 +801,8 @@ export class TMDMacroEvaluator {
       ...sheet,
       paragraphs: concreteParagraphs,
       orders: newOrders,
+      entries: concreteParagraphs,
+      playback: newOrders,
     };
   }
 }
