@@ -610,7 +610,7 @@ export class TMDMeasureChecker {
           if (duration > measureDuration + 1e-9 && (section.barlinePositions ?? []).length === 0) {
             const measureCount = Math.round(duration / measureDuration);
             const issueObj = {
-              paragraphName: entry.name, instrument: entry.instrument, lineNumber: entry.line ?? 0,
+              paragraphName: entry.name, instrument: entry.assignment ?? entry.instrument, lineNumber: entry.line ?? 0,
               measureIndex: 0, expectedUnits: measureCount, actualUnits: measureCount,
               deltaUnits: 0, noteLength: section.noteLength, beat: sheet.beat,
               snippet: "Multi-measure section requires explicit barlines",

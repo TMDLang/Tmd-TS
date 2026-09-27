@@ -124,14 +124,14 @@ export function formatSection(sec: Section, beat: Beat = { count: 4, noteValue: 
 export function formatParagraph(p: Paragraph, beat?: Beat): string {
   if (p.showProgram) {
     const time = p.executionTime ?? "";
-    return `${p.name}:${p.instrument}@${time}{\n"""${p.showProgram}"""\n}\n\n`;
+    return `${p.name}:${p.assignment ?? p.instrument}@${time}{\n"""${p.showProgram}"""\n}\n\n`;
   }
 
   let result = "";
-  if (!p.instrument) {
+  if (!(p.assignment ?? p.instrument)) {
     result = `${p.name} {\n`;
   } else {
-    result = `${p.name}:${p.instrument}`;
+    result = `${p.name}:${p.assignment ?? p.instrument}`;
     if (p.pitchMode === "fixed") result += "[pitchMode=fixed]";
     result += "@|";
     if (p.start > 0) result += `+${p.start}`;
@@ -210,7 +210,7 @@ export function formatSummary(sheet: Sheet): string {
   sheet.paragraphs.forEach((p, idx) => {
     const secCount = p.sections.length;
     const totalUnits = p.sections.reduce((acc, s) => acc + s.unitGroups.length, 0);
-    lines.push(`  [${idx + 1}] ${p.name} (Assignment: ${p.instrument}, Start: ${p.start}, Sections: ${secCount}, UnitGroups: ${totalUnits})`);
+    lines.push(`  [${idx + 1}] ${p.name} (Assignment: ${p.assignment ?? p.instrument}, Start: ${p.start}, Sections: ${secCount}, UnitGroups: ${totalUnits})`);
   });
 
   lines.push(`Playback:     ${sheet.orders.length}`);

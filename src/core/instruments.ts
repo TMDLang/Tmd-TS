@@ -16,7 +16,7 @@ export class SheetInstrumentHelper {
     const distinct = Array.from(
       new Set(
         sheet.paragraphs
-          .map((p) => p.instrument)
+          .map((p) => p.assignment ?? p.instrument)
           .filter((inst) => Boolean(inst && inst.trim()))
       )
     ).sort();
