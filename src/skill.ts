@@ -89,10 +89,10 @@ section_name:instrument_name@|start_measure|{
 - **\`instrument_name\`**: Track/instrument label (e.g. \`Piano\`, \`Guitar\`, \`Bass\`, \`Drums\`, \`Vocal\`, \`CHORD\`, \`Strings\`).
   Common names are mapped to General MIDI instruments automatically (e.g., \`Piano\` -> Grand Piano, \`Guitar\` -> Steel String Guitar, \`Drums\` / \`Groove\` -> Channel 10 Drum kit).
 - **\`start_measure\`**: Entry measure offset inside \`|...|\` (e.g. \`@|0|\`, \`@|+4|\`, \`@|-1|\`).
-  - \`@|0|\` or \`@|+0|\`: Enters at the beginning of the section.
+  - \`@|0|\`: Enters at the beginning of the section. The equivalent \`@|+0|\` spelling is unsupported.
   - \`@|+4|\`: Enters 4 measures after the section begins.
   - \`@|-1|\`: Enters 1 measure before the section begins (pick-up / anticipation measure).
-  - Can also omit pipes: \`@0\` or \`@|0|\`.
+  - The legacy bare \`@{\` form is accepted for compatibility and formats as \`@|0|\`; \`@0\` is unsupported.
 
 Multiple tracks can share the same section name:
 \`\`\`tmd

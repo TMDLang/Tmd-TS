@@ -57,7 +57,7 @@ describe("TMDCanonGenerator (TDD port from canon_gen.py)", () => {
     });
 
     const tmdScore = generator.generate();
-    expect(tmdScore).toContain("canon:Violin1@|+0|{");
+    expect(tmdScore).toContain("canon:Violin1@|0|{");
     expect(tmdScore).toContain("canon:Violin2@|+2|{");
     expect(tmdScore).toContain("-> intro -> canon -> outro ->#");
 

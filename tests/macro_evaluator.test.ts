@@ -153,7 +153,7 @@ Bass {
 
 Theme {
     <4*>
-    3^ 2^ 1^ 7 | 6 5 6 7
+    3^ 2^ 1^ 7 | 6 5 6 7 | 1^ 7 6 5 | 4 3 4 2
 }
 
 -> (canon Theme (Violin1 Violin2 Violin3) 2) ->#
@@ -167,9 +167,9 @@ Theme {
       expect(v2.events[0].position).toBe(8);  // 2 measures * 4 beats
       expect(v3.events[0].position).toBe(16); // 4 measures * 4 beats
 
-      expect(v1.events.length).toBe(8);
-      expect(v2.events.length).toBe(8);
-      expect(v3.events.length).toBe(8);
+      expect(v1.events.length).toBe(16);
+      expect(v2.events.length).toBe(16);
+      expect(v3.events.length).toBe(16);
     });
 
     it('evaluates nested canon (canon (canon Theme (Violin1 Violin2) 1) (Flute1 Flute2) 4)', () => {
@@ -254,7 +254,7 @@ Theme {
       expect(v3.events.length).toBe(16);
     });
 
-    it('evaluates (layer A (loop B 10)) with concrete paragraphs without requiring explicit instrument arguments', () => {
+    it('rejects concrete paragraphs and the legacy two-argument loop form', () => {
       const input = `::SCORE::
 ** Layer Bare Concrete Paragraph & 2-arg Loop **
 != 120
@@ -275,23 +275,7 @@ B:Bass@|0|{
      A
      (loop B 10)) ->#
 `;
-      const sheet = TmdParser.parse(input);
-      const expanded = TMDMacroEvaluator.expand(sheet);
-
-      expect(expanded.playback).toHaveLength(1);
-      const orderName = (expanded.playback[0] as any).name;
-      expect(orderName).toMatch(/^__layer_/);
-
-      const piano = TMDPlaybackRenderer.render(expanded, 'Piano');
-      const bass = TMDPlaybackRenderer.render(expanded, 'Bass');
-
-      // In TMD, all concurrent tracks in a layer block span the duration of the longest track (40 beats)
-      expect(piano.duration).toBe(40);
-      expect(piano.events.length).toBe(4);
-
-      // Bass loops 10 times * 4 beats = 40 beats
-      expect(bass.duration).toBe(40);
-      expect(bass.events.length).toBe(20);
+      expect(() => TMDMacroEvaluator.expand(TmdParser.parse(input))).toThrow(/not a macro expression/);
     });
 
     it('passes TMDMeasureChecker and exports MIDI / WAV seamlessly', () => {
@@ -522,7 +506,7 @@ Subject {
 -> (layer
      (play Subject SoloViolin)
      (play (vary Subject +19) Flute)
-     (canon (vary Subject reverse -12) (Cello Bass) 2)) ->#
+     (canon (vary Subject reverse -12) (Cello Bass) 1)) ->#
 `;
       const sheet = TmdParser.parse(input);
       expect(sheet).not.toBeNull();
@@ -546,7 +530,7 @@ Subject {
       expect(flutePitches).toEqual([79, 81, 83, 86]);
 
       // Cello & Bass: reverse (5 3 2 1: 67, 64, 62, 60), octave -1 (-12 semitones: 55, 52, 50, 48)
-      // Cello at 0, Bass at 2 bars (8 beats)
+      // Cello at 0, Bass at 1 bar (4 beats)
       const celloPitches = cello.events.map((e) =>
         e.content.type === 'note' ? TMDMIDIGenerator.noteToMIDIPitch(e.content.note, e.state.keyOffset) : 0
       );
@@ -557,7 +541,7 @@ Subject {
         e.content.type === 'note' ? TMDMIDIGenerator.noteToMIDIPitch(e.content.note, e.state.keyOffset) : 0
       );
       expect(bassPitches).toEqual([55, 52, 50, 48]);
-      expect(bass.events[0].position).toBe(8);
+      expect(bass.events[0].position).toBe(4);
     });
 
     it('evaluates flat vary: (vary Theme flip reverse) and (vary Theme +2)', () => {
@@ -794,8 +778,8 @@ Theme { <4*> 1 2 3 4 }
       });
 
       it('validates loop arguments', () => {
-        expect(() => expandMacro("(loop)")).toThrow(/Macro error.*: 'loop' requires theme and instrument/);
-        expect(() => expandMacro("(loop Theme)")).toThrow(/Macro error.*: 'loop' requires theme and instrument/);
+        expect(() => expandMacro("(loop)")).toThrow(/Macro error.*: 'loop' requires theme/);
+        expect(() => expandMacro("(loop Theme)")).toThrow(/Macro error.*: 'loop' requires theme/);
       });
 
       it('validates canon arguments', () => {
@@ -836,7 +820,7 @@ Theme { <4*> 1 2 3 4 }
       });
 
       it('validates unknown theme reference', () => {
-        expect(() => expandMacro("(play NonExistent Violin)")).toThrow(/Macro error.*: Theme 'NonExistent' not found/);
+        expect(() => expandMacro("(play NonExistent Violin)")).toThrow(/Macro error.*: Theme 'NonExistent' is not a prototype/);
       });
 
       it('attaches exact line and column to TMDMacroError', () => {

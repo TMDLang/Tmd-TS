@@ -58,7 +58,7 @@ main:Piano@|0|{
     const notes = timeline.events.filter((event) => event.content.type === "note");
 
     expect(notes.map((event) => event.state.keyOffset)).toEqual([
-      6, 6, 6, 6, 6, 6, 6, 6,
+      2, 2, 2, 2, 2, 2, 2, 2,
     ]);
     expect(notes.map((event) => event.state.dynamicLevel)).toEqual([
       "ppp", "pp", "p", "mp", "mf", "f", "ff", "fff",

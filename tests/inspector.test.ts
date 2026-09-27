@@ -194,7 +194,7 @@ Bass {
     1_ 5__ 6__ 3__ |
 }
 
--> (canon Theme (V1 V2) 2) -> (loop Bass Cello 2) ->#
+-> (canon Theme (V1 V2) 0) -> (loop Bass Cello 2) ->#
 `;
 
     const sheet = TmdParser.parse(tmd);

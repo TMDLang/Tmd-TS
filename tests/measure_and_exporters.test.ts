@@ -340,7 +340,7 @@ Theme {
     1 2 3 4
 }
 
--> (canon Theme (Violin1 Violin2) 2) ->#
+-> (canon Theme (Violin1 Violin2) 0) ->#
 `;
     const sheet = TmdParser.parse(macroTmd)!;
 

@@ -1,13 +1,13 @@
 import { describe, expect,it } from "vitest";
 
-import { formatSectionDirective, SectionDirective,TmdParser, TMDPlaybackRenderer } from "../src/core/index.js";
+import { TmdParser, TMDPlaybackRenderer } from "../src/core/index.js";
 import { TMDABCGenerator } from "../src/exporters/abc.js";
 import { TMDLilyPondGenerator } from "../src/exporters/lilypond.js";
 import { TMDMIDIGenerator } from "../src/exporters/midi.js";
 import { TMDMusicXMLGenerator } from "../src/exporters/musicxml.js";
 
-describe("Fixed Pitch Section Directive ({?=fixed}) (TDD)", () => {
-  it("parses {?=fixed}, {?= fixed}, and {? fixed} as fixedPitch directive", () => {
+describe("Fixed Pitch Entry Attribute", () => {
+  it("rejects legacy inline fixed-pitch directives", () => {
     const tmd = `
 ::SCORE::
 ** Fixed Pitch Parse Test **
@@ -15,7 +15,7 @@ describe("Fixed Pitch Section Directive ({?=fixed}) (TDD)", () => {
 ?= C
 <4/4>
 
-verse:Timpani@|0|{
+verse:Timpani[pitchMode=fixed]@|0|{
     <4*>
     {?=fixed}
     1 - - -
@@ -25,16 +25,7 @@ verse:Timpani@|0|{
     3 - - -
 }
 `;
-    const sheet = TmdParser.parse(tmd);
-    expect(sheet).not.toBeNull();
-    const section = sheet!.entries[0].sections[0];
-    expect(section.directives).toHaveLength(3);
-    expect(section.directives[0].kind).toEqual({ type: "fixedPitch" });
-    expect(section.directives[1].kind).toEqual({ type: "fixedPitch" });
-    expect(section.directives[2].kind).toEqual({ type: "fixedPitch" });
-
-    // Format check
-    expect(formatSectionDirective(section.directives[0])).toBe("{?=fixed}");
+    expect(() => TmdParser.parseThrowing(tmd)).toThrow();
   });
 
   it("locks keyOffset to 0 in timeline rendering regardless of initial key or order transpositions", () => {
@@ -45,9 +36,9 @@ verse:Timpani@|0|{
 ?= G
 <4/4>
 
-verse:Timpani@|0|{
+verse:Timpani[pitchMode=fixed]@|0|{
     <4*>
-    {?=fixed}
+
     1 2 3 4
 }
 
@@ -61,14 +52,14 @@ verse:Piano@|0|{
     const sheet = TmdParser.parse(tmd);
     expect(sheet).not.toBeNull();
 
-    // In Timpani track, {?=fixed} forces keyOffset = 0 regardless of initial key G or global transposition {?+3}
+    // The entry attribute forces keyOffset = 0 regardless of initial key G or global transposition {?+3}.
     const timpaniTimeline = TMDPlaybackRenderer.render(sheet!, "Timpani");
     expect(timpaniTimeline.events.length).toBeGreaterThan(0);
     for (const event of timpaniTimeline.events) {
       expect(event.state.keyOffset).toBe(0);
     }
 
-    // In Piano track, without {?=fixed}, initial key G (offset 7) + transposition {?+3} results in keyOffset = 10
+    // In Piano track, initial key G (offset 7) + transposition {?+3} results in keyOffset = 10.
     const pianoTimeline = TMDPlaybackRenderer.render(sheet!, "Piano");
     expect(pianoTimeline.events.length).toBeGreaterThan(0);
     for (const event of pianoTimeline.events) {
@@ -98,9 +89,9 @@ Intro:Timpani[pitchMode=fixed]@|0|{ <4*> 1 2 3 4 }
 ?= D
 <4/4>
 
-intro:Timpani@|0|{
+intro:Timpani[pitchMode=fixed]@|0|{
     <4*>
-    {?=fixed}
+
     1 2 3 4
 }
 -> intro ->#
@@ -113,15 +104,15 @@ intro:Timpani@|0|{
 
     // ABC
     const abc = TMDABCGenerator.generateABC(sheet);
-    expect(abc).toContain("K:C");
+    expect(abc).toContain("K:D");
 
     // LilyPond
     const ly = TMDLilyPondGenerator.generateLilyPond(sheet);
-    expect(ly).toContain("\\key c \\major");
+    expect(ly).toContain("\\key d \\major");
 
     // MusicXML
     const xml = TMDMusicXMLGenerator.generateMusicXML(sheet);
-    expect(xml).toContain("<fifths>0</fifths>");
+    expect(xml).toContain("<fifths>2</fifths>");
     expect(xml).toContain("<step>C</step>");
   });
 });

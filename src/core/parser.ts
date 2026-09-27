@@ -894,12 +894,21 @@ export class TmdParser {
           if (nextType === "number") start = -this.advance().value;
           else if (nextType === "note") start = -this.advance().value.degree;
         } else if (currType === "number" || currType === "positiveNumber") {
-          start = this.advance().value;
+          const value = this.advance().value;
+          if (currType === "positiveNumber" && value === 0) {
+            this.recordFailure(this.pos, ["positive non-zero entry offset"]);
+            return null;
+          }
+          start = value;
         } else if (currType === "note") {
           start = this.advance().value.degree;
         }
         this.match("pipe");
       } else if (["identifier", "number", "positiveNumber", "double", "note"].includes(this.currentToken().type as string)) {
+        if (["number", "positiveNumber", "double"].includes(this.currentToken().type as string) && Number(this.currentToken().value) === 0) {
+          this.recordFailure(this.pos, ["entry offset in pipe form or execution-time identifier"]);
+          return null;
+        }
         const value = this.advance().value;
         executionTime = typeof value === "object" ? String(value.degree) : String(value);
       }
@@ -1010,6 +1019,11 @@ export class TmdParser {
       }
     }
     this.match("closeBrace");
+
+    if (!assignment && sections.some((section) => section.directives.length > 0)) {
+      this.recordFailure(this.pos, ["prototype without modifiers"]);
+      return null;
+    }
 
     return { name, assignment, isPrototype: !assignment, pitchMode, start, sections, executionTime, line: startLine, column: startCol };
   }
@@ -1168,7 +1182,7 @@ export class TmdParser {
       }
       const trimmed = val.trim().toLowerCase();
       if (trimmed === "fixed") {
-        result = { position, kind: { type: "fixedPitch" } };
+        this.recordFailure(this.pos, ["entry attribute [pitchMode=fixed]"]);
       } else {
         const num = parseInt(val, 10);
         if (!isNaN(num)) {
@@ -1192,7 +1206,7 @@ export class TmdParser {
       }
       const trimmed = val.trim().toLowerCase();
       if (trimmed === "fixed") {
-        result = { position, kind: { type: "fixedPitch" } };
+        this.recordFailure(this.pos, ["entry attribute [pitchMode=fixed]"]);
       } else {
         result = { position, kind: { type: "absoluteKey", key: val } };
       }

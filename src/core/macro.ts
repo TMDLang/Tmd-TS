@@ -244,6 +244,12 @@ export class TMDMacroEvaluator {
       return new TMDMacroError(msg, currentOrderLoc.line, currentOrderLoc.column);
     };
 
+    const integer = (value: SExpr, label: string): number => {
+      const number = typeof value === "number" ? value : Number(value);
+      if (!Number.isInteger(number)) throw macroError(`${label} must be an integer`);
+      return number;
+    };
+
     const createSyntheticParagraph = (
       baseName: string,
       instrument: string,
@@ -265,20 +271,20 @@ export class TMDMacroEvaluator {
     const getThemeSections = (themeArg: SExpr): { name: string; sections: Section[] } => {
       if (Array.isArray(themeArg)) {
         if (themeArg.length === 0) {
-          return { name: "empty", sections: [] };
+          throw macroError("Empty prototype expression");
         }
 
         const head = String(themeArg[0]).toLowerCase();
 
         // 1. (transpose <theme> <semitones>) or (transpose <semitones> <theme>)
         if (head === "transpose") {
-          if (themeArg.length < 3 || themeArg[1] === undefined || themeArg[2] === undefined) {
+          if (themeArg.length !== 3 || themeArg[1] === undefined || themeArg[2] === undefined) {
             throw macroError(`'transpose' requires theme and semitones offset, e.g. (transpose Theme 7)`);
           }
           let target = themeArg[1];
-          let semitones = Number(themeArg[2]) || 0;
+          let semitones = integer(themeArg[2], "Transpose offset");
           if (typeof target === "number" || (!isNaN(Number(target)) && typeof themeArg[2] === "string")) {
-            semitones = Number(target) || 0;
+            semitones = integer(target, "Transpose offset");
             target = themeArg[2];
           }
           const sub = getThemeSections(target);
@@ -290,7 +296,7 @@ export class TMDMacroEvaluator {
 
         // 2. (reverse <theme>)
         if (head === "reverse") {
-          if (themeArg.length < 2 || themeArg[1] === undefined) {
+          if (themeArg.length !== 2 || themeArg[1] === undefined) {
             throw macroError(`'reverse' requires a target theme, e.g. (reverse Theme)`);
           }
           const target = themeArg[1];
@@ -303,11 +309,11 @@ export class TMDMacroEvaluator {
 
         // 3. (flip <theme> [axis])
         if (head === "flip") {
-          if (themeArg.length < 2 || themeArg[1] === undefined) {
+          if ((themeArg.length !== 2 && themeArg.length !== 3) || themeArg[1] === undefined) {
             throw macroError(`'flip' requires a target theme, e.g. (flip Theme)`);
           }
           const target = themeArg[1];
-          const axisArg = themeArg.length >= 3 ? Number(themeArg[2]) : undefined;
+          const axisArg = themeArg.length === 3 ? integer(themeArg[2]!, "Flip axis") : undefined;
           const sub = getThemeSections(target);
           return {
             name: `${sub.name}_flip`,
@@ -317,7 +323,7 @@ export class TMDMacroEvaluator {
 
         // 4. (minor <theme>)
         if (head === "minor") {
-          if (themeArg.length < 2 || themeArg[1] === undefined) {
+          if (themeArg.length !== 2 || themeArg[1] === undefined) {
             throw macroError(`'minor' requires a target theme, e.g. (minor Theme)`);
           }
           const target = themeArg[1];
@@ -330,7 +336,7 @@ export class TMDMacroEvaluator {
 
         // 5. (major <theme>)
         if (head === "major") {
-          if (themeArg.length < 2 || themeArg[1] === undefined) {
+          if (themeArg.length !== 2 || themeArg[1] === undefined) {
             throw macroError(`'major' requires a target theme, e.g. (major Theme)`);
           }
           const target = themeArg[1];
@@ -434,9 +440,9 @@ export class TMDMacroEvaluator {
       }
 
       const themeName = String(themeArg);
-      const p = abstractMap.get(themeName) || sheet.entries.find((p) => p.name === themeName);
+      const p = abstractMap.get(themeName);
       if (!p) {
-        throw macroError(`Theme '${themeName}' not found`);
+        throw macroError(`Theme '${themeName}' is not a prototype`);
       }
       return { name: themeName, sections: p.sections };
     };
@@ -445,21 +451,11 @@ export class TMDMacroEvaluator {
       // 1. Support bare string / atom referring to an existing concrete paragraph
       if (!Array.isArray(expr)) {
         const targetName = String(expr);
-        const matching = concreteParagraphs.filter((p) => p.name === targetName);
-        if (matching.length > 0) {
-          // Clone the concrete paragraph(s) to a synthetic instance so layer can rename it without mutating original
-          const clonedNames: string[] = [];
-          for (const p of matching) {
-            const synthetic = createSyntheticParagraph(p.name, p.assignment!, p.start, p.sections);
-            clonedNames.push(synthetic.name);
-          }
-          return { paragraphNames: clonedNames };
-        }
-        throw macroError(`Target '${targetName}' is not a valid section or macro expression`);
+        throw macroError(`Target '${targetName}' is not a macro expression; use play/loop/canon with a prototype`);
       }
 
       if (expr.length === 0) {
-        return { paragraphNames: [] };
+        throw macroError("Empty macro expression");
       }
 
       const op = String(expr[0]).toLowerCase();
@@ -467,16 +463,18 @@ export class TMDMacroEvaluator {
       switch (op) {
         case "play": {
           // (play <theme|themes> <instrument> [:at <measure_offset>])
-          if (expr.length < 3 || expr[1] === undefined || expr[2] === undefined) {
+          if (![3, 4, 5].includes(expr.length) || expr[1] === undefined || expr[2] === undefined) {
             throw macroError(`'play' requires theme and instrument, e.g. (play Theme Violin)`);
           }
           const themeTarget = expr[1];
           const instrument = String(expr[2]);
           let atOffset = 0;
-          if (expr.length >= 5 && String(expr[3]).toLowerCase() === ":at") {
-            atOffset = Number(expr[4]) || 0;
-          } else if (expr.length >= 4 && typeof expr[3] === "number") {
-            atOffset = Number(expr[3]) || 0;
+          if (expr.length === 5 && String(expr[3]).toLowerCase() === ":at") {
+            atOffset = integer(expr[4]!, "Play entry offset");
+          } else if (expr.length === 4 && typeof expr[3] === "number") {
+            atOffset = integer(expr[3], "Play entry offset");
+          } else if (expr.length !== 3) {
+            throw macroError("'play' accepts an optional :at integer offset");
           }
 
           const { name: themeName, sections } = getThemeSections(themeTarget);
@@ -487,28 +485,14 @@ export class TMDMacroEvaluator {
         case "loop": {
           // (loop <theme> <times>) when target is already a concrete paragraph with an instrument!
           // Or (loop <theme|themes> <instrument> <times>)
-          if (expr.length < 3 || expr[1] === undefined || expr[2] === undefined) {
-            throw macroError(`'loop' requires theme and instrument (or theme and times), e.g. (loop B 10) or (loop Theme Cello 4)`);
+          if (expr.length !== 4 || expr[1] === undefined || expr[2] === undefined || expr[3] === undefined) {
+            throw macroError(`'loop' requires theme, instrument, and a positive integer count`);
           }
 
           const themeTarget = expr[1];
-          let instrument = "";
-          let times = 1;
-
-          // Check if expr[2] is a number (e.g. (loop B 10))
-          if (expr.length === 3 && (typeof expr[2] === "number" || (!isNaN(Number(expr[2])) && typeof expr[2] === "string" && /^\d+$/.test(expr[2])))) {
-            times = Number(expr[2]);
-            const targetName = String(themeTarget);
-            const concreteMatch = sheet.entries.find((p) => p.name === targetName && Boolean(p.assignment));
-            if (concreteMatch) {
-              instrument = concreteMatch.assignment!;
-            } else {
-              throw macroError(`'loop' with 2 arguments requires a concrete section with an instrument, but '${targetName}' has no instrument`);
-            }
-          } else {
-            instrument = String(expr[2]);
-            times = Number(expr[3]) || 1;
-          }
+          const instrument = String(expr[2]);
+          const times = integer(expr[3], "Loop count");
+          if (times <= 0) throw macroError("Loop count must be positive");
 
           const { name: themeName, sections: baseSections } = getThemeSections(themeTarget);
 
@@ -525,15 +509,17 @@ export class TMDMacroEvaluator {
 
         case "canon": {
           // (canon <theme|themes|canon_expr> (<instruments...>) <offset_bars>)
-          if (expr.length < 3 || expr[1] === undefined || expr[2] === undefined) {
+          if (expr.length !== 4 || expr[1] === undefined || expr[2] === undefined || expr[3] === undefined) {
             throw macroError(`'canon' requires theme and instruments, e.g. (canon Theme (Violin1 Violin2) 2)`);
           }
           const themeTarget = expr[1];
           const instrumentsRaw = expr[2];
-          const instruments: string[] = Array.isArray(instrumentsRaw)
-            ? instrumentsRaw.map((x) => String(x))
-            : [String(instrumentsRaw)];
-          const offsetBars = Number(expr[3]) || 0;
+          if (!Array.isArray(instrumentsRaw) || instrumentsRaw.length === 0 || instrumentsRaw.some((x) => typeof x !== "string")) {
+            throw macroError("Canon requires a non-empty parenthesized instrument list");
+          }
+          const instruments: string[] = instrumentsRaw.map((x) => String(x));
+          const offsetBars = integer(expr[3], "Canon offset");
+          if (offsetBars < 0) throw macroError("Canon offset must be non-negative");
 
           // Check if themeTarget is a nested sub-expression like (canon ...), (layer ...), (reverse ...), etc.
           const nestedOps = ["canon", "layer", "play", "loop", "seq", "reverse", "flip", "minor", "major", "vary", "transpose"];
@@ -600,6 +586,12 @@ export class TMDMacroEvaluator {
 
           const { name: themeName, sections } = getThemeSections(themeTarget);
 
+          const durationQuarters = sections.reduce((total, section) => total + section.unitGroups.reduce((sum, group) => sum + group.length * (4 / Math.max(1, section.noteLength)), 0), 0);
+          const durationBars = durationQuarters / TMDPlaybackRenderer.measureDuration(sheet.beat);
+          if ((instruments.length - 1) * offsetBars > durationBars) {
+            throw macroError("Canon voice enters after the combined prototype ends");
+          }
+
           const createdNames: string[] = [];
           for (let i = 0; i < instruments.length; i++) {
             const inst = instruments[i];
@@ -627,6 +619,7 @@ export class TMDMacroEvaluator {
           // (layer <child1> <child2> ...)
           // Evaluates all child expressions concurrently.
           // All generated paragraphs will share the same unified section name so they start at the same time.
+          if (expr.length < 2) throw macroError("'layer' requires at least one child");
           const childNames: string[] = [];
           for (let i = 1; i < expr.length; i++) {
             const res = evalExpr(expr[i]);
@@ -649,6 +642,7 @@ export class TMDMacroEvaluator {
         case "seq": {
           // (seq <child1> <child2> ...)
           // Evaluates all child expressions sequentially, preserving chronological execution order.
+          if (expr.length < 2) throw macroError("'seq' requires at least one child");
           const seqNames: string[] = [];
           for (let i = 1; i < expr.length; i++) {
             const res = evalExpr(expr[i]);

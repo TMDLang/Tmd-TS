@@ -400,7 +400,8 @@ export class TMDPlaybackRenderer {
       case "relativeKey":
         return { ...state, keyOffset: state.keyOffset + kind.semitones };
       case "explicitKey":
-        return { ...state, keyOffset: KeySignature.parse(kind.key).semitoneOffset };
+        // `key=` is notation metadata only; it must not alter sounding pitch.
+        return state;
       case "dynamics":
         return { ...state, dynamicLevel: kind.mark };
       case "fixedPitch":

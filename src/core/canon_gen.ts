@@ -646,7 +646,8 @@ export class TMDCanonGenerator {
     for (let vIdx = 0; vIdx < this.voiceInstruments.length; vIdx++) {
       const voice = this.voiceInstruments[vIdx];
       const offset = vIdx * this.offsetBars;
-      const voiceLines = [`canon:${voice}@|+${offset}|{`];
+      const offsetText = offset === 0 ? "0" : `+${offset}`;
+      const voiceLines = [`canon:${voice}@|${offsetText}|{`];
       for (let vNum = 0; vNum < varData.length; vNum++) {
         voiceLines.push(`    /* Variation ${vNum} */`);
         for (const [grid, bars] of varData[vNum]) {
