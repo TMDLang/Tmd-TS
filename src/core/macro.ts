@@ -451,7 +451,7 @@ export class TMDMacroEvaluator {
           // Clone the concrete paragraph(s) to a synthetic instance so layer can rename it without mutating original
           const clonedNames: string[] = [];
           for (const p of matching) {
-            const synthetic = createSyntheticParagraph(p.name, p.instrument, p.start, p.sections);
+            const synthetic = createSyntheticParagraph(p.name, p.assignment ?? p.instrument, p.start, p.sections);
             clonedNames.push(synthetic.name);
           }
           return { paragraphNames: clonedNames };
@@ -500,9 +500,9 @@ export class TMDMacroEvaluator {
           if (expr.length === 3 && (typeof expr[2] === "number" || (!isNaN(Number(expr[2])) && typeof expr[2] === "string" && /^\d+$/.test(expr[2])))) {
             times = Number(expr[2]);
             const targetName = String(themeTarget);
-            const concreteMatch = sheet.paragraphs.find((p) => p.name === targetName && Boolean(p.instrument));
+            const concreteMatch = sheet.paragraphs.find((p) => p.name === targetName && Boolean(p.assignment ?? p.instrument));
             if (concreteMatch) {
-              instrument = concreteMatch.instrument;
+              instrument = concreteMatch.assignment ?? concreteMatch.instrument;
             } else {
               throw macroError(`'loop' with 2 arguments requires a concrete section with an instrument, but '${targetName}' has no instrument`);
             }
@@ -562,8 +562,9 @@ export class TMDMacroEvaluator {
             // Extract the distinct instruments used in the inner expression in appearance order
             const innerDistinctInsts: string[] = [];
             for (const ip of innerParagraphs) {
-              if (!innerDistinctInsts.includes(ip.instrument)) {
-                innerDistinctInsts.push(ip.instrument);
+              const innerAssignment = ip.assignment ?? ip.instrument;
+              if (!innerDistinctInsts.includes(innerAssignment)) {
+                innerDistinctInsts.push(innerAssignment);
               }
             }
 
@@ -574,8 +575,9 @@ export class TMDMacroEvaluator {
             if (instruments.length > 0) {
               for (let i = 0; i < innerParagraphs.length; i++) {
                 const p = innerParagraphs[i];
-                const instIdx = innerDistinctInsts.indexOf(p.instrument);
-                const mappedInst = (instIdx >= 0 && instIdx < instruments.length) ? instruments[instIdx] : p.instrument;
+                const assignment = p.assignment ?? p.instrument;
+                const instIdx = innerDistinctInsts.indexOf(assignment);
+                const mappedInst = (instIdx >= 0 && instIdx < instruments.length) ? instruments[instIdx] : assignment;
 
                 // Clone outer voice with shifted start offset
                 const outerP = createSyntheticParagraph(
