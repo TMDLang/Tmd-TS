@@ -26,7 +26,7 @@ verse:Timpani@|0|{
 `;
     const sheet = TmdParser.parse(tmd);
     expect(sheet).not.toBeNull();
-    const section = sheet!.paragraphs[0].sections[0];
+    const section = sheet!.entries[0].sections[0];
     expect(section.directives).toHaveLength(3);
     expect(section.directives[0].kind).toEqual({ type: "fixedPitch" });
     expect(section.directives[1].kind).toEqual({ type: "fixedPitch" });

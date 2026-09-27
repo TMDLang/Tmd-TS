@@ -285,7 +285,7 @@ export class TMDRefactor {
 
   public static extractInstrument(source: string, instrument: string): string {
     const sheet = TmdParser.parseThrowing(source);
-    const matchingParagraphs = (sheet.entries ?? sheet.paragraphs).filter((p) => (p.assignment ?? p.instrument) === instrument);
+    const matchingParagraphs = sheet.entries.filter((p) => p.assignment === instrument);
     if (matchingParagraphs.length === 0) {
       throw new TMDRefactorError(`Instrument '${instrument}' not found in score`);
     }
@@ -342,7 +342,7 @@ export class TMDRefactor {
     options?: { section?: string; octaveShift?: number }
   ): string {
     const sheet = TmdParser.parseThrowing(source);
-    let matching = (sheet.entries ?? sheet.paragraphs).filter((p) => (p.assignment ?? p.instrument) === sourceInstrument);
+    let matching = sheet.entries.filter((p) => p.assignment === sourceInstrument);
     if (options?.section) {
       matching = matching.filter((p) => p.name === options.section);
     }
@@ -385,7 +385,7 @@ export class TMDRefactor {
 
       return {
         name: orig.name,
-        instrument: targetInstrument,
+        assignment: targetInstrument,
         start: orig.start,
         sections: clonedSections,
         executionTime: orig.executionTime,
@@ -418,7 +418,7 @@ export class TMDRefactor {
     options: { section?: string; intervalSteps: number }
   ): string {
     const sheet = TmdParser.parseThrowing(source);
-    let matching = (sheet.entries ?? sheet.paragraphs).filter((p) => (p.assignment ?? p.instrument) === sourceInstrument);
+    let matching = sheet.entries.filter((p) => p.assignment === sourceInstrument);
     if (options?.section) {
       matching = matching.filter((p) => p.name === options.section);
     }
@@ -474,7 +474,7 @@ export class TMDRefactor {
 
       return {
         name: orig.name,
-        instrument: harmonyInstrument,
+        assignment: harmonyInstrument,
         start: orig.start,
         sections: clonedSections,
         executionTime: orig.executionTime,
@@ -502,21 +502,21 @@ export class TMDRefactor {
 
   public static inlineOrders(source: string): string {
     const sheet = TmdParser.parseThrowing(source);
-    if (!sheet.orders || sheet.orders.length === 0) {
+    if (sheet.playback.length === 0) {
       return source;
     }
 
     // Map instruments -> combined list of sections in linear playback sequence
-    const instruments = Array.from(new Set((sheet.entries ?? sheet.paragraphs).map((p) => p.assignment ?? p.instrument)));
+    const instruments = Array.from(new Set(sheet.entries.map((p) => p.assignment).filter((value): value is string => Boolean(value))));
     const linearParagraphs: Entry[] = [];
 
     for (const inst of instruments) {
       const combinedUnitGroups: UnitGroup[] = [];
       let baseNoteLength = 4;
 
-      for (const ord of sheet.orders) {
+      for (const ord of sheet.playback) {
         if (ord.type !== "name") continue;
-      const para = (sheet.entries ?? sheet.paragraphs).find((p) => p.name === ord.name && (p.assignment ?? p.instrument) === inst);
+      const para = sheet.entries.find((p) => p.name === ord.name && p.assignment === inst);
         if (!para) continue;
 
         for (const sec of para.sections) {
@@ -527,7 +527,7 @@ export class TMDRefactor {
 
       linearParagraphs.push({
         name: "linear",
-        instrument: inst,
+        assignment: inst,
         start: 0,
         sections: [
           {
@@ -544,8 +544,8 @@ export class TMDRefactor {
       speed: sheet.speed,
       keySignature: sheet.keySignature,
       beat: sheet.beat,
-      paragraphs: linearParagraphs,
-      orders: [{ type: "name", name: "linear" }],
+      entries: linearParagraphs,
+      playback: [{ type: "name", name: "linear" }],
       metadata: sheet.metadata,
     };
 
@@ -704,11 +704,11 @@ export class TMDRefactor {
     let current = source;
     try {
       const sheet = TmdParser.parseThrowing(current);
-      for (const p of (sheet.entries ?? sheet.paragraphs)) {
+      for (const p of sheet.entries) {
         let paraCurrent = current;
         while (true) {
           try {
-            const next = this.halveGrid(paraCurrent, { section: p.name, instrument: p.instrument });
+            const next = this.halveGrid(paraCurrent, { section: p.name, instrument: p.assignment });
             if (next === paraCurrent) break;
             paraCurrent = next;
           } catch {

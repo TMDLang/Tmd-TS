@@ -155,8 +155,8 @@ export class TMDMusicXMLGenerator {
     const lower = instrument.toLowerCase();
     const aliases = ["drum", "drums", "groove", "percussion", "beat", "drumkit", "cajon", "snare", "kick", "hihat"];
     if (aliases.some((a) => lower.includes(a))) return true;
-    return sheet.paragraphs
-      .filter((p) => (p.assignment ?? p.instrument) === instrument)
+    return sheet.entries
+      .filter((p) => p.assignment === instrument)
       .some((p) =>
         p.sections.some((s) =>
           s.unitGroups.some((g) =>

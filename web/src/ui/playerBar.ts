@@ -172,7 +172,7 @@ export class TMDPlayerController {
       return;
     }
 
-    const targetOrder = sheet.orders[orderIndex];
+    const targetOrder = sheet.playback[orderIndex];
     const orderLabel = targetOrder ? formatOrder(targetOrder) : `#${orderIndex + 1}`;
     const title = `${sheet.name || "score"} [➔ ${orderLabel}]`;
 

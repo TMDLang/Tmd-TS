@@ -223,19 +223,19 @@ export class TMDMacroEvaluator {
    * If the sheet contains no macro orders, it returns the paragraphs and orders as-is.
    */
   public static expand(sheet: Sheet): Sheet {
-    const hasMacro = sheet.orders.some((o) => o.type === "macro");
+  const hasMacro = sheet.playback.some((o) => o.type === "macro");
     if (!hasMacro) {
       return sheet;
     }
 
     const abstractMap = new Map<string, Entry>();
     for (const p of sheet.entries) {
-      if (!(p.assignment ?? p.instrument)) {
+      if (!p.assignment) {
         abstractMap.set(p.name, p);
       }
     }
 
-    const concreteParagraphs: Entry[] = sheet.entries.filter((p) => Boolean(p.assignment ?? p.instrument));
+    const concreteParagraphs: Entry[] = sheet.entries.filter((p) => Boolean(p.assignment));
     const newOrders: Playback[] = [];
     let genCounter = 0;
     let currentOrderLoc: { line?: number; column?: number } = {};
@@ -254,7 +254,6 @@ export class TMDMacroEvaluator {
       const uniqueName = `__macro_${baseName}_${genCounter}`;
       const p: Entry = {
         name: uniqueName,
-        instrument,
         assignment: instrument,
         start: startOffset,
         sections: JSON.parse(JSON.stringify(sections)),
@@ -435,7 +434,7 @@ export class TMDMacroEvaluator {
       }
 
       const themeName = String(themeArg);
-      const p = abstractMap.get(themeName) || sheet.paragraphs.find((p) => p.name === themeName);
+      const p = abstractMap.get(themeName) || sheet.entries.find((p) => p.name === themeName);
       if (!p) {
         throw macroError(`Theme '${themeName}' not found`);
       }
@@ -451,7 +450,7 @@ export class TMDMacroEvaluator {
           // Clone the concrete paragraph(s) to a synthetic instance so layer can rename it without mutating original
           const clonedNames: string[] = [];
           for (const p of matching) {
-            const synthetic = createSyntheticParagraph(p.name, p.assignment ?? p.instrument, p.start, p.sections);
+            const synthetic = createSyntheticParagraph(p.name, p.assignment!, p.start, p.sections);
             clonedNames.push(synthetic.name);
           }
           return { paragraphNames: clonedNames };
@@ -500,9 +499,9 @@ export class TMDMacroEvaluator {
           if (expr.length === 3 && (typeof expr[2] === "number" || (!isNaN(Number(expr[2])) && typeof expr[2] === "string" && /^\d+$/.test(expr[2])))) {
             times = Number(expr[2]);
             const targetName = String(themeTarget);
-            const concreteMatch = sheet.entries.find((p) => p.name === targetName && Boolean(p.assignment ?? p.instrument));
+            const concreteMatch = sheet.entries.find((p) => p.name === targetName && Boolean(p.assignment));
             if (concreteMatch) {
-              instrument = concreteMatch.assignment ?? concreteMatch.instrument;
+              instrument = concreteMatch.assignment!;
             } else {
               throw macroError(`'loop' with 2 arguments requires a concrete section with an instrument, but '${targetName}' has no instrument`);
             }
@@ -562,8 +561,8 @@ export class TMDMacroEvaluator {
             // Extract the distinct instruments used in the inner expression in appearance order
             const innerDistinctInsts: string[] = [];
             for (const ip of innerParagraphs) {
-              const innerAssignment = ip.assignment ?? ip.instrument;
-              if (!innerDistinctInsts.includes(innerAssignment)) {
+              const innerAssignment = ip.assignment;
+              if (innerAssignment && !innerDistinctInsts.includes(innerAssignment)) {
                 innerDistinctInsts.push(innerAssignment);
               }
             }
@@ -575,7 +574,8 @@ export class TMDMacroEvaluator {
             if (instruments.length > 0) {
               for (let i = 0; i < innerParagraphs.length; i++) {
                 const p = innerParagraphs[i];
-                const assignment = p.assignment ?? p.instrument;
+                const assignment = p.assignment;
+                if (!assignment) continue;
                 const instIdx = innerDistinctInsts.indexOf(assignment);
                 const mappedInst = (instIdx >= 0 && instIdx < instruments.length) ? instruments[instIdx] : assignment;
 
@@ -785,7 +785,7 @@ export class TMDMacroEvaluator {
       }
     };
 
-    for (const order of sheet.orders) {
+    for (const order of sheet.playback) {
       if (order.type === "macro") {
         currentOrderLoc = { line: order.line, column: order.column };
         const res = evalExpr(order.expr);
@@ -799,8 +799,6 @@ export class TMDMacroEvaluator {
 
     return {
       ...sheet,
-      paragraphs: concreteParagraphs,
-      orders: newOrders,
       entries: concreteParagraphs,
       playback: newOrders,
     };

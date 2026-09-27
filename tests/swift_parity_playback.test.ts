@@ -63,7 +63,7 @@ A:Piano@|0|{
 -> A ->#
 `);
 
-    const units = sheet.paragraphs[0].sections[0].unitGroups.map((g) => g.units);
+    const units = sheet.entries[0].sections[0].unitGroups.map((g) => g.units);
     expect(units[0]).toHaveLength(1);
     expect(units[0][0]).toMatchObject({ type: "multiNote" });
     expect(formatSheet(sheet)).toContain("1+3");

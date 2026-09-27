@@ -309,8 +309,6 @@ export interface Entry {
   name: string;
   /** Canonical assignment name; undefined identifies a prototype. */
   assignment?: string;
-  /** @deprecated Use assignment. Kept at the compatibility boundary. */
-  instrument: string;
   isPrototype?: boolean;
   pitchMode?: EntryPitchMode;
   start: number;
@@ -319,13 +317,6 @@ export interface Entry {
   showProgram?: string;
   line?: number;
   column?: number;
-}
-
-/** Source compatibility name retained for existing TypeScript consumers. */
-export type Paragraph = Entry;
-
-export function entryAssignment(entry: Entry): string | undefined {
-  return entry.instrument || undefined;
 }
 
 export type SExprAtom = string | number;
@@ -338,10 +329,6 @@ export type Playback =
   | { type: "absolute"; value: string; line?: number; column?: number }
   | { type: "macro"; expr: SExpr[]; line?: number; column?: number };
 
-/** Canonical name for one source playback expression. */
-/** @deprecated Use Playback. */
-export type Order = Playback;
-
 export interface Sheet {
   name: string;
   speed: number;
@@ -352,10 +339,6 @@ export interface Sheet {
   entries: Entry[];
   /** Canonical playback expressions. */
   playback: Playback[];
-  /** @deprecated Use entries. */
-  paragraphs: Paragraph[];
-  /** @deprecated Use playback. */
-  orders: Order[];
   metadata: Record<string, string>;
   distinctAssignments?: () => string[];
 }

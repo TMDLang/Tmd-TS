@@ -110,9 +110,9 @@ export function renderInspectorView(
     const profile = TMDSongInspector.inspect(currentSheet, currentInst);
 
     // Track list for pitch analysis from expanded instrument ranges
-    const distinctInsts = profile.instrumentRanges.map((r) => r.instrument);
+    const distinctInsts = profile.instrumentRanges.map((r) => r.assignment);
     if (!currentInst || !distinctInsts.includes(currentInst)) {
-      currentInst = profile.vocalRange?.instrument
+      currentInst = profile.vocalRange?.assignment
         || distinctInsts.find((inst) => /^(main_?vocal|lead_?vocal|vocal|voice|主唱|人聲|歌|vo)$/i.test(inst))
         || distinctInsts.find((inst) => /vocal|voice|miku|utau|teto|sing|melody|lead|主旋律/i.test(inst) && !/backing|harm|choir|guitar|synth|pad|bass|drum|beat/i.test(inst))
         || distinctInsts[0];
@@ -177,7 +177,7 @@ export function renderInspectorView(
       if (inspectorVocalDetails) {
         const detailTmpl = t("vocalDetailFormat") || "Track: {instrument} · Lowest in [{lowestSection}] · Highest in [{highestSection}]";
         const detailText = detailTmpl
-          .replace("{instrument}", v.instrument)
+        .replace("{instrument}", v.assignment)
           .replace("{lowestSection}", v.lowestNote.sectionName)
           .replace("{highestSection}", v.highestNote.sectionName);
 
@@ -255,8 +255,8 @@ export function renderInspectorView(
   const ordersNode = outlineNodes.find((n) => n.name === "Orders");
 
   // Orders
-  if (currentSheet.orders && currentSheet.orders.length > 0) {
-    inspectorOrders.innerHTML = currentSheet.orders
+  if (currentSheet.playback.length > 0) {
+    inspectorOrders.innerHTML = currentSheet.playback
       .map((ord, idx) => {
         let orderLabel = "";
         let opName = "";
@@ -364,14 +364,14 @@ export function renderInspectorView(
           .join("")}
       </div>
     `;
-  } else if (currentSheet.paragraphs && currentSheet.paragraphs.length > 0) {
+  } else if (currentSheet.entries.length > 0) {
     // Fallback if AST has paragraphs but outline nodes failed
-    inspectorTracks.innerHTML = currentSheet.paragraphs
+    inspectorTracks.innerHTML = currentSheet.entries
       .map((p) => {
         const offset = p.start ? (p.start > 0 ? `+${p.start}` : `${p.start}`) : "0";
         const totalUnits = p.sections.reduce((acc, s) => acc + s.unitGroups.reduce((uAcc, g) => uAcc + g.units.length, 0), 0);
         const lineAttr = p.line ? `data-start-line="${p.line}" data-start-col="1" data-end-line="${p.line}" data-end-col="1"` : "";
-        const instLabel = p.instrument || DEFAULT_INSTRUMENT;
+        const instLabel = p.assignment || DEFAULT_INSTRUMENT;
         const trkPlayTitle = (t("playTrackTitle") || "Play track: {section} ({instrument})")
           .replace("{section}", p.name)
           .replace("{instrument}", instLabel);
@@ -381,7 +381,7 @@ export function renderInspectorView(
             <span class="track-name">${escapeHtml(p.name)}:${escapeHtml(instLabel)}</span>
             <span class="outline-item-right">
               <span class="track-meta">@|${offset}| · ${totalUnits} notes</span>
-              <button type="button" class="outline-play-btn" data-play-section="${escapeHtml(p.name)}" data-play-instrument="${escapeHtml(p.instrument || DEFAULT_INSTRUMENT)}" title="${escapeHtml(trkPlayTitle)}">▶</button>
+              <button type="button" class="outline-play-btn" data-play-section="${escapeHtml(p.name)}" data-play-instrument="${escapeHtml(instLabel)}" title="${escapeHtml(trkPlayTitle)}">▶</button>
             </span>
           </div>
         `;
@@ -395,7 +395,7 @@ export function renderInspectorView(
   const distinctInstruments = SheetInstrumentHelper.distinctInstruments(currentSheet);
   const trackCount = distinctInstruments.length;
   sbStatus.textContent = "Valid TMD";
-  sbSummary.textContent = `${currentSheet.paragraphs.length} paragraphs · ${trackCount} instruments · BPM ${currentSheet.speed || 120}`;
+  sbSummary.textContent = `${currentSheet.entries.length} entries · ${trackCount} instruments · BPM ${currentSheet.speed || 120}`;
 
   return currentSheet;
 }

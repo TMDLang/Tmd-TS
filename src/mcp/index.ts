@@ -67,9 +67,9 @@ export class TmdMcpServer {
         tonic = `${letter}${acc}`;
       }
 
-      const paragraphs = sheet.paragraphs.map((p) => ({
+      const paragraphs = sheet.entries.map((p) => ({
         name: p.name,
-        instrument: p.instrument,
+        assignment: p.assignment,
         start: p.start || 0,
         sectionCount: p.sections.length,
       }));
@@ -84,8 +84,8 @@ export class TmdMcpServer {
             timeSignature: sheet.beat
               ? `${sheet.beat.count}/${sheet.beat.noteValue}`
               : "4/4",
-            orders: sheet.orders,
-            paragraphCount: sheet.paragraphs.length,
+            playback: sheet.playback,
+            entryCount: sheet.entries.length,
             paragraphs,
           },
           null,
@@ -125,7 +125,7 @@ export class TmdMcpServer {
           issueCount: issues.length,
           issues: issues.map((i) => ({
             paragraph: i.paragraphName,
-            instrument: i.instrument,
+                instrument: i.instrument,
             line: i.lineNumber,
             measureIndex: i.measureIndex,
             expectedUnits: i.expectedUnits,

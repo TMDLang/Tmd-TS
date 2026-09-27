@@ -124,14 +124,14 @@ export function formatSection(sec: Section, beat: Beat = { count: 4, noteValue: 
 export function formatParagraph(p: Entry, beat?: Beat): string {
   if (p.showProgram) {
     const time = p.executionTime ?? "";
-    return `${p.name}:${p.assignment ?? p.instrument}@${time}{\n"""${p.showProgram}"""\n}\n\n`;
+    return `${p.name}:${p.assignment}@${time}{\n"""${p.showProgram}"""\n}\n\n`;
   }
 
   let result = "";
-  if (!(p.assignment ?? p.instrument)) {
+  if (!p.assignment) {
     result = `${p.name} {\n`;
   } else {
-    result = `${p.name}:${p.assignment ?? p.instrument}`;
+    result = `${p.name}:${p.assignment}`;
     if (p.pitchMode === "fixed") result += "[pitchMode=fixed]";
     result += "@|";
     if (p.start > 0) result += `+${p.start}`;
@@ -182,12 +182,12 @@ export function formatSheet(sheet: Sheet): string {
   }
   if (metaKeys.length > 0) result += "\n";
 
-  for (const p of (sheet.entries ?? sheet.paragraphs)) {
+  for (const p of sheet.entries) {
     result += formatParagraph(p, sheet.beat);
   }
 
   let counter = 0;
-  for (const order of (sheet.playback ?? sheet.orders)) {
+  for (const order of sheet.playback) {
     result += `-> ${formatOrder(order)} `;
     counter++;
     if (counter % 4 === 0) result += "\n";
@@ -205,14 +205,14 @@ export function formatSummary(sheet: Sheet): string {
     lines.push(`DeclaredKey:  ${sheet.declaredKey}`);
   }
   lines.push(`Beat:         ${sheet.beat.count}/${sheet.beat.noteValue}`);
-  const entries = sheet.entries ?? sheet.paragraphs;
-  const playback = sheet.playback ?? sheet.orders;
+  const entries = sheet.entries;
+  const playback = sheet.playback;
   lines.push(`Entries:      ${entries.length}`);
 
   entries.forEach((p, idx) => {
     const secCount = p.sections.length;
     const totalUnits = p.sections.reduce((acc, s) => acc + s.unitGroups.length, 0);
-    lines.push(`  [${idx + 1}] ${p.name} (Assignment: ${p.assignment ?? p.instrument}, Start: ${p.start}, Sections: ${secCount}, UnitGroups: ${totalUnits})`);
+    lines.push(`  [${idx + 1}] ${p.name} (Assignment: ${p.assignment ?? "(prototype)"}, Start: ${p.start}, Sections: ${secCount}, UnitGroups: ${totalUnits})`);
   });
 
   lines.push(`Playback:     ${playback.length}`);

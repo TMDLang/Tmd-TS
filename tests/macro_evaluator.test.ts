@@ -41,10 +41,10 @@ Theme {
 `;
       const sheet = TmdParser.parse(input);
       expect(sheet).not.toBeNull();
-      expect(sheet.paragraphs.length).toBe(1);
-      const p = sheet.paragraphs[0];
+      expect(sheet.entries.length).toBe(1);
+      const p = sheet.entries[0];
       expect(p.name).toBe('Theme');
-      expect(p.instrument).toBe(''); // Empty instrument indicates abstract prototype
+      expect(p.assignment).toBeUndefined(); // Missing assignment indicates abstract prototype
       expect(p.start).toBe(0);
       expect(p.sections.length).toBe(1);
       expect(p.sections[0].unitGroups.length).toBe(4);
@@ -66,8 +66,8 @@ Theme:Piano@|0|{
 `;
       const sheet = TmdParser.parse(input);
       expect(sheet).not.toBeNull();
-      expect(sheet.orders.length).toBe(1);
-      const order = sheet.orders[0];
+      expect(sheet.playback.length).toBe(1);
+      const order = sheet.playback[0];
       expect(order.type).toBe('macro');
       if (order.type === 'macro') {
         expect(order.expr).toEqual([
@@ -94,7 +94,7 @@ Theme {
 -> (canon Theme (Violin1 Violin2) 2) ->#
 `;
       const sheet = TmdParser.parse(input);
-      const formattedOrder = formatOrder(sheet.orders[0]);
+      const formattedOrder = formatOrder(sheet.playback[0]);
       expect(formattedOrder).toBe('(canon Theme (Violin1 Violin2) 2)');
 
       const formatted = formatSheet(sheet);
@@ -279,8 +279,8 @@ B:Bass@|0|{
       const sheet = TmdParser.parse(input);
       const expanded = TMDMacroEvaluator.expand(sheet);
 
-      expect(expanded.orders).toHaveLength(1);
-      const orderName = (expanded.orders[0] as any).name;
+      expect(expanded.playback).toHaveLength(1);
+      const orderName = (expanded.playback[0] as any).name;
       expect(orderName).toMatch(/^__layer_/);
 
       const piano = TMDPlaybackRenderer.render(expanded, 'Piano');
@@ -875,5 +875,3 @@ Theme { <4*> 1 2 3 4 }
     });
   });
 });
-
-

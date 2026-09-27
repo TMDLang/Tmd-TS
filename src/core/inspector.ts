@@ -53,8 +53,6 @@ export type VocalClassification = "soprano" | "mezzo-soprano" | "contralto" | "t
 export interface TMDPitchRangeProfile {
   /** Canonical assignment represented by this pitch profile. */
   assignment: string;
-  /** @deprecated Use assignment. */
-  instrument: string;
   lowestNote: TMDNotePitchInfo;
   highestNote: TMDNotePitchInfo;
   spanSemitones: number;
@@ -302,9 +300,9 @@ export class TMDSongInspector {
 
   private static buildTimingProfile(sheet: Sheet, timelineDirectives: PlaybackDirectiveEvent[]): TMDTimingProfile {
     const orders: Playback[] =
-      sheet.orders.length > 0
-        ? sheet.orders
-        : Array.from(new Set(sheet.paragraphs.map((p) => p.name))).map((n) => ({
+      sheet.playback.length > 0
+        ? sheet.playback
+        : Array.from(new Set(sheet.entries.map((p) => p.name))).map((n) => ({
             type: "name",
             name: n,
           }));
@@ -491,7 +489,6 @@ export class TMDSongInspector {
 
     return {
       assignment: instrument,
-      instrument,
       lowestNote: {
         midiPitch: lowest.midi,
         noteName: lowest.name,
@@ -520,7 +517,7 @@ export class TMDSongInspector {
   }
 
   private static collectTimelineDirectives(sheet: Sheet): PlaybackDirectiveEvent[] {
-    const instruments = new Set(sheet.entries.map((paragraph) => paragraph.assignment ?? paragraph.instrument).filter((instrument) => instrument.trim().length > 0));
+    const instruments = new Set(sheet.entries.map((paragraph) => paragraph.assignment).filter((instrument): instrument is string => Boolean(instrument && instrument.trim().length > 0)));
     const directives: PlaybackDirectiveEvent[] = [];
     for (const instrument of instruments) {
       directives.push(...TMDPlaybackRenderer.render(sheet, instrument).directives);
@@ -596,7 +593,7 @@ export class TMDSongInspector {
     }
 
     const modulations: string[] = [];
-    for (const order of sheet.orders) {
+    for (const order of sheet.playback) {
       if (order.type === "relative") {
         modulations.push(`Relative: ${order.value} semitones`);
       } else if (order.type === "absolute") {
@@ -613,8 +610,9 @@ export class TMDSongInspector {
 
   private static buildDensityProfile(sheet: Sheet): TMDArrangementDensityProfile {
     const sectionDict: Record<string, string[]> = {};
-    for (const p of sheet.paragraphs) {
-      const assignment = p.assignment ?? p.instrument;
+    for (const p of sheet.entries) {
+      const assignment = p.assignment;
+      if (!assignment) continue;
       if (!assignment.trim()) continue;
       if (!sectionDict[p.name]) {
         sectionDict[p.name] = [];
@@ -753,7 +751,7 @@ export class TMDSongInspector {
     for (let secIdx = 0; secIdx < timingProfile.sections.length; secIdx++) {
       const sec = timingProfile.sections[secIdx];
       const weights = sectionWeights[secIdx] || new Array<number>(12).fill(0.0);
-      const fixedPitch = sheet.paragraphs
+      const fixedPitch = sheet.entries
         .filter((paragraph) => paragraph.name === sec.name)
         .some((paragraph) => paragraph.sections.some((section) => section.directives.some((directive) => directive.kind.type === "fixedPitch")));
       const secInference = this.evaluateTonality(weights);

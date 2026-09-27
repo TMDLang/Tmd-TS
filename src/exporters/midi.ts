@@ -852,11 +852,11 @@ export class TMDMIDIGenerator {
   ): Uint8Array {
     let effectiveSheet = TMDMacroEvaluator.expand(rawSheet);
     if (options?.targetParagraph) {
-      const filteredParagraphs = rawSheet.paragraphs.filter(p => p.name === options.targetParagraph);
+      const filteredParagraphs = rawSheet.entries.filter(p => p.name === options.targetParagraph);
       effectiveSheet = {
         ...rawSheet,
-        paragraphs: filteredParagraphs,
-        orders: [{ type: 'name', name: options.targetParagraph }],
+        entries: filteredParagraphs,
+        playback: [{ type: 'name', name: options.targetParagraph }],
       };
     }
 

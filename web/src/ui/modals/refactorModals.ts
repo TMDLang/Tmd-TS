@@ -1,4 +1,4 @@
-import { Sheet, Paragraph } from "../../../../src/core/types.js";
+import { Sheet } from "../../../../src/core/types.js";
 import { TmdParser } from "../../../../src/core/parser.js";
 import { TMDRefactor } from "../../../../src/core/refactor.js";
 import { escapeHtml } from "../../html.js";
@@ -159,7 +159,7 @@ export function setupRefactorModals(
     } catch {
       // ignore
     }
-    const instruments = Array.from(new Set(sheet?.paragraphs.map((p: Paragraph) => p.instrument) || []));
+    const instruments = Array.from(new Set(sheet?.entries.map((p) => p.assignment).filter((p): p is string => Boolean(p)) || []));
     refactorOldInst.innerHTML = instruments
       .map((inst) => `<option value="${escapeHtml(inst)}">${escapeHtml(inst)}</option>`)
       .join("");
@@ -198,7 +198,7 @@ export function setupRefactorModals(
     } catch {
       // ignore
     }
-    const sections = Array.from(new Set(sheet?.paragraphs.map((p: Paragraph) => p.name) || []));
+    const sections = Array.from(new Set(sheet?.entries.map((p) => p.name) || []));
     refactorOldSec.innerHTML = sections
       .map((sec) => `<option value="${escapeHtml(sec)}">${escapeHtml(sec)}</option>`)
       .join("");
@@ -237,7 +237,7 @@ export function setupRefactorModals(
     } catch {
       // ignore
     }
-    const instruments = Array.from(new Set(sheet?.paragraphs.map((p: Paragraph) => p.instrument) || []));
+    const instruments = Array.from(new Set(sheet?.entries.map((p) => p.assignment).filter((p): p is string => Boolean(p)) || []));
     refactorExtractInst.innerHTML = instruments
       .map((inst) => `<option value="${escapeHtml(inst)}">${escapeHtml(inst)}</option>`)
       .join("");
@@ -281,7 +281,7 @@ export function setupRefactorModals(
     } catch {
       // ignore
     }
-    const instruments = Array.from(new Set(sheet?.paragraphs.map((p: Paragraph) => p.instrument) || []));
+    const instruments = Array.from(new Set(sheet?.entries.map((p) => p.assignment).filter((p): p is string => Boolean(p)) || []));
     refactorDupSource.innerHTML = instruments
       .map((inst) => `<option value="${escapeHtml(inst)}" ${inst === initialInstrument ? "selected" : ""}>${escapeHtml(inst)}</option>`)
       .join("");
@@ -311,7 +311,7 @@ export function setupRefactorModals(
     } catch {
       // ignore
     }
-    const instruments = Array.from(new Set(sheet?.paragraphs.map((p: Paragraph) => p.instrument) || []));
+    const instruments = Array.from(new Set(sheet?.entries.map((p) => p.assignment).filter((p): p is string => Boolean(p)) || []));
     refactorHarmSource.innerHTML = instruments
       .map((inst) => `<option value="${escapeHtml(inst)}" ${inst === initialInstrument ? "selected" : ""}>${escapeHtml(inst)}</option>`)
       .join("");

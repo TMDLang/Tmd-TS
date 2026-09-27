@@ -103,7 +103,7 @@ verse:Piano@|0|{
     expect(parsed.name).toBe('MCP Test');
     expect(parsed.speed).toBe(120);
     expect(parsed.tonic).toBe('C');
-    expect(parsed.paragraphCount).toBe(1);
+    expect(parsed.entryCount).toBe(1);
   });
 
   it('parseTmd exposes explicit tonality separately from movable-do', async () => {

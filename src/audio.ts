@@ -9,7 +9,7 @@ export class TMDWAVRenderer {
     if (!Number.isFinite(sampleRate) || sampleRate < 8000) throw new TmdAudioError("Sample rate must be at least 8000 Hz");
     const events: PlaybackEvent[] = [];
     const directives: PlaybackDirectiveEvent[] = [];
-    for (const assignment of new Set(sheet.entries.map(p => p.assignment ?? p.instrument).filter(Boolean))) {
+    for (const assignment of new Set(sheet.entries.map(p => p.assignment).filter((value): value is string => Boolean(value))) ) {
       const timeline = TMDPlaybackRenderer.render(sheet, assignment);
       events.push(...timeline.events);
       directives.push(...timeline.directives);
