@@ -164,5 +164,29 @@ describe("TMDCanonGenerator (TDD port from canon_gen.py)", () => {
       const issues = TMDMeasureChecker.check(tmd);
       expect(issues).toEqual([]);
     });
+
+    it("selects a seeded violin arpeggio texture according to probability", () => {
+      const bassNotes = ["1_", "5__", "6__", "3__"];
+      const plain = new TMDCanonGenerator({ mode: "tonal", key: "C", arpeggioProbability: 0, seed: 7 });
+      const arpeggiated = new TMDCanonGenerator({ mode: "tonal", key: "C", arpeggioProbability: 1, seed: 7 });
+
+      expect(plain.generateThemeBars(bassNotes, 0)[0][0]).toBe("<4*>");
+      const [grid, bars] = arpeggiated.generateThemeBars(bassNotes, 0)[0];
+      expect(grid).toBe("<8*>");
+      expect(bars).toHaveLength(2);
+      expect(bars[0].trim().split(/\s+/)).toHaveLength(8);
+
+      const firstChord = (arpeggiated as any).getChordTones("1_");
+      const secondChord = (arpeggiated as any).getChordTones("5__");
+      const firstBar = bars[0].trim().split(/\s+/);
+      expect(firstBar.slice(0, 4).every((note: string) => firstChord.includes(note))).toBe(true);
+      expect(firstBar.slice(4).every((note: string) => secondChord.includes(note))).toBe(true);
+      expect(TMDMeasureChecker.check(arpeggiated.generate())).toEqual([]);
+    });
+
+    it("keeps arpeggio generation reproducible with the same seed", () => {
+      const options = { mode: "pentatonic" as const, key: "D", arpeggioProbability: 0.5, seed: 1234 };
+      expect(new TMDCanonGenerator(options).generate()).toBe(new TMDCanonGenerator(options).generate());
+    });
   });
 });
