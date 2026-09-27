@@ -1,6 +1,4 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import {
   TmdParser,
   TMDABCGenerator,
@@ -11,6 +9,7 @@ import {
   NotationDuration,
   TMDMIDIGenerator,
 } from '../src/index.js';
+import { musicXmlExportFixture } from './conformanceFixtures.js';
 
 describe('NotationDuration and Measure Decomposition', () => {
   it('decomposes quarter notes into standard notation duration atoms', () => {
@@ -91,8 +90,7 @@ A:Piano@|0|{
 
 describe('MusicXML Exporter Invariants', () => {
   it('matches the shared MusicXML exporter fixture', () => {
-    const source = readFileSync(join(process.cwd(), "docs/conformance/musicxml-export-fixture.tmd"), "utf8");
-    const sheet = TmdParser.parse(source);
+    const sheet = TmdParser.parse(musicXmlExportFixture);
     const xml = TMDMusicXMLGenerator.generateMusicXML(sheet);
 
     expect(xml).toContain("<part-name>Piano</part-name>");

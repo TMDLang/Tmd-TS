@@ -1,13 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { TmdParser } from "../src/core/parser.js";
 import { TMDSongInspector } from "../src/core/inspector.js";
+import { inspectorBasicFixture } from "./conformanceFixtures.js";
 
 describe("TMDSongInspector (TDD port from TmdSwift)", () => {
   it("matches the shared Inspector fixture's stable profile fields", () => {
-    const source = readFileSync(join(process.cwd(), "docs/conformance/inspector-basic-fixture.tmd"), "utf8");
-    const sheet = TmdParser.parse(source);
+    const sheet = TmdParser.parse(inspectorBasicFixture);
     const profile = TMDSongInspector.inspect(sheet);
 
     expect(profile.timing.totalMeasures).toBe(1);

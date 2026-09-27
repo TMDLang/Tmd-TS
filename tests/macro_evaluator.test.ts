@@ -1,6 +1,4 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import {
   TmdParser,
   formatOrder,
@@ -12,11 +10,11 @@ import {
   TMDMacroEvaluator,
   TMDMacroError,
 } from '../src/index.js';
+import { macroPlayFixture } from './conformanceFixtures.js';
 
 describe('TMD Macro S-Expression & Abstract Paragraphs (TDD - Red Phase)', () => {
   it('matches the shared prototype-binding macro fixture', () => {
-    const source = readFileSync(join(process.cwd(), 'docs/conformance/macro-play-fixture.tmd'), 'utf8');
-    const sheet = TmdParser.parse(source);
+    const sheet = TmdParser.parse(macroPlayFixture);
     const playback = TMDPlaybackRenderer.render(sheet, 'Violin');
 
     expect(sheet.entries?.[0].isPrototype).toBe(true);
