@@ -6,8 +6,8 @@ import {
   ChordSymbol,
   KeySignature,
   Note,
-  Order,
-  Paragraph,
+  Playback,
+  Entry,
   ScaleDegree,
   Section,
   SectionDirective,
@@ -667,8 +667,8 @@ export class TmdParser {
     let keySignature = new KeySignature();
     let declaredKey: string | undefined;
     let beat: Beat = { count: 4, noteValue: 4 };
-    const paragraphs: Paragraph[] = [];
-    const orders: Order[] = [];
+    const paragraphs: Entry[] = [];
+    const orders: Playback[] = [];
     const metadata: Record<string, string> = {};
 
     while (this.current.type !== "eof") {
@@ -746,7 +746,7 @@ export class TmdParser {
             this.advance();
             const entries = paragraphs.map((entry) => ({
               ...entry,
-              assignment: entry.instrument || undefined,
+              assignment: entry.assignment ?? (entry.instrument || undefined),
               isPrototype: entry.instrument.length === 0,
               pitchMode: entry.pitchMode ?? "transposing"
             }));
@@ -828,7 +828,7 @@ export class TmdParser {
           break;
 
         default: {
-          const para = this.parseParagraph();
+          const para = this.parseEntry();
           if (para) {
             paragraphs.push(para);
           } else {
@@ -844,7 +844,7 @@ export class TmdParser {
 
     const entries = paragraphs.map((entry) => ({
       ...entry,
-      assignment: entry.instrument || undefined,
+      assignment: entry.assignment ?? (entry.instrument || undefined),
       isPrototype: entry.instrument.length === 0,
       pitchMode: entry.pitchMode ?? "transposing"
     }));
@@ -861,7 +861,7 @@ export class TmdParser {
     };
   }
 
-  private parseParagraph(): Paragraph | null {
+  private parseEntry(): Entry | null {
     const startLine = this.current.line;
     const startCol = this.current.column;
     let name = "";
