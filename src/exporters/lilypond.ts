@@ -278,7 +278,7 @@ export class TMDLilyPondGenerator {
 
   private static paragraphsContainPercussion(paragraphs: Paragraph[], instrument: string): boolean {
     return paragraphs
-      .filter((p) => p.instrument.toLocaleLowerCase() === instrument.toLocaleLowerCase())
+      .filter((p) => (p.assignment ?? p.instrument).toLocaleLowerCase() === instrument.toLocaleLowerCase())
       .some((p) =>
         p.sections.some((s) =>
           s.unitGroups.some((g) => g.units.some((u) => u.type === "percussion"))

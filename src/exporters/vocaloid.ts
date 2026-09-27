@@ -591,7 +591,7 @@ export class TMDVSQXGenerator {
 
   private static resolveTargetInstrument(sheet: Sheet, requested?: string): string {
     const distinct = Array.from(new Set(
-      sheet.paragraphs.map((p) => p.instrument).filter((instrument) => instrument.trim().length > 0)
+      sheet.paragraphs.map((p) => p.assignment ?? p.instrument).filter((instrument) => instrument.trim().length > 0)
     )).sort();
     if (requested) {
       const matched = distinct.find((instrument) => instrument.toLocaleLowerCase() === requested.toLocaleLowerCase());
