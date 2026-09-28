@@ -1,6 +1,6 @@
 {
   "name": "tmd-ts",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "TypeScript parser, AST, CLI, and multi-format music generator for TMD (Timebase Mark Down)",
   "author": "zonble",
   "license": "MIT",
