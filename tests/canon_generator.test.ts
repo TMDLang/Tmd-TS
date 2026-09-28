@@ -8,7 +8,7 @@ import { TMDPlaybackRenderer } from "../src/core/playback.js";
 describe("TMDCanonGenerator (TDD port from canon_gen.py)", () => {
   it("rejects canon dimensions beyond the generation limits", () => {
     expect(() => new TMDCanonGenerator({ numVoices: 17 })).toThrow(/numVoices.*16/);
-    expect(() => new TMDCanonGenerator({ numVariations: 33 })).toThrow(/numVariations.*32/);
+    expect(() => new TMDCanonGenerator({ numVariations: 129 })).toThrow(/numVariations.*128/);
     expect(() => new TMDCanonGenerator({ offsetBars: 65 })).toThrow(/offsetBars.*64/);
   });
 
