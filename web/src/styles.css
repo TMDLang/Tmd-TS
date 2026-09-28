@@ -157,7 +157,10 @@ html, body {
 }
 
 .brand-icon {
-  font-size: 20px;
+  width: 24px;
+  height: 24px;
+  display: block;
+  flex: 0 0 auto;
 }
 
 .brand-badge {

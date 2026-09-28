@@ -23,6 +23,11 @@ describe("tablet and PWA web contract", () => {
     expect(html).toContain('<meta name="apple-mobile-web-app-title" content="TMD Studio" />');
   });
 
+  it("uses the product mark in the Web Studio brand", () => {
+    expect(html).toContain('<img class="brand-icon" src="./favicon.svg" alt="TMD" />');
+    expect(html).not.toContain('<span class="brand-icon">🎵</span>');
+  });
+
   it("registers the service worker from the application bootstrap", () => {
     expect(main).toContain('navigator.serviceWorker.register("./sw.js")');
   });
@@ -38,6 +43,18 @@ describe("tablet and PWA web contract", () => {
         expect.objectContaining({ src: "./pwa-icon.svg", sizes: "512x512" }),
       ])
     );
+  });
+
+  it("uses the monochrome brace-and-note product mark", () => {
+    const favicon = readFileSync(join(root, "web/public/favicon.svg"), "utf8");
+    const pwaIcon = readFileSync(join(root, "web/public/pwa-icon.svg"), "utf8");
+    for (const svg of [favicon, pwaIcon]) {
+      expect(svg).toContain("#000000");
+      expect(svg).toContain("#ffffff");
+      expect(svg).not.toMatch(/gradient|#58a6ff|#bc8cff|#2ea043/);
+    }
+    expect(favicon).toContain("TMD");
+    expect(pwaIcon).toContain("TMD");
   });
 
   it("protects tablet layouts and keeps primary controls touch-sized", () => {
