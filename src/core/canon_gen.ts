@@ -70,7 +70,7 @@ export interface CanonGeneratorOptions {
 
 export class TMDCanonGenerator {
   public static readonly MAX_VOICES = 16;
-  public static readonly MAX_VARIATIONS = 128;
+  public static readonly MAX_VARIATIONS = 4096;
   public static readonly MAX_OFFSET_BARS = 64;
 
   public static readonly MAJOR_PENTATONIC_SCALE = [
