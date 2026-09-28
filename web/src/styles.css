@@ -314,6 +314,70 @@ html, body {
   position: relative;
 }
 
+.tmd-palette {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 46px;
+  padding: 4px 8px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+}
+
+.tmd-palette-header {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 76px;
+  line-height: 1.1;
+}
+
+.tmd-palette-title {
+  color: var(--text-bright);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.tmd-palette-hint {
+  color: var(--text-secondary);
+  font-size: 9px;
+}
+
+.tmd-palette-buttons {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 4px;
+}
+
+.tmd-palette-button {
+  min-width: 36px;
+  min-height: 36px;
+  padding: 5px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  line-height: 1;
+  touch-action: manipulation;
+  cursor: pointer;
+}
+
+.tmd-palette-button:hover,
+.tmd-palette-button:focus-visible {
+  border-color: var(--accent-blue);
+  background: rgba(88, 166, 255, 0.16);
+  color: var(--text-bright);
+  outline: none;
+}
+
 .editor-container {
   flex: 1;
   min-height: 0;

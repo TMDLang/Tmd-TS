@@ -30,6 +30,7 @@ import { setupRefactorModals } from "./ui/modals/refactorModals.js";
 import { setupInsertSectionModal } from "./ui/modals/insertSectionModal.js";
 import { setupHumModal } from "./ui/modals/humModal.js";
 import { VirtualKeyboardController } from "./ui/virtualKeyboard.js";
+import { TmdPaletteController } from "./ui/tmdPalette.js";
 
 let editor: TMDWebEditor;
 let currentSheet: Sheet | null = null;
@@ -631,6 +632,8 @@ async function init() {
       playerController?.playSectionOrTrack(section, instrument);
     }
   );
+
+  new TmdPaletteController(dom.tmdPalette, editor);
 
   const initialTheme = initTheme();
   editor.setTheme(initialTheme);

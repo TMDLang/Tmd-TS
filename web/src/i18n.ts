@@ -97,6 +97,14 @@ export function applyI18n(lang: Locale) {
     }
   });
 
+  // [data-i18n-aria-label]
+  document.querySelectorAll<HTMLElement>("[data-i18n-aria-label]").forEach((el) => {
+    const key = el.dataset.i18nAriaLabel as keyof typeof en;
+    if (key && typeof dict[key] === "string") {
+      el.setAttribute("aria-label", dict[key]);
+    }
+  });
+
   // [data-i18n-placeholder]
   document.querySelectorAll<HTMLInputElement>("input[data-i18n-placeholder], textarea[data-i18n-placeholder]").forEach((el) => {
     const key = el.dataset.i18nPlaceholder as keyof typeof en;

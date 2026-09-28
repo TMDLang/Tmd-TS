@@ -95,6 +95,9 @@ export interface AppDOMElements {
   btnJumpOrders: HTMLButtonElement;
   inspectorTracks: HTMLElement;
 
+  // TMD tablet input palette
+  tmdPalette: HTMLElement;
+
   // Status Bar
   sbStatus: HTMLElement;
   sbSummary: HTMLElement;
@@ -353,6 +356,8 @@ export function initAppDOMElements(): AppDOMElements {
     inspectorOrders: getElement("inspector-orders"),
     btnJumpOrders: getElement("btn-jump-orders"),
     inspectorTracks: getElement("inspector-tracks"),
+
+    tmdPalette: getElement("tmd-palette"),
 
     sbStatus: getElement("sb-status"),
     sbSummary: getElement("sb-summary"),
