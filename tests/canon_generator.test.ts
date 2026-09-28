@@ -6,6 +6,19 @@ import { TmdParser } from "../src/core/parser.js";
 import { TMDPlaybackRenderer } from "../src/core/playback.js";
 
 describe("TMDCanonGenerator (TDD port from canon_gen.py)", () => {
+  it("rejects canon dimensions beyond the generation limits", () => {
+    expect(() => new TMDCanonGenerator({ numVoices: 17 })).toThrow(/numVoices.*16/);
+    expect(() => new TMDCanonGenerator({ numVariations: 33 })).toThrow(/numVariations.*32/);
+    expect(() => new TMDCanonGenerator({ offsetBars: 65 })).toThrow(/offsetBars.*64/);
+  });
+
+  it("rejects invalid canon dimensions before allocating voices", () => {
+    expect(() => new TMDCanonGenerator({ numVoices: 0 })).toThrow(/numVoices.*positive integer/);
+    expect(() => new TMDCanonGenerator({ numVariations: 1.5 })).toThrow(/numVariations.*positive integer/);
+    expect(() => new TMDCanonGenerator({ offsetBars: Number.POSITIVE_INFINITY })).toThrow(/offsetBars.*finite/);
+    expect(() => new TMDCanonGenerator({ offsetBars: -1 })).toThrow(/offsetBars.*non-negative integer/);
+  });
+
   it("generates a valid macro-based canon in D major", () => {
     const generator = new TMDCanonGenerator({
       title: "My Algorithmic Canon",

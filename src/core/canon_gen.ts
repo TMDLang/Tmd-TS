@@ -69,6 +69,10 @@ export interface CanonGeneratorOptions {
 }
 
 export class TMDCanonGenerator {
+  public static readonly MAX_VOICES = 16;
+  public static readonly MAX_VARIATIONS = 32;
+  public static readonly MAX_OFFSET_BARS = 64;
+
   public static readonly MAJOR_PENTATONIC_SCALE = [
     "1_", "2_", "3_", "5_", "6_",
     "1", "2", "3", "5", "6",
@@ -199,6 +203,10 @@ export class TMDCanonGenerator {
   private arpeggioProbability: number;
 
   constructor(options: CanonGeneratorOptions = {}) {
+    this.validateDimension("numVoices", options.numVoices ?? 3, 1, TMDCanonGenerator.MAX_VOICES);
+    this.validateDimension("numVariations", options.numVariations ?? 3, 1, TMDCanonGenerator.MAX_VARIATIONS);
+    this.validateDimension("offsetBars", options.offsetBars ?? 2, 0, TMDCanonGenerator.MAX_OFFSET_BARS);
+
     this.title = options.title ?? "Canon";
     this.tempo = options.tempo ?? 64;
     this.key = options.key ?? "C";
@@ -230,6 +238,19 @@ export class TMDCanonGenerator {
 
     this.voiceInstruments = Array.from({ length: this.numVoices }, (_, i) => `Violin${i + 1}`);
     this.bassInstrument = "Cello";
+  }
+
+  private validateDimension(name: string, value: number, minimum: number, maximum: number): void {
+    if (!Number.isFinite(value)) {
+      throw new RangeError(`${name} must be finite`);
+    }
+    if (!Number.isInteger(value) || value < minimum) {
+      const kind = minimum === 0 ? "a non-negative integer" : "a positive integer";
+      throw new RangeError(`${name} must be ${kind}`);
+    }
+    if (value > maximum) {
+      throw new RangeError(`${name} must be at most ${maximum}`);
+    }
   }
 
   private createSeededRng(seed: number): () => number {
