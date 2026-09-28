@@ -5,6 +5,7 @@ import {
   TmdParser,
   TMDRefactor,
 } from "../core/index.js";
+import { TMD_VERSION } from "../version.js";
 
 // MARK: - LSP Data Structures
 
@@ -465,7 +466,7 @@ export class TMDLSPServer {
           },
           serverInfo: {
             name: "tmd-lsp",
-            version: "0.2.0",
+            version: TMD_VERSION,
           },
         };
         const resp = TMDJSONRPCCodec.encode({ id: message.id, result: capabilities });
