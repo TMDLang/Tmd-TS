@@ -70,4 +70,9 @@ describe("tablet and PWA web contract", () => {
     expect(styles).not.toMatch(/\.tmd-player-bar\s*\{[^}]*touch-action:\s*none/s);
     expect(styles).toMatch(/\.tmd-player-bar\.dragging\s*\{[^}]*touch-action:\s*none/s);
   });
+
+  it("hides btn-text when viewport width is 900px or below", () => {
+    expect(styles).toMatch(/@media\s*\(max-width:\s*900px\)\s*\{\s*\.btn-text\s*\{\s*display:\s*none\s*!important;\s*\}\s*\}/);
+  });
 });
+

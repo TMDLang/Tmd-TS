@@ -280,6 +280,28 @@ Intro:vocal@|0|{
     expect(halvedIssues).toHaveLength(0);
   });
 
+  it("doubles a grid containing tied tuplets and unspaced notes without losing slots", () => {
+    const input = `::SCORE::
+** Grid Repro **
+!= 120
+?= C
+<4/4>
+
+verse:Piano@|0|{
+    <4*>
+    | 5 1 (1 - - 2)%(--) | (3 - - 1)%(--) 5_ 5_ | 2 - 1 7_ | 5 0 11 |
+}
+
+-> verse ->#
+`;
+
+    const doubled = TMDRefactor.doubleGrid(input);
+
+    expect(doubled).toContain("| 5 - 1 - (1 - - 2)%(----) |");
+    expect(doubled).toContain("| 5 - 0 - 1 - 1 - |");
+    expect(TMDMeasureChecker.check(doubled)).toHaveLength(0);
+  });
+
   it("halves grid resolution (<8*> -> <4*>) when divisible", () => {
     const input = `::SCORE::
 ** Halve Test **

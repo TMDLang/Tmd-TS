@@ -2,6 +2,10 @@ export const zhTW = {
   pageTitle: "TMD Studio - Timebase Mark Down 樂譜編輯與試聽",
   pageDescription:
     "TMD (Timebase Mark Down) 純文字音樂標記語言線上編輯器、多格式匯出與合成試聽工具。",
+  tmdPaletteTitle: "TMD 符號",
+  tmdPaletteHint: "平板輸入",
+  tmdPaletteAriaLabel: "TMD 符號輸入工具列",
+  tmdPaletteInsert: "插入 {value}",
   btnLibrary: "樂譜庫",
   btnLibraryTitle: "開啟/關閉樂譜庫抽屜",
   libraryTitle: "樂譜庫",

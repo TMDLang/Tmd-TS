@@ -55,9 +55,8 @@
       <!-- Navbar -->
       <header class="navbar">
         <div class="nav-left">
-            <div class="brand">
-              <img class="brand-icon" src="./favicon.svg" alt="TMD" />
-            <span>TMD Studio</span>
+          <div class="brand">
+            <span class="brand-icon">{♪}</span>
           </div>
 
           <!-- Library Drawer Button -->
@@ -277,6 +276,13 @@
 
         <!-- Editor Workspace Column (Editor + Virtual Keyboard + Problems Panel) -->
         <div class="editor-workspace-column">
+          <!-- Tablet-friendly TMD symbol input palette -->
+          <div id="tmd-palette" class="tmd-palette" aria-label="TMD symbol palette" data-i18n-aria-label="tmdPaletteAriaLabel">
+            <div class="tmd-palette-header">
+              <span class="tmd-palette-title" data-i18n="tmdPaletteTitle">TMD Symbols</span>
+              <span class="tmd-palette-hint" data-i18n="tmdPaletteHint">Tablet input</span>
+            </div>
+          </div>
           <div id="editor-container" class="editor-container"></div>
 
           <!-- Collapsible Virtual Keyboard -->

@@ -1,6 +1,10 @@
 export const en = {
   pageTitle: "TMD Studio - Timebase Mark Down Editor & Player",
   pageDescription: "Online editor, multi-format exporter, and synthesizer for the TMD (Timebase Mark Down) music markup language.",
+  tmdPaletteTitle: "TMD Symbols",
+  tmdPaletteHint: "Tablet input",
+  tmdPaletteAriaLabel: "TMD symbol palette",
+  tmdPaletteInsert: "Insert {value}",
   btnLibrary: "Library",
   btnLibraryTitle: "Toggle score library drawer",
   libraryTitle: "Score Library",

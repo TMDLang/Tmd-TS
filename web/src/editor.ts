@@ -101,7 +101,7 @@ export interface TMDWebEditor {
   lspClient: TMDWebLSPClient;
   getContent(): string;
   setContent(text: string): void;
-  insertAtCursor(text: string): void;
+  insertAtCursor(text: string, cursorOffset?: number): void;
   getSelection(): string;
   replaceSelection(text: string): void;
   scrollToLine(line: number): void;
@@ -501,7 +501,7 @@ export function createTmdEditor(
         },
       });
     },
-    insertAtCursor(text: string) {
+    insertAtCursor(text: string, cursorOffset = text.length) {
       const selection = view.state.selection.main;
       view.dispatch({
         changes: {
@@ -509,7 +509,7 @@ export function createTmdEditor(
           to: selection.to,
           insert: text,
         },
-        selection: { anchor: selection.from + text.length },
+        selection: { anchor: selection.from + cursorOffset },
       });
     },
     getSelection() {
