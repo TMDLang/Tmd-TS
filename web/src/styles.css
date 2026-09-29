@@ -2367,28 +2367,7 @@ dialog.modal.modal-lg .modal-body {
   }
 
   .navbar {
-    min-height: 88px;
-    height: auto;
     padding: 8px max(12px, env(safe-area-inset-left)) 8px max(12px, env(safe-area-inset-right));
-    flex-wrap: wrap;
-    align-content: center;
-  }
-
-  .nav-left,
-  .nav-right {
-    min-width: 0;
-    flex: 1 1 auto;
-  }
-
-  .nav-right {
-    justify-content: flex-end;
-  }
-
-  .nav-center {
-    flex: 1 0 100%;
-    order: 3;
-    justify-content: center;
-    min-width: 0;
   }
 
   .navbar .btn,
@@ -2442,7 +2421,7 @@ dialog.modal.modal-lg .modal-body {
   }
 
   .tmd-player-bar {
-    top: calc(96px + env(safe-area-inset-top));
+    top: calc(60px + env(safe-area-inset-top));
     left: max(12px, env(safe-area-inset-left));
     right: max(12px, env(safe-area-inset-right));
     max-width: calc(100vw - 24px);
@@ -2500,6 +2479,12 @@ dialog.modal.modal-lg .modal-body {
   }
 }
 
+@media (max-width: 900px) {
+  .btn-text {
+    display: none !important;
+  }
+}
+
 @media (max-width: 768px) {
   .navbar {
     padding: 0 6px;
@@ -2534,10 +2519,6 @@ dialog.modal.modal-lg .modal-body {
     height: 13px;
   }
 
-  .btn-text {
-    display: inline;
-  }
-
   .select-control {
     padding: 3px 6px;
     font-size: 11px;
@@ -2546,10 +2527,6 @@ dialog.modal.modal-lg .modal-body {
 }
 
 @media (max-width: 600px) {
-  .btn-text {
-    display: none !important;
-  }
-
   .btn {
     padding: 4px 6px;
   }
