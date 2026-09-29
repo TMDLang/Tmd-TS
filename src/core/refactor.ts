@@ -1079,12 +1079,36 @@ function doubleGridInLine(line: string): string {
       continue;
     }
 
-    // Regular unit: append a tie '-'
-    outTokens.push(tok);
-    outTokens.push("-");
+    // The parser accepts compact note runs such as `11` and `1'^2,_3^--`,
+    // while this refactor operates on grid units. Split those runs first so
+    // every original unit receives its own sustaining tie.
+    for (const unit of splitUnspacedUnits(tok)) {
+      outTokens.push(unit);
+      outTokens.push("-");
+    }
   }
 
   return outTokens.join(" ") + commentSuffix;
+}
+
+function splitUnspacedUnits(token: string): string[] {
+  if (!/^[0-7]/.test(token)) return [token];
+
+  const units: string[] = [];
+  let i = 0;
+  while (i < token.length) {
+    if (/^[0-7]$/.test(token[i])) {
+      let unit = token[i++];
+      if (token[i] === "'" || token[i] === ",") unit += token[i++];
+      while (token[i] === "^" || token[i] === "_") unit += token[i++];
+      units.push(unit);
+    } else if (token[i] === "-") {
+      units.push(token[i++]);
+    } else {
+      return [token];
+    }
+  }
+  return units.length > 0 ? units : [token];
 }
 
 function halveGridInLine(line: string): string {
