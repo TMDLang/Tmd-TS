@@ -123,21 +123,21 @@ Requires Node.js `v20.0.0` or newer.
 Install globally via `npm` to use the `tmd` command anywhere:
 
 ```bash
-npm install -g tmd-ts
+npm install -g tmdlang
 ```
 
 Or execute directly without permanent installation via `npx`:
 
 ```bash
-npx tmd-ts <input-path> [options]
+npx tmdlang <input-path> [options]
 ```
 
 ### Local Dependency (TypeScript / JavaScript Projects)
 
-Add `tmd-ts` to your project:
+Add `tmdlang` to your project:
 
 ```bash
-npm install tmd-ts
+npm install tmdlang
 ```
 
 ### Build from Source
@@ -244,7 +244,7 @@ tmd refactor inline-orders sample.tmd -i
 
 ## TypeScript / JavaScript Package Usage
 
-Import `tmd-ts` into your application:
+Import `tmdlang` into your application:
 
 ```typescript
 import {
@@ -263,7 +263,7 @@ import {
   TMDMeasureChecker,
   TMDRefactor,
   TMDWAVRenderer,
-} from "tmd-ts";
+} from "tmdlang";
 
 const scoreText = `
 ::SCORE::
@@ -323,7 +323,7 @@ You can edit TMD files with syntax highlighting, snippets, and in-editor diagnos
 
 The official VS Code extension is maintained in the [**TmdSwift repository (`editor/vscode`)**](https://github.com/zonble/TmdSwift/tree/main/editor/vscode). 
 
-Because the CLI interfaces and command flags of `TmdSwift` and `Tmd-TS` are designed to be interchangeable, this extension **works seamlessly with `Tmd-TS`**! Once you install `tmd-ts` globally (`npm install -g tmd-ts`), the extension will automatically pick up your `tmd` CLI for diagnostics, song inspection, formatting, and exports:
+Because the CLI interfaces and command flags of `TmdSwift` and `Tmd-TS` are designed to be interchangeable, this extension **works seamlessly with `Tmd-TS`**! Once you install `tmdlang` globally (`npm install -g tmdlang`), the extension will automatically pick up your `tmd` CLI for diagnostics, song inspection, formatting, and exports:
 
 - **Syntax Highlighting & Snippets**: Full grammar for TMD metadata, tracks, numbered notation, chords, tuplets, and arrangement flow.
 - **Interactive Web MIDI Player**: Built-in Web MIDI player panel with SoundFont selection, play/stop controls, and position scrub bar.

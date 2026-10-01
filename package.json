@@ -1,5 +1,5 @@
 {
-  "name": "tmd-ts",
+  "name": "tmdlang",
   "version": "0.2.1",
   "description": "TypeScript parser, AST, CLI, and multi-format music generator for TMD (Timebase Mark Down)",
   "author": "zonble",
@@ -10,7 +10,8 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
-    "tmd": "bin/tmd.js"
+    "tmd": "bin/tmd.js",
+    "tmdlang": "bin/tmd.js"
   },
   "files": [
     "dist",
