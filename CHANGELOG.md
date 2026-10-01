@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-10-01
+
+### Changed
+- Renamed npm package to `tmdlang` (while preserving `tmd` CLI executable).
+- Updated brand icon mark to `{♪}` in Web Studio.
+
+### Added
+- **Web Studio TMD Symbol Palette**:
+  - Touch/click friendly symbol palette bar for tablets and mobile devices with categorized tabs for chords, notes, dynamics, meter, and structure tags.
+
+### Fixed
+- Fixed unspaced note runs splitting when doubling grid resolution in score refactoring.
+- Raised canon variation limit and bounded canon generator dimensions.
+
 ## [0.2.1] - 2026-09-28
 
 ### Changed
