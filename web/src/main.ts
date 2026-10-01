@@ -27,9 +27,9 @@ import { applyPanelsState,savePanelsState } from "./ui/panelState.js";
 import { TMDPlayerController } from "./ui/playerBar.js";
 import { setupProblemsPanelEvents,updateProblemsPanel } from "./ui/problemsPanel.js";
 import { getTheme,initTheme, toggleTheme } from "./ui/theme.js";
+import { TmdPaletteController } from "./ui/tmdPalette.js";
 import { TMDToolsAndContextMenuController } from "./ui/toolsMenu.js";
 import { VirtualKeyboardController } from "./ui/virtualKeyboard.js";
-import { TmdPaletteController } from "./ui/tmdPalette.js";
 
 let editor: TMDWebEditor;
 let currentSheet: Sheet | null = null;

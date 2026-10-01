@@ -1,13 +1,15 @@
-import { describe, expect, it } from "vitest";
-import {
-  TMD_PALETTE_ENTRIES,
-  applyPaletteInsertion,
-  getTmdPaletteEntry,
-} from "../web/src/ui/tmdPalette.js";
-import { en } from "../web/src/locales/en.js";
-import { zhTW } from "../web/src/locales/zh-TW.js";
 import * as fs from "node:fs";
 import * as path from "node:path";
+
+import { describe, expect, it } from "vitest";
+
+import { en } from "../web/src/locales/en.js";
+import { zhTW } from "../web/src/locales/zh-TW.js";
+import {
+  applyPaletteInsertion,
+  getTmdPaletteEntry,
+  TMD_PALETTE_ENTRIES,
+} from "../web/src/ui/tmdPalette.js";
 
 describe("TMD tablet input palette", () => {
   it("contains all digits and tablet-hostile TMD symbols", () => {
