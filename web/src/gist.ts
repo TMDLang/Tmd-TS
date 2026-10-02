@@ -73,7 +73,6 @@ export async function fetchGistTmd(
   const resp = await fetchFn(apiUrl, {
     headers: {
       Accept: "application/vnd.github.v3+json",
-      "User-Agent": "TMD-Studio-Web",
     },
   });
 

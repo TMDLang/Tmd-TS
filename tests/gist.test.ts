@@ -64,6 +64,10 @@ describe("GitHub Gist TMD Importer (TDD)", () => {
       expect(res.title).toBe("Gist Song");
       expect(res.filename).toBe("score.tmd");
       expect(res.content).toBe(mockScore);
+
+      // Must not set User-Agent which is forbidden by browser fetch standard
+      const callHeaders = mockFetch.mock.calls[0][1]?.headers;
+      expect(callHeaders?.["User-Agent"]).toBeUndefined();
     });
 
     it("prefers .tmd files over other files in a multi-file gist", async () => {
