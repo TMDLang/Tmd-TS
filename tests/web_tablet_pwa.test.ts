@@ -24,7 +24,7 @@ describe("tablet and PWA web contract", () => {
   });
 
   it("uses the product mark in the Web Studio brand", () => {
-    expect(html).toContain('<img class="brand-icon" src="./favicon.svg" alt="TMD" />');
+    expect(html).toContain('<span class="brand-icon">{♪}</span>');
     expect(html).not.toContain('<span class="brand-icon">🎵</span>');
   });
 

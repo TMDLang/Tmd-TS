@@ -276,6 +276,36 @@ verse:Piano@|0|{
     }
   });
 
+  it("provides common secondary dominant and modal interchange scale-degree chords including [3], [37], [2], [6], [4m]", () => {
+    const source = `::SCORE::
+** Chord Test **
+!= 120
+?= C
+<4/4>
+
+verse:Piano@|0|{
+    <4*>
+    [`;
+    const lines = source.split("\n");
+    const items = TMDLSPCompletionEngine.complete(source, new TMDLSPPosition(lines.length - 1, lines.at(-1)!.length));
+    const labels = items.map((item) => item.label);
+
+    expect(labels).toContain("3");
+    expect(labels).toContain("37");
+    expect(labels).toContain("2");
+    expect(labels).toContain("27");
+    expect(labels).toContain("6");
+    expect(labels).toContain("67");
+    expect(labels).toContain("4m");
+    expect(labels).toContain("17");
+
+    const item3 = items.find((i) => i.label === "3");
+    expect(item3).toBeDefined();
+    expect(item3?.detail).toBe("Scale Degree Chord: [3]");
+    expect(item3?.insertText).toBe("3]");
+  });
+
+
   it("publishes diagnostics on beat discrepancies in measures", () => {
     const invalidSource = `::SCORE::
 ** Measure Error Score **
