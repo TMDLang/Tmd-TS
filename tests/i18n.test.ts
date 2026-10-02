@@ -90,4 +90,10 @@ describe("i18n and Default Language (TDD)", () => {
     expect(html).toContain('&lt;4*&gt;');
     expect(html).toContain('&lt;8*&gt;');
   });
+
+  it("ensures web/src/main.ts correctly imports t from i18n for toasts and notifications", () => {
+    const mainPath = path.join(__dirname, "../web/src/main.ts");
+    const content = fs.readFileSync(mainPath, "utf-8");
+    expect(content).toMatch(/import\s*\{[^}]*\bt\b[^}]*\}\s*from\s*["']\.\/i18n\.js["']/);
+  });
 });

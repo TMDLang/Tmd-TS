@@ -9,6 +9,7 @@ import {
   getCurrentLocale,
   Locale,
   onLanguageChange,
+  t,
 } from "./i18n.js";
 import { initTmdWebMcp } from "./mcp/webmcpIntegration.js";
 import { SAMPLES } from "./samples.js";
