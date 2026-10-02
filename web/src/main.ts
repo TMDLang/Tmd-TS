@@ -584,6 +584,18 @@ function initEvents() {
       .then((score) => score && libraryController.loadScoreIntoEditor(score))
       .catch((err) => console.error("Failed to import shared score:", err));
   });
+
+  // URL query parameter (?gist=) change
+  window.addEventListener("popstate", () => {
+    TMDScoreService.importGistScore()
+      .then((score) => {
+        if (score) {
+          libraryController.loadScoreIntoEditor(score);
+          showToast(t("importGistSuccess").replace("{title}", score.title));
+        }
+      })
+      .catch((err) => console.error("Failed to import gist score on popstate:", err));
+  });
 }
 
 async function init() {
@@ -599,8 +611,15 @@ async function init() {
   let initialTemplateId: string | null = defaultSample.id;
 
   try {
-    const shared = await TMDScoreService.importSharedScore();
-    if (shared) TmdStorage.setActiveScoreId(shared.id);
+    const sharedHash = await TMDScoreService.importSharedScore();
+    const sharedGist = sharedHash ? null : await TMDScoreService.importGistScore();
+    const shared = sharedHash ?? sharedGist;
+    if (shared) {
+      TmdStorage.setActiveScoreId(shared.id);
+      if (sharedGist) {
+        showToast(t("importGistSuccess").replace("{title}", sharedGist.title));
+      }
+    }
     const activeId = TmdStorage.getActiveScoreId();
     if (activeId) {
       const saved = shared ?? (await TmdStorage.getScore(activeId));

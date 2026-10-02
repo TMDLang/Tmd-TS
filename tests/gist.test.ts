@@ -1,6 +1,10 @@
+import "fake-indexeddb/auto";
+
 import { describe, expect, it, vi } from "vitest";
 
 import { extractGistId, fetchGistTmd, GistImportResult } from "../web/src/gist.js";
+import { TMDScoreService } from "../web/src/services/scoreService.js";
+import { TmdStorage } from "../web/src/storage/db.js";
 
 describe("GitHub Gist TMD Importer (TDD)", () => {
   describe("extractGistId", () => {
@@ -207,4 +211,149 @@ describe("GitHub Gist TMD Importer (TDD)", () => {
       expect(html).toContain('id="btn-confirm-import-gist"');
     });
   });
+
+  describe("URL query parameter (?gist=) loading", () => {
+    it("returns null when no ?gist= parameter is in location.search", async () => {
+      const replaceStateMock = vi.fn();
+      (globalThis as any).window = {
+        location: {
+          href: "https://tmd.example.com/",
+          pathname: "/",
+          search: "",
+          hash: "",
+        },
+      };
+      (globalThis as any).history = {
+        replaceState: replaceStateMock,
+      };
+
+      const score = await TMDScoreService.importGistScore();
+      expect(score).toBeNull();
+      expect(replaceStateMock).not.toHaveBeenCalled();
+    });
+
+    it("imports score from ?gist=<id>, saves to storage, and clears query param", async () => {
+      await TmdStorage.clearAll();
+
+      const mockScore = "::SCORE::\n** URL Loaded Gist **\n!= 130\n?= D\n<4/4>\n";
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          description: "Gist from URL",
+          files: {
+            "tune.tmd": {
+              filename: "tune.tmd",
+              content: mockScore,
+              truncated: false,
+            },
+          },
+        }),
+      });
+
+      const replaceStateMock = vi.fn();
+      (globalThis as any).window = {
+        location: {
+          href: "https://tmd.example.com/?lang=zh-TW&gist=6b85675e2e88a099a25997dbb341f23c#view",
+          pathname: "/",
+          search: "?lang=zh-TW&gist=6b85675e2e88a099a25997dbb341f23c",
+          hash: "#view",
+        },
+      };
+      (globalThis as any).history = {
+        replaceState: replaceStateMock,
+      };
+
+      const score = await TMDScoreService.importGistScore(undefined, mockFetch as any);
+      expect(score).not.toBeNull();
+      expect(score?.title).toBe("URL Loaded Gist");
+      expect(score?.content).toBe(mockScore);
+
+      // Verify it was saved to storage
+      const inDb = await TmdStorage.getScore(score!.id);
+      expect(inDb).not.toBeNull();
+      expect(inDb?.title).toBe("URL Loaded Gist");
+
+      // Verify query param was cleaned while preserving ?lang=zh-TW and #view
+      expect(replaceStateMock).toHaveBeenCalledWith(
+        null,
+        "",
+        "/?lang=zh-TW#view"
+      );
+    });
+
+    it("handles full Gist URL encoded in ?gist=", async () => {
+      await TmdStorage.clearAll();
+
+      const mockScore = "::SCORE::\n** Full URL Gist **\n";
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          files: {
+            "score.tmd": {
+              filename: "score.tmd",
+              content: mockScore,
+            },
+          },
+        }),
+      });
+
+      const replaceStateMock = vi.fn();
+      (globalThis as any).window = {
+        location: {
+          href: "https://tmd.example.com/?gist=https%3A%2F%2Fgist.github.com%2Fzonble%2F6b85675e2e88a099a25997dbb341f23c",
+          pathname: "/",
+          search: "?gist=https%3A%2F%2Fgist.github.com%2Fzonble%2F6b85675e2e88a099a25997dbb341f23c",
+          hash: "",
+        },
+      };
+      (globalThis as any).history = {
+        replaceState: replaceStateMock,
+      };
+
+      const score = await TMDScoreService.importGistScore(undefined, mockFetch as any);
+      expect(score).not.toBeNull();
+      expect(score?.title).toBe("Full URL Gist");
+      expect(replaceStateMock).toHaveBeenCalledWith(null, "", "/");
+    });
+
+    it("handles fetch error gracefully without throwing and cleans query param", async () => {
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: false,
+        status: 404,
+        statusText: "Not Found",
+      });
+
+      const alertMock = vi.fn();
+      (globalThis as any).alert = alertMock;
+
+      const replaceStateMock = vi.fn();
+      (globalThis as any).window = {
+        location: {
+          href: "https://tmd.example.com/?gist=notfound123456",
+          pathname: "/",
+          search: "?gist=notfound123456",
+          hash: "",
+        },
+      };
+      (globalThis as any).history = {
+        replaceState: replaceStateMock,
+      };
+
+      const score = await TMDScoreService.importGistScore(undefined, mockFetch as any);
+      expect(score).toBeNull();
+      expect(alertMock).toHaveBeenCalled();
+      expect(replaceStateMock).toHaveBeenCalledWith(null, "", "/");
+    });
+
+    it("integrates Gist URL loading in web/src/main.ts bootstrap", async () => {
+      const fs = await import("node:fs");
+      const path = await import("node:path");
+      const mainContent = fs.readFileSync(path.join(__dirname, "../web/src/main.ts"), "utf-8");
+
+      expect(mainContent).toContain("importGistScore");
+    });
+  });
 });
+
