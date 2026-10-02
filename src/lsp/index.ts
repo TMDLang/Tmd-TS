@@ -331,10 +331,19 @@ export class TMDLSPCompletionEngine {
         let keyStr = "C";
         try {
           const sheet = TmdParser.parse(source);
-          if (sheet?.keySignature) {
+          if (sheet?.declaredKey) {
+            keyStr = sheet.declaredKey;
+          } else if (sheet?.keySignature) {
             keyStr = sheet.keySignature.toString();
           }
-        } catch (_) {}
+        } catch (_) {
+          const keyMatch = source.match(/(?:key=|\?=)\s*([A-Ga-g][#b]?(?:m|maj|min)?)/i);
+          if (keyMatch) {
+            keyStr = keyMatch[1];
+          }
+        }
+
+
 
         const chords = [...this.scaleDegreeChords, ...this.getDiatonicChords(keyStr)];
         const appendClosingBracket = nextChar !== "]";
