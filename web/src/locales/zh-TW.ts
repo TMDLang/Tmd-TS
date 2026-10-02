@@ -265,7 +265,7 @@ export const zhTW = {
   helpLiTuplets: "<code>(1 2)%(-)</code>, <code>(1 2 3)%(-)</code>：切音符／細分時值（在 <code>%(-)</code> 宣告的單位長度內平均細分演奏音符）。",
   helpLi4: "<code>{!= 140}</code>, <code>{?+2}</code>：動態速度與轉調指令。",
   helpSamplesAndExtensions:
-    '💡 更多 TMD 範例樂譜與編輯器外掛（如 VS Code 語法標亮）可至 <a href="https://github.com/zonble/TmdSwift" target="_blank" rel="noopener noreferrer" style="color: var(--accent-blue); text-decoration: underline;">TmdSwift 專案</a> 取得。',
+    '💡 更多 TMD 範例樂譜與編輯器外掛（如 VS Code 語法標亮）可至 <a href="https://github.com/TMDLang/TmdSwift" target="_blank" rel="noopener noreferrer" style="color: var(--accent-blue); text-decoration: underline;">TmdSwift 專案</a> 取得。',
   btnDismissHelp: "了解",
   alertCannotPlaySyntax: "無法播放：樂譜語法錯誤",
   alertCannotPlayMissingHeader:

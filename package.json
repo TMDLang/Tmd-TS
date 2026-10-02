@@ -4,6 +4,14 @@
   "description": "TypeScript parser, AST, CLI, and multi-format music generator for TMD (Timebase Mark Down)",
   "author": "zonble",
   "license": "MIT",
+  "homepage": "https://tmdlang.github.io/Tmd-TS/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TMDLang/Tmd-TS.git"
+  },
+  "bugs": {
+    "url": "https://github.com/TMDLang/Tmd-TS/issues"
+  },
   "engines": {
     "node": ">=20"
   },

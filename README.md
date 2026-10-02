@@ -5,7 +5,7 @@ A modern TypeScript/JavaScript implementation of the **TMD** (Timebase Mark Down
 In memory of **Chen, Chih-Han / [aguai](https://github.com/aguai)** (阿怪, 1974–2019).
 
 - Original project: [https://github.com/aguai/TMDLang](https://github.com/aguai/TMDLang)
-- Swift Implementation & Samples: [https://github.com/zonble/TmdSwift](https://github.com/zonble/TmdSwift)
+- Swift Implementation & Samples: [https://github.com/TMDLang/TmdSwift](https://github.com/TMDLang/TmdSwift)
 
 ## The Markdown of Music
 
@@ -143,7 +143,7 @@ npm install tmdlang
 ### Build from Source
 
 ```bash
-git clone https://github.com/zonble/Tmd-TS.git
+git clone https://github.com/TMDLang/Tmd-TS.git
 cd Tmd-TS
 npm install
 npm run build
@@ -321,7 +321,7 @@ You can edit TMD files with syntax highlighting, snippets, and in-editor diagnos
 
 ### Visual Studio Code Extension
 
-The official VS Code extension is maintained in the [**TmdSwift repository (`editor/vscode`)**](https://github.com/zonble/TmdSwift/tree/main/editor/vscode). 
+The official VS Code extension is maintained in the [**TmdSwift repository (`editor/vscode`)**](https://github.com/TMDLang/TmdSwift/tree/main/editor/vscode). 
 
 Because the CLI interfaces and command flags of `TmdSwift` and `Tmd-TS` are designed to be interchangeable, this extension **works seamlessly with `Tmd-TS`**! Once you install `tmdlang` globally (`npm install -g tmdlang`), the extension will automatically pick up your `tmd` CLI for diagnostics, song inspection, formatting, and exports:
 
@@ -337,7 +337,7 @@ Because the CLI interfaces and command flags of `TmdSwift` and `Tmd-TS` are desi
 
 To install the extension locally from source:
 ```bash
-git clone https://github.com/zonble/TmdSwift.git
+git clone https://github.com/TMDLang/TmdSwift.git
 ln -s "$(pwd)/TmdSwift/editor/vscode" ~/.vscode/extensions/tmd-vscode
 ```
 

@@ -258,7 +258,7 @@ export const en = {
   helpLi3: "<code>(1 2 3)%(--)</code>: Tuplets across unit groups (e.g. triplets).",
   helpLiTuplets: "<code>(1 2)%(-)</code>, <code>(1 2 3)%(-)</code>: Tuplet note subdivisions (evenly dividing notes within the duration defined in <code>%(-)</code>).",
   helpLi4: "<code>{!= 140}</code>, <code>{?+2}</code>: Dynamic tempo and key directives.",
-  helpSamplesAndExtensions: '💡 More TMD score samples and editor extensions (such as VS Code syntax highlighting) are available from the <a href="https://github.com/zonble/TmdSwift" target="_blank" rel="noopener noreferrer" style="color: var(--accent-blue); text-decoration: underline;">TmdSwift repository</a>.',
+  helpSamplesAndExtensions: '💡 More TMD score samples and editor extensions (such as VS Code syntax highlighting) are available from the <a href="https://github.com/TMDLang/TmdSwift" target="_blank" rel="noopener noreferrer" style="color: var(--accent-blue); text-decoration: underline;">TmdSwift repository</a>.',
   btnDismissHelp: "Close",
   alertCannotPlaySyntax: "Cannot play: score has syntax errors",
   alertCannotPlayMissingHeader: "Cannot play: missing valid ::SCORE:: header",

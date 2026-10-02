@@ -31,7 +31,7 @@ describe("GitHub Gist TMD Importer (TDD)", () => {
 
     it("returns null for invalid or non-gist inputs", () => {
       expect(extractGistId("")).toBeNull();
-      expect(extractGistId("https://github.com/zonble/Tmd-TS")).toBeNull();
+      expect(extractGistId("https://github.com/TMDLang/Tmd-TS")).toBeNull();
       expect(extractGistId("invalid url with spaces")).toBeNull();
       expect(extractGistId("https://google.com")).toBeNull();
     });
