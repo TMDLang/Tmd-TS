@@ -305,6 +305,36 @@ verse:Piano@|0|{
     expect(item3?.insertText).toBe("3]");
   });
 
+  it("avoids duplicate closing bracket when ']' already exists immediately after cursor", () => {
+    const source = "verse:Piano@|0|{\n    <4*>\n    []\n}";
+    // Position cursor right between '[' and ']' on line 2, character 5
+    const items = TMDLSPCompletionEngine.complete(source, new TMDLSPPosition(2, 5));
+    const item3 = items.find((i) => i.label === "3");
+    expect(item3).toBeDefined();
+    expect(item3?.insertText).toBe("3"); // No trailing ']' because nextChar is already ']'
+  });
+
+  it("provides minor diatonic chords when in minor key signature", () => {
+    const source = `::SCORE::
+** Minor Score **
+key= Am
+<4/4>
+
+verse:Piano@|0|{
+    <4*>
+    [`;
+    const lines = source.split("\n");
+    const items = TMDLSPCompletionEngine.complete(source, new TMDLSPPosition(lines.length - 1, lines.at(-1)!.length));
+    const labels = items.map((item) => item.label);
+
+    expect(labels).toContain("Am");
+    expect(labels).toContain("Dm");
+    expect(labels).toContain("E7");
+    expect(labels).toContain("3");
+    expect(labels).toContain("3m");
+  });
+
+
 
   it("publishes diagnostics on beat discrepancies in measures", () => {
     const invalidSource = `::SCORE::

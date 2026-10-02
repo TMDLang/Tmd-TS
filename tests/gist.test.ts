@@ -354,6 +354,140 @@ describe("GitHub Gist TMD Importer (TDD)", () => {
 
       expect(mainContent).toContain("importGistScore");
     });
+
+    it("returns null when ?gist= query parameter is empty string", async () => {
+      (globalThis as any).window = {
+        location: {
+          href: "https://tmd.example.com/?gist=",
+          pathname: "/",
+          search: "?gist=",
+          hash: "",
+        },
+      };
+      (globalThis as any).history = {
+        replaceState: vi.fn(),
+      };
+
+      const score = await TMDScoreService.importGistScore();
+      expect(score).toBeNull();
+    });
+
+    it("reuses existing score when identical Gist content is already saved", async () => {
+      await TmdStorage.clearAll();
+
+      const content = "::SCORE::\n** Existing In DB **\n1 2 3 4\n";
+      const existing = await TmdStorage.saveScore({
+        title: "Existing In DB",
+        content,
+      });
+
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          files: {
+            "score.tmd": {
+              filename: "score.tmd",
+              content,
+            },
+          },
+        }),
+      });
+
+      (globalThis as any).window = {
+        location: {
+          href: "https://tmd.example.com/?gist=a1b2c3d4e5f6",
+          pathname: "/",
+          search: "?gist=a1b2c3d4e5f6",
+          hash: "",
+        },
+      };
+      (globalThis as any).history = {
+        replaceState: vi.fn(),
+      };
+
+      const result = await TMDScoreService.importGistScore(undefined, mockFetch as any);
+      expect(result?.id).toBe(existing.id);
+    });
+
+    it("handles storage write failure gracefully", async () => {
+      await TmdStorage.clearAll();
+
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          files: {
+            "score.tmd": {
+              filename: "score.tmd",
+              content: "::SCORE::\n** Fail Save **\n",
+            },
+          },
+        }),
+      });
+
+      const saveSpy = vi.spyOn(TmdStorage, "saveScore").mockRejectedValue(new Error("Disk Full"));
+      const alertMock = vi.fn();
+      (globalThis as any).alert = alertMock;
+
+      const replaceStateMock = vi.fn();
+      (globalThis as any).window = {
+        location: {
+          href: "https://tmd.example.com/?gist=savefail123",
+          pathname: "/",
+          search: "?gist=savefail123",
+          hash: "",
+        },
+      };
+      (globalThis as any).history = {
+        replaceState: replaceStateMock,
+      };
+
+      const score = await TMDScoreService.importGistScore(undefined, mockFetch as any);
+      expect(score).toBeNull();
+      expect(alertMock).toHaveBeenCalled();
+      expect(replaceStateMock).toHaveBeenCalledWith(null, "", "/");
+
+      saveSpy.mockRestore();
+    });
+
+    it("throws when selected file content in Gist is empty", async () => {
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          files: {
+            "empty.tmd": {
+              filename: "empty.tmd",
+              content: "   ",
+            },
+          },
+        }),
+      });
+
+      await expect(fetchGistTmd("1234567890", mockFetch as any)).rejects.toThrow(
+        /is empty/i
+      );
+    });
+
+    it("falls back to file basename when TMD score has no explicit title header", async () => {
+      const mockScore = "::SCORE::\n!= 120\n?= C\n<4/4>\n1 2 3 4\n";
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          files: {
+            "cantata-bwv147.tmd": {
+              filename: "cantata-bwv147.tmd",
+              content: mockScore,
+            },
+          },
+        }),
+      });
+
+      const result = await fetchGistTmd("1234567890", mockFetch as any);
+      expect(result.title).toBe("cantata-bwv147");
+    });
   });
 });
 

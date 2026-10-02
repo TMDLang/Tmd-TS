@@ -126,10 +126,12 @@ export async function fetchGistTmd(
     throw new Error(`Selected file '${targetFile.filename}' is empty`);
   }
 
+  const extracted = extractTmdTitle(content);
   const title =
-    extractTmdTitle(content) ||
-    targetFile.filename.replace(/\.[^/.]+$/, "") ||
-    "Gist Score";
+    extracted && extracted !== "未命名樂譜"
+      ? extracted
+      : targetFile.filename.replace(/\.[^/.]+$/, "") || "Gist Score";
+
 
   return {
     gistId,
