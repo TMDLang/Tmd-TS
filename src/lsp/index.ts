@@ -379,6 +379,7 @@ export class TMDLSPCompletionEngine {
   private static readonly scaleDegreeChords: string[] = [
     "1", "2m", "3m", "4", "5", "6m", "7dim",
     "1maj7", "2m7", "3m7", "4maj7", "57", "6m7", "5sus4",
+    "3", "37", "2", "27", "6", "67", "4m", "17",
     "5/4", "4/5", "1/3", "5/7", "1/5",
   ];
 }

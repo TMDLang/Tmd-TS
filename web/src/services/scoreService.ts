@@ -1,6 +1,7 @@
 // web/src/services/scoreService.ts
 // Handles score auto-saving, hash-based sharing, and score title extraction
 
+import { fetchGistTmd } from "../gist.js";
 import { t } from "../i18n.js";
 import { decodeShareHash } from "../share.js";
 import { extractTmdTitle,SavedScore, TmdStorage } from "../storage/db.js";
@@ -58,7 +59,23 @@ export class TMDScoreService {
   }
 
   public static clearShareHash(): void {
-    history.replaceState(null, "", window.location.pathname + window.location.search);
+    if (typeof history !== "undefined" && typeof window !== "undefined" && history.replaceState) {
+      history.replaceState(null, "", window.location.pathname + window.location.search);
+    }
+  }
+
+  public static clearGistParam(): void {
+    if (typeof history !== "undefined" && typeof window !== "undefined" && history.replaceState) {
+      try {
+        const url = new URL(window.location.href);
+        if (url.searchParams.has("gist")) {
+          url.searchParams.delete("gist");
+          const search = url.searchParams.toString();
+          const query = search ? `?${search}` : "";
+          history.replaceState(null, "", url.pathname + query + url.hash);
+        }
+      } catch (_) {}
+    }
   }
 
   public static async importSharedScore(): Promise<SavedScore | null> {
@@ -82,5 +99,47 @@ export class TMDScoreService {
     }
     TMDScoreService.clearShareHash();
     return score;
+  }
+
+  public static async importGistScore(
+    gistInput?: string,
+    fetchFn: typeof fetch = fetch
+  ): Promise<SavedScore | null> {
+    let input = gistInput;
+    if (!input && typeof window !== "undefined" && window.location) {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        input = params.get("gist") || undefined;
+      } catch (_) {}
+    }
+    if (!input) return null;
+
+    try {
+      const result = await fetchGistTmd(input, fetchFn);
+      let score: SavedScore;
+      try {
+        score =
+          (await TmdStorage.findScoreByContent(result.content)) ??
+          (await TmdStorage.saveScore({
+            title: result.title,
+            content: result.content,
+          }));
+      } catch (saveErr) {
+        console.error("Could not save the gist score into storage:", saveErr);
+        TMDScoreService.clearGistParam();
+        if (typeof alert === "function") alert(t("shareSaveFailed"));
+        return null;
+      }
+      TMDScoreService.clearGistParam();
+      return score;
+    } catch (err: any) {
+      console.warn("Failed to load gist from URL:", err);
+      TMDScoreService.clearGistParam();
+      const errorMsg = err?.message || String(err);
+      if (typeof alert === "function") {
+        alert(t("importGistError").replace("{error}", errorMsg));
+      }
+      return null;
+    }
   }
 }
