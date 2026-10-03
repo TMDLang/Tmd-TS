@@ -39,7 +39,7 @@ SUBCOMMANDS:
   check <input-path>       Check measure consistency and report incorrect beat counts.
   format [<options>] <input-path> Format TMD file with standardized indentation and spacing.
   outline [--json] <input-path> Generate a document symbol outline of a TMD score.
-  inspect [--json] <input-path> Inspect full song musical profile, vocal tessitura, and arrangement density.
+  inspect [--json | --svg | --html] [--locale LOCALE] <input-path> Inspect full song musical profile, vocal tessitura, and arrangement density.
   refactor <subcommand>    Refactor TMD score (rename-instrument, rename-section, extract-instrument).
   lsp                      Run Language Server Protocol (LSP) daemon over stdio (JSON-RPC).
 
@@ -58,6 +58,7 @@ OPTIONS:
       --vsqx-output PATH  Export vocal track to VOCALOID3/4 (.vsqx) XML file.
   -u, --ust-output PATH   Export vocal track to UTAU / OpenUtau (.ust) file.
       --singer NAME       Vocaloid singer name (defaults to Miku).
+      --soundfont PATH    SoundFont/DLS path for WAV rendering (not supported by the portable renderer).
       --section NAME      Optional section filter for MIDI export or playback.
       --instrument NAME   Optional instrument filter for MIDI export or playback.
   -w, --wav-output PATH   Render portable 16-bit stereo WAV.
@@ -234,11 +235,12 @@ function handleInspectCommand(argv: string[]): number {
   let json = false;
   let svg = false;
   let html = false;
+  let locale = "zh-Hant";
 
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === "-h" || arg === "--help") {
-      console.log(`USAGE: tmd inspect [--json | --svg | --html] <input-path>
+      console.log(`USAGE: tmd inspect [--json | --svg | --html] [--locale LOCALE] <input-path>
 
 Inspect full song musical profile, vocal tessitura, key modulations, and arrangement density.
 
@@ -246,6 +248,7 @@ OPTIONS:
   --json                  Output song profile as JSON.
   --svg                   Output tonality visualizer dashboard as SVG.
   --html                  Output tonality report and dashboard as HTML.
+  --locale LOCALE         Localization for generated output (en or zh-Hant).
 `);
       return 0;
     }
@@ -259,6 +262,14 @@ OPTIONS:
     }
     if (arg === "--html") {
       html = true;
+      continue;
+    }
+    if (arg === "--locale") {
+      locale = argv[++i] || "zh-Hant";
+      continue;
+    }
+    if (arg.startsWith("--locale=")) {
+      locale = arg.slice("--locale=".length) || "zh-Hant";
       continue;
     }
     if (!arg.startsWith("-")) {
@@ -295,16 +306,17 @@ OPTIONS:
     return 1;
   }
 
-  const profile = TMDSongInspector.inspect(sheet);
+  const normalizedLocale = locale.toLowerCase().startsWith("zh") ? "zh-Hant" : "en";
+  const profile = TMDSongInspector.inspect(sheet, undefined, normalizedLocale);
 
   if (json) {
     console.log(JSON.stringify(profile, null, 2));
   } else if (svg) {
-    console.log(TMDTonalityVisualizer.generateSVG(profile));
+    console.log(TMDTonalityVisualizer.generateSVG(profile, normalizedLocale));
   } else if (html) {
-    console.log(TMDTonalityVisualizer.generateHTML(profile));
+    console.log(TMDTonalityVisualizer.generateHTML(profile, normalizedLocale));
   } else {
-    console.log(TMDSongInspector.generateReport(profile));
+    console.log(TMDSongInspector.generateReport(profile, normalizedLocale));
   }
   return 0;
 }
@@ -1031,6 +1043,7 @@ export function main(argv = process.argv.slice(2)): number {
 
   let input: string | undefined,
     parseOnly = false,
+    inspectSong = false,
     force = false,
     play = false,
     installSkills = false,
@@ -1038,6 +1051,7 @@ export function main(argv = process.argv.slice(2)): number {
     runMcp = false,
     runLsp = false,
     singer = "Miku",
+    soundfont: string | undefined,
     section: string | undefined,
     instrument: string | undefined;
   const outputs: Record<string, string | undefined> = {};
@@ -1054,6 +1068,10 @@ export function main(argv = process.argv.slice(2)): number {
     }
     if (arg === "-p" || arg === "--parse-only") {
       parseOnly = true;
+      continue;
+    }
+    if (arg === "--inspect") {
+      inspectSong = true;
       continue;
     }
     if (arg === "-f" || arg === "--force") {
@@ -1082,6 +1100,14 @@ export function main(argv = process.argv.slice(2)): number {
     }
     if (arg === "--singer") {
       singer = argv[++i] || "Miku";
+      continue;
+    }
+    if (arg === "--soundfont") {
+      soundfont = argv[++i];
+      continue;
+    }
+    if (arg.startsWith("--soundfont=")) {
+      soundfont = arg.slice("--soundfont=".length);
       continue;
     }
     if (arg === "--section") {
@@ -1219,7 +1245,16 @@ export function main(argv = process.argv.slice(2)): number {
       sheet
     )}\n----------------------------------------`
   );
+  if (inspectSong) {
+    const profile = TMDSongInspector.inspect(sheet);
+    console.log(TMDSongInspector.generateReport(profile));
+    return 0;
+  }
   if (parseOnly) return 0;
+  if (soundfont && !outputs.wav && !play) {
+    console.error("Error: --soundfont is only applicable to WAV rendering or --play.");
+    return 1;
+  }
   try {
     if (outputs.midi)
       fs.writeFileSync(
@@ -1259,6 +1294,7 @@ export function main(argv = process.argv.slice(2)): number {
         TMDWAVRenderer.renderWAV(sheet, 44100, {
           targetParagraph: section,
           targetInstrument: instrument,
+          soundfont,
         })
       );
       if (play)

@@ -16,6 +16,7 @@ export interface TMDWAVRendererOptions {
   sampleRate?: number;
   targetParagraph?: string;
   targetInstrument?: string;
+  soundfont?: string;
 }
 
 /** Portable fallback renderer. It produces deterministic stereo PCM WAV without platform audio APIs. */
@@ -33,6 +34,12 @@ export class TMDWAVRenderer {
     } else {
       sampleRate = sampleRateOrOptions;
       options = maybeOptions;
+    }
+
+    if (options?.soundfont) {
+      throw new TmdAudioError(
+        "External SoundFont/DLS rendering is not supported by the portable WAV renderer."
+      );
     }
 
     let sheet = TMDMacroEvaluator.expand(rawSheet);
