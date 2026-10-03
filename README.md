@@ -1,5 +1,11 @@
 # Tmd-TS
 
+[![CI](https://github.com/TMDLang/Tmd-TS/actions/workflows/ci.yml/badge.svg)](https://github.com/TMDLang/Tmd-TS/actions/workflows/ci.yml)
+[![GitHub Pages](https://github.com/TMDLang/Tmd-TS/actions/workflows/deploy-pages.yml/badge.svg)](https://github.com/TMDLang/Tmd-TS/actions/workflows/deploy-pages.yml)
+[![npm version](https://img.shields.io/npm/v/tmdlang.svg)](https://www.npmjs.com/package/tmdlang)
+[![Node.js >=20](https://img.shields.io/badge/node-%3E%3D20-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 A modern TypeScript/JavaScript implementation of the **TMD** (Timebase Mark Down) markup language parser, toolkit, and music notation exporter.
 
 In memory of **Chen, Chih-Han / [aguai](https://github.com/aguai)** (阿怪, 1974–2019).
