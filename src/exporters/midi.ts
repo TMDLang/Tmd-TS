@@ -852,9 +852,9 @@ export class TMDMIDIGenerator {
   ): Uint8Array {
     let effectiveSheet = TMDMacroEvaluator.expand(rawSheet);
     if (options?.targetParagraph) {
-      const filteredParagraphs = rawSheet.entries.filter(p => p.name === options.targetParagraph);
+      const filteredParagraphs = effectiveSheet.entries.filter(p => p.name === options.targetParagraph);
       effectiveSheet = {
-        ...rawSheet,
+        ...effectiveSheet,
         entries: filteredParagraphs,
         playback: [{ type: 'name', name: options.targetParagraph }],
       };

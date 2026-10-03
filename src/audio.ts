@@ -1,15 +1,68 @@
-import { Accidental,Note, PlaybackDirectiveEvent, PlaybackEvent, Sheet, TMDMacroEvaluator, TMDPlaybackRenderer } from "./core/index.js";
+import {
+  Accidental,
+  DEFAULT_INSTRUMENT,
+  Note,
+  PlaybackDirectiveEvent,
+  PlaybackEvent,
+  Sheet,
+  SheetInstrumentHelper,
+  TMDMacroEvaluator,
+  TMDPlaybackRenderer,
+} from "./core/index.js";
 
 export class TmdAudioError extends Error {}
 
+export interface TMDWAVRendererOptions {
+  sampleRate?: number;
+  targetParagraph?: string;
+  targetInstrument?: string;
+}
+
 /** Portable fallback renderer. It produces deterministic stereo PCM WAV without platform audio APIs. */
 export class TMDWAVRenderer {
-  static renderWAV(rawSheet: Sheet, sampleRate = 44100): Uint8Array {
-    const sheet = TMDMacroEvaluator.expand(rawSheet);
-    if (!Number.isFinite(sampleRate) || sampleRate < 8000) throw new TmdAudioError("Sample rate must be at least 8000 Hz");
+  static renderWAV(
+    rawSheet: Sheet,
+    sampleRateOrOptions: number | TMDWAVRendererOptions = 44100,
+    maybeOptions?: TMDWAVRendererOptions
+  ): Uint8Array {
+    let sampleRate = 44100;
+    let options: TMDWAVRendererOptions | undefined;
+    if (typeof sampleRateOrOptions === "object" && sampleRateOrOptions !== null) {
+      options = sampleRateOrOptions;
+      sampleRate = options.sampleRate ?? 44100;
+    } else {
+      sampleRate = sampleRateOrOptions;
+      options = maybeOptions;
+    }
+
+    let sheet = TMDMacroEvaluator.expand(rawSheet);
+    if (options?.targetParagraph) {
+      const filteredParagraphs = sheet.entries.filter(p => p.name === options.targetParagraph);
+      sheet = {
+        ...sheet,
+        entries: filteredParagraphs,
+        playback: [{ type: "name", name: options.targetParagraph }],
+      };
+    }
+
+    if (!Number.isFinite(sampleRate) || sampleRate < 8000)
+      throw new TmdAudioError("Sample rate must be at least 8000 Hz");
+
     const events: PlaybackEvent[] = [];
     const directives: PlaybackDirectiveEvent[] = [];
-    for (const assignment of new Set(sheet.entries.map(p => p.assignment).filter((value): value is string => Boolean(value))) ) {
+
+    let distinctInstruments = SheetInstrumentHelper.distinctInstruments(sheet, false);
+    if (options?.targetInstrument) {
+      const target = options.targetInstrument === "" ? DEFAULT_INSTRUMENT : options.targetInstrument;
+      distinctInstruments = distinctInstruments.filter(inst => inst === target);
+      if (distinctInstruments.length === 0 && (options.targetInstrument === DEFAULT_INSTRUMENT || options.targetInstrument === "")) {
+        distinctInstruments = [DEFAULT_INSTRUMENT];
+      }
+    } else if (distinctInstruments.length === 0) {
+      distinctInstruments = [DEFAULT_INSTRUMENT];
+    }
+
+    for (const assignment of distinctInstruments) {
       const timeline = TMDPlaybackRenderer.render(sheet, assignment);
       events.push(...timeline.events);
       directives.push(...timeline.directives);

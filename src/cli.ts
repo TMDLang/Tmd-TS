@@ -58,6 +58,8 @@ OPTIONS:
       --vsqx-output PATH  Export vocal track to VOCALOID3/4 (.vsqx) XML file.
   -u, --ust-output PATH   Export vocal track to UTAU / OpenUtau (.ust) file.
       --singer NAME       Vocaloid singer name (defaults to Miku).
+      --section NAME      Optional section filter for MIDI export or playback.
+      --instrument NAME   Optional instrument filter for MIDI export or playback.
   -w, --wav-output PATH   Render portable 16-bit stereo WAV.
       --pdf-output PATH   Render PDF through lilypond.
       --play              Render and play through afplay/aplay.
@@ -1035,7 +1037,9 @@ export function main(argv = process.argv.slice(2)): number {
     installMcp = false,
     runMcp = false,
     runLsp = false,
-    singer = "Miku";
+    singer = "Miku",
+    section: string | undefined,
+    instrument: string | undefined;
   const outputs: Record<string, string | undefined> = {};
 
   for (let i = 0; i < argv.length; i++) {
@@ -1078,6 +1082,22 @@ export function main(argv = process.argv.slice(2)): number {
     }
     if (arg === "--singer") {
       singer = argv[++i] || "Miku";
+      continue;
+    }
+    if (arg === "--section") {
+      section = argv[++i];
+      continue;
+    }
+    if (arg.startsWith("--section=")) {
+      section = arg.slice("--section=".length);
+      continue;
+    }
+    if (arg === "--instrument") {
+      instrument = argv[++i];
+      continue;
+    }
+    if (arg.startsWith("--instrument=")) {
+      instrument = arg.slice("--instrument=".length);
       continue;
     }
     const option: Record<string, string> = {
@@ -1201,7 +1221,14 @@ export function main(argv = process.argv.slice(2)): number {
   );
   if (parseOnly) return 0;
   try {
-    if (outputs.midi) fs.writeFileSync(outputs.midi, TMDMIDIGenerator.generateMIDI(sheet));
+    if (outputs.midi)
+      fs.writeFileSync(
+        outputs.midi,
+        TMDMIDIGenerator.generateMIDI(sheet, TMDMIDIGenerator.defaultTicksPerQuarterNote, {
+          targetParagraph: section,
+          targetInstrument: instrument,
+        })
+      );
     if (outputs.musicxml)
       fs.writeFileSync(outputs.musicxml, TMDMusicXMLGenerator.generateMusicXML(sheet));
     if (outputs.lilypond)
@@ -1227,7 +1254,13 @@ export function main(argv = process.argv.slice(2)): number {
     }
     if (outputs.wav || play) {
       const temp = outputs.wav || path.join(os.tmpdir(), `tmd-${Date.now()}.wav`);
-      fs.writeFileSync(temp, TMDWAVRenderer.renderWAV(sheet));
+      fs.writeFileSync(
+        temp,
+        TMDWAVRenderer.renderWAV(sheet, 44100, {
+          targetParagraph: section,
+          targetInstrument: instrument,
+        })
+      );
       if (play)
         execFileSync(process.platform === "darwin" ? "afplay" : "aplay", [temp], {
           stdio: "inherit",

@@ -147,11 +147,15 @@ export class TmdMcpServer {
     filePath,
     format,
     outputPath,
+    section,
+    instrument,
   }: {
     text?: string;
     filePath?: string;
     format: "midi" | "musicxml" | "lilypond" | "abc" | "wav" | "reaper" | "rpp" | "vsq" | "vsqx" | "chordpro" | "cho";
     outputPath?: string;
+    section?: string;
+    instrument?: string;
   }) {
     let content = text;
     if (!content && filePath) {
@@ -169,7 +173,10 @@ export class TmdMcpServer {
     const fmt = (format || "midi").toLowerCase();
     switch (fmt) {
       case "midi": {
-        const uint8 = TMDMIDIGenerator.generateMIDI(sheet);
+        const uint8 = TMDMIDIGenerator.generateMIDI(sheet, TMDMIDIGenerator.defaultTicksPerQuarterNote, {
+          targetParagraph: section,
+          targetInstrument: instrument,
+        });
         if (outputPath) {
           fs.writeFileSync(outputPath, uint8);
           return textContent(`MIDI successfully written to ${outputPath}`);
@@ -201,7 +208,10 @@ export class TmdMcpServer {
         return textContent(abc);
       }
       case "wav": {
-        const wav = TMDWAVRenderer.renderWAV(sheet);
+        const wav = TMDWAVRenderer.renderWAV(sheet, 44100, {
+          targetParagraph: section,
+          targetInstrument: instrument,
+        });
         if (outputPath) {
           fs.writeFileSync(outputPath, wav);
           return textContent(`WAV audio successfully written to ${outputPath}`);
@@ -305,10 +315,18 @@ export class TmdMcpServer {
             .string()
             .optional()
             .describe("Optional filesystem destination path to write output"),
+          section: z
+            .string()
+            .optional()
+            .describe("Optional section filter for MIDI or WAV export"),
+          instrument: z
+            .string()
+            .optional()
+            .describe("Optional instrument filter for MIDI or WAV export"),
         }),
       },
-      async ({ text, filePath, format, outputPath }) =>
-        TmdMcpServer.handleConvertTmd({ text, filePath, format, outputPath })
+      async ({ text, filePath, format, outputPath, section, instrument }) =>
+        TmdMcpServer.handleConvertTmd({ text, filePath, format, outputPath, section, instrument })
     );
 
     return server;

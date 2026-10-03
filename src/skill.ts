@@ -328,20 +328,25 @@ tmd score.tmd -c score.cho
 # 7. Render offline WAV audio (macOS DLS / SoundFont)
 tmd score.tmd -w output.wav
 
-# 8. Export vocal track to VOCALOID (.vsq, .vsqx)
+# 8. Filter export by section and/or solo instrument (MIDI, WAV, play)
+tmd score.tmd -m intro.mid --section intro
+tmd score.tmd -w intro_piano.wav --section intro --instrument Piano
+tmd score.tmd --play --section chorus --instrument Vocal
+
+# 9. Export vocal track to VOCALOID (.vsq, .vsqx)
 tmd score.tmd --vsq-output vocal.vsq --singer Miku
 tmd score.tmd --vsqx-output vocal.vsqx --singer Miku
 
-# 9. Export vocal track to UTAU / OpenUtau (.ust)
+# 10. Export vocal track to UTAU / OpenUtau (.ust)
 tmd score.tmd -u vocal.ust
 
-# 10. Check measure consistency and beat accuracy (Essential for AI self-verification)
+# 11. Check measure consistency and beat accuracy (Essential for AI self-verification)
 tmd check score.tmd
 
-# 11. Format document layout and indentation
+# 12. Format document layout and indentation
 tmd format score.tmd -i
 
-# 12. Install this skill into AI agent directories
+# 13. Install this skill into AI agent directories
 tmd --install-skills
 \`\`\`
 
