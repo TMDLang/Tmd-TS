@@ -1,10 +1,34 @@
 import { describe, expect,it } from "vitest";
 
 import { TMDSongInspector } from "../src/core/inspector.js";
+import { TMDSongTimingAnalyzer } from "../src/core/timing_analyzer.js";
+import { TMDPlaybackRenderer } from "../src/core/playback.js";
 import { TmdParser } from "../src/core/parser.js";
 import { inspectorBasicFixture } from "./conformanceFixtures.js";
 
 describe("TMDSongInspector (TDD port from TmdSwift)", () => {
+  it("runs timing analysis independently from the Inspector facade", () => {
+    const sheet = TmdParser.parse(`::SCORE::
+** Timing Analyzer **
+!= 120
+?= C
+<4/4>
+
+intro:Piano@|0|{
+    <4*>
+    1 2 3 4
+}
+
+-> intro ->#
+`);
+    const directives = TMDPlaybackRenderer.render(sheet, "Piano").directives;
+    const timing = TMDSongTimingAnalyzer.analyze(sheet, directives);
+
+    expect(timing.totalMeasures).toBe(1);
+    expect(timing.totalDurationSeconds).toBeCloseTo(2, 5);
+    expect(timing.sections[0].name).toBe("intro");
+  });
+
   it("matches the shared Inspector fixture's stable profile fields", () => {
     const sheet = TmdParser.parse(inspectorBasicFixture);
     const profile = TMDSongInspector.inspect(sheet);

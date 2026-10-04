@@ -17,6 +17,7 @@ export type { TMDLocale } from "./localization.js";
 export { TMDLocalizationKey,TMDLocalizer } from "./localization.js";
 import type { TMDLocale } from "./localization.js";
 import { TMDLocalizationKey, TMDLocalizer } from "./localization.js";
+import { TMDSongTimingAnalyzer } from "./timing_analyzer.js";
 
 /**
  * Pitch descriptor with MIDI note number, canonical note name (e.g. "C4", "A5"), and source section context.
@@ -300,95 +301,7 @@ export class TMDSongInspector {
   }
 
   private static buildTimingProfile(sheet: Sheet, timelineDirectives: PlaybackDirectiveEvent[]): TMDTimingProfile {
-    const orders: Playback[] =
-      sheet.playback.length > 0
-        ? sheet.playback
-        : Array.from(new Set(sheet.entries.map((p) => p.name))).map((n) => ({
-            type: "name",
-            name: n,
-          }));
-
-    let state: PlaybackState = {
-      tempo: sheet.speed && sheet.speed > 0 ? sheet.speed : DEFAULT_TEMPO_BPM,
-      keyOffset: sheet.keySignature ? sheet.keySignature.semitoneOffset : 0,
-      timeSignature: sheet.beat || { count: 4, noteValue: 4 },
-      dynamicLevel: "mf",
-    };
-
-    const sections: TMDSectionTimingProfile[] = [];
-    let currentQuarterPosition = 0.0;
-    let currentSeconds = 0.0;
-    let currentMeasure = 1;
-    let totalMeasures = 0;
-    const sectionOccurrences: Record<string, number> = {};
-
-    for (let idx = 0; idx < orders.length; idx++) {
-      const order = orders[idx];
-      if (order.type === "relative") {
-        const delta = parseInt(order.value.replace(/\+/g, ""), 10);
-        if (!isNaN(delta)) {
-          state = { ...state, keyOffset: state.keyOffset + delta };
-        }
-      } else if (order.type === "absolute") {
-        const offset = KeySignature.parse(order.value).semitoneOffset;
-        state = { ...state, keyOffset: offset };
-      } else if (order.type === "name") {
-        const durQuarterNotes = TMDPlaybackRenderer.durationOf(order.name, sheet);
-        const startPosition = currentQuarterPosition;
-        const endPosition = startPosition + durQuarterNotes;
-        let cursor = startPosition;
-        let tempo = state.tempo;
-        let meter = state.timeSignature;
-        let secDurationSeconds = 0;
-        let measureCount = 0;
-        for (const directive of timelineDirectives) {
-          if (directive.position < startPosition || directive.position >= endPosition) continue;
-          if (directive.position > cursor) {
-            const segment = directive.position - cursor;
-            secDurationSeconds += segment * 60 / tempo;
-            measureCount += segment / this.measureDuration(meter);
-            cursor = directive.position;
-          }
-          tempo = directive.state.tempo;
-          meter = directive.state.timeSignature;
-        }
-        if (endPosition > cursor) {
-          const segment = endPosition - cursor;
-          secDurationSeconds += segment * 60 / tempo;
-          measureCount += segment / this.measureDuration(meter);
-        }
-        const secMeasures = Math.max(1, Math.round(measureCount));
-
-        const occurrence = (sectionOccurrences[order.name] || 0) + 1;
-        sectionOccurrences[order.name] = occurrence;
-
-        sections.push({
-          name: order.name,
-          orderIndex: idx,
-          occurrenceIndex: occurrence,
-          startMeasure: currentMeasure,
-          startPositionQuarterNotes: currentQuarterPosition,
-          durationQuarterNotes: durQuarterNotes,
-          startSeconds: currentSeconds,
-          durationSeconds: secDurationSeconds,
-          measures: secMeasures,
-          keyOffset: state.keyOffset,
-          tempo: state.tempo,
-        });
-
-        currentQuarterPosition += durQuarterNotes;
-        currentSeconds += secDurationSeconds;
-        currentMeasure += secMeasures;
-        totalMeasures += secMeasures;
-        state = { tempo, keyOffset: state.keyOffset, timeSignature: meter, dynamicLevel: state.dynamicLevel };
-      }
-    }
-
-    return {
-      totalDurationSeconds: currentSeconds,
-      totalMeasures,
-      sections,
-    };
+    return TMDSongTimingAnalyzer.analyze(sheet, timelineDirectives);
   }
 
   private static buildPitchProfile(

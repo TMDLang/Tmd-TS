@@ -1,6 +1,7 @@
 export * from './canon_gen.js';
 export * from './format.js';
 export * from './inspector.js';
+export * from './timing_analyzer.js';
 export * from './instruments.js';
 export * from './localization.js';
 export * from './macro.js';
