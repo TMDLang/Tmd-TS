@@ -4,6 +4,7 @@ import { TMDSongInspector } from "../src/core/inspector.js";
 import { TMDSongTimingAnalyzer } from "../src/core/timing_analyzer.js";
 import { TMDSongPitchRangeAnalyzer } from "../src/core/pitch_range_analyzer.js";
 import { TMDSongHarmonyAnalyzer } from "../src/core/harmony_analyzer.js";
+import { TMDSongTonalityAnalyzer } from "../src/core/tonality_analyzer.js";
 import { TMDPlaybackRenderer } from "../src/core/playback.js";
 import { TmdParser } from "../src/core/parser.js";
 import { inspectorBasicFixture } from "./conformanceFixtures.js";
@@ -75,6 +76,29 @@ intro:Piano@|0|{
     expect(profile.distinctChords).toEqual(["[C]", "[G]"]);
     expect(profile.chordCount).toBe(2);
     expect(profile.modulations).toEqual([]);
+  });
+
+  it("runs tonality analysis independently from the Inspector facade", () => {
+    const sheet = TmdParser.parse(`::SCORE::
+** Tonality Analyzer **
+!= 120
+?= C
+<4/4>
+
+intro:Piano@|0|{
+    <4*>
+    1 3 5 1^
+}
+
+-> intro ->#
+`);
+    const timeline = TMDPlaybackRenderer.render(sheet, "Piano");
+    const timing = TMDSongTimingAnalyzer.analyze(sheet, timeline.directives);
+    const profile = TMDSongTonalityAnalyzer.analyze(sheet, timing, "zh-Hant");
+
+    expect(profile.globalPitchClasses.weights[0]).toBeGreaterThan(0);
+    expect(profile.globalInference.tonic).not.toBeNull();
+    expect(profile.sections).toHaveLength(1);
   });
 
   it("matches the shared Inspector fixture's stable profile fields", () => {
