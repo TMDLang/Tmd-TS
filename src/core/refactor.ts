@@ -519,31 +519,32 @@ export class TMDRefactor {
     const linearParagraphs: Entry[] = [];
 
     for (const inst of instruments) {
-      const combinedUnitGroups: UnitGroup[] = [];
-      let baseNoteLength = 4;
+      const combinedSections: Entry["sections"] = [];
+      const sourceEntries: Entry[] = [];
 
       for (const ord of sheet.playback) {
         if (ord.type !== "name") continue;
-      const para = sheet.entries.find((p) => p.name === ord.name && p.assignment === inst);
+        const para = sheet.entries.find((p) => p.name === ord.name && p.assignment === inst);
         if (!para) continue;
+        sourceEntries.push(para);
 
         for (const sec of para.sections) {
-          baseNoteLength = sec.noteLength;
-          combinedUnitGroups.push(...sec.unitGroups);
+          combinedSections.push(JSON.parse(JSON.stringify(sec)) as Entry["sections"][number]);
         }
       }
+
+      const pitchModes = new Set(sourceEntries.map((entry) => entry.pitchMode).filter(Boolean));
+      const executionTimes = new Set(sourceEntries.map((entry) => entry.executionTime).filter(Boolean));
+      const showPrograms = new Set(sourceEntries.map((entry) => entry.showProgram).filter(Boolean));
 
       linearParagraphs.push({
         name: "linear",
         assignment: inst,
         start: 0,
-        sections: [
-          {
-            noteLength: baseNoteLength,
-            unitGroups: combinedUnitGroups,
-            directives: [],
-          },
-        ],
+        sections: combinedSections,
+        ...(pitchModes.size === 1 ? { pitchMode: [...pitchModes][0] } : {}),
+        ...(executionTimes.size === 1 ? { executionTime: [...executionTimes][0] } : {}),
+        ...(showPrograms.size === 1 ? { showProgram: [...showPrograms][0] } : {}),
       });
     }
 
@@ -551,6 +552,7 @@ export class TMDRefactor {
       name: sheet.name,
       speed: sheet.speed,
       keySignature: sheet.keySignature,
+      declaredKey: sheet.declaredKey,
       beat: sheet.beat,
       entries: linearParagraphs,
       playback: [{ type: "name", name: "linear" }],

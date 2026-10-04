@@ -1,5 +1,5 @@
 import { PlaybackContent, PlaybackDirectiveEvent, PlaybackEvent, PlaybackState, TMDPlaybackRenderer } from './playback.js';
-import { Beat, Sheet } from './types.js';
+import { Beat, DEFAULT_TEMPO_BPM, Sheet } from './types.js';
 
 export interface NotationDurationAtom {
   baseDenominator: number; // 1, 2, 4, 8, 16, 32, 64
@@ -114,6 +114,21 @@ export class TMDMeasureRenderer {
     }
 
     const measures: Measure[] = [];
+    const initialState: PlaybackState = {
+      tempo: sheet.speed > 0 ? sheet.speed : DEFAULT_TEMPO_BPM,
+      keyOffset: sheet.keySignature.semitoneOffset,
+      timeSignature: defaultBeat,
+      dynamicLevel: 'mf',
+    };
+    const orderedDirectives = [...timeline.directives].sort((a, b) => a.position - b.position);
+    const stateAt = (position: number): PlaybackState => {
+      let state = initialState;
+      for (const directive of orderedDirectives) {
+        if (directive.position > position) break;
+        state = directive.state;
+      }
+      return state;
+    };
 
     for (let mIdx = 0; mIdx < intervals.length; mIdx++) {
       const interval = intervals[mIdx];
@@ -157,12 +172,7 @@ export class TMDMeasureRenderer {
 
       const paddedEvents: MeasureEvent[] = [];
       let cursor = 0.0;
-      const state: PlaybackState = rawMeasureEvents[0]?.state ?? {
-        tempo: sheet.speed > 0 ? sheet.speed : 120,
-        keyOffset: sheet.keySignature.semitoneOffset,
-        timeSignature: mBeat,
-        dynamicLevel: "mf",
-      };
+      const measureState = stateAt(mStart);
 
       const epsilon = 1e-4;
       for (const ev of rawMeasureEvents) {
@@ -172,9 +182,9 @@ export class TMDMeasureRenderer {
             startOffset: cursor,
             duration: gap,
             content: { type: 'rest' },
-            tieStart: false,
-            tieStop: false,
-            state,
+          tieStart: false,
+          tieStop: false,
+          state: stateAt(mStart + cursor),
           });
         }
         paddedEvents.push(ev);
@@ -187,9 +197,9 @@ export class TMDMeasureRenderer {
           startOffset: cursor,
           duration: trailingGap,
           content: { type: 'rest' },
-          tieStart: false,
-          tieStop: false,
-          state,
+            tieStart: false,
+            tieStop: false,
+            state: stateAt(mStart + cursor),
         });
       }
 
@@ -198,8 +208,8 @@ export class TMDMeasureRenderer {
         startTime: mStart,
         nominalDuration: mDuration,
         timeSignature: mBeat,
-        tempo: state.tempo,
-        keyOffset: state.keyOffset,
+        tempo: measureState.tempo,
+        keyOffset: measureState.keyOffset,
         events: paddedEvents,
         directives: directivesInMeasure,
       });

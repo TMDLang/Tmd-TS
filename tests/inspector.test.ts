@@ -19,6 +19,27 @@ describe("TMDSongInspector (TDD port from TmdSwift)", () => {
     expect(profile.density.sectionDensities.map((section) => section.trackCount)).toEqual([1]);
   });
 
+  it("localizes vocal range report labels in Traditional Chinese", () => {
+    const sheet = TmdParser.parse(`::SCORE::
+** Vocal Report **
+!= 120
+?= C
+<4/4>
+
+verse:Vocal@|0|{
+    <4*>
+    1 2 3 4
+}
+-> verse ->#
+`);
+
+    const report = TMDSongInspector.generateReport(TMDSongInspector.inspect(sheet, "Vocal", "zh-Hant"));
+    expect(report).not.toContain("Vocal Range");
+    expect(report).not.toContain("Lowest Note");
+    expect(report).not.toContain("Highest Note");
+    expect(report).not.toContain("Suitable For");
+  });
+
   it("does not create an Inspector Piano track for a prototype-only score", () => {
     const sheet = TmdParser.parse(`::SCORE::
 ** Prototype Only **
@@ -172,7 +193,7 @@ chorus:Bass@|0|{
     const report = TMDSongInspector.generateReport(profile);
     expect(report).toContain("TMD Song Profile: [ Inspector Test Song ]");
     expect(report).toContain("Duration:");
-    expect(report).toContain("Vocal Range:");
+    expect(report).toContain("人聲音域:");
     expect(report).toMatch(/(和聲:|Harmony:)/);
   });
 
@@ -338,7 +359,7 @@ chorus:Vocal@|0|{
     const report = TMDSongInspector.generateReport(profile);
     expect(report).toContain("in [verse #1 @ m.1, 0:00]");
     expect(report).toContain("in [chorus #2 @ m.7, 0:13]");
-    expect(report).toContain("/ 1.8 octaves");
+    expect(report).toContain("/ 1.8 個八度");
   });
 
   it("inspects song tonality and key profile accurately using K-S correlation", () => {

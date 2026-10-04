@@ -81,6 +81,26 @@ Intro:Timpani[pitchMode=fixed]@|0|{ <4*> 1 2 3 4 }
     expect(timeline.events.every((event) => event.state.keyOffset === 0)).toBe(true);
   });
 
+  it("keeps fixed pitch after a trailing key directive at a section boundary", () => {
+    const sheet = TmdParser.parse(`
+::SCORE::
+?= C
+<4/4>
+Intro:Timpani[pitchMode=fixed]@|0|{
+    <4*>
+    1 2 3 4
+    {?=G}
+    <4*>
+    5 6 7 1^
+}
+-> Intro ->#
+`);
+
+    const timeline = TMDPlaybackRenderer.render(sheet, "Timpani");
+    expect(timeline.events.length).toBe(8);
+    expect(timeline.events.every((event) => event.state.keyOffset === 0)).toBe(true);
+  });
+
   it("exports correctly to MIDI, ABC, LilyPond, and MusicXML", () => {
     const tmd = `
 ::SCORE::

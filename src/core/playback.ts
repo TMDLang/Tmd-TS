@@ -3,6 +3,7 @@ import {
   Beat,
   ChordSymbol,
   DEFAULT_INSTRUMENT,
+  DEFAULT_TEMPO_BPM,
   DynamicMark,
   Entry,
   KeySignature,
@@ -11,7 +12,8 @@ import {
   SectionDirective,
   SectionDirectiveKind,
   Sheet,
-  Unit} from "./types";
+  Unit,
+} from "./types.js";
 
 export type PlaybackContent =
   | { type: "note"; note: Note }
@@ -74,7 +76,12 @@ export interface TMDPlaybackRendererOptions {
 export class TMDPlaybackRenderer {
   public static validateTempoConflicts(inputSheet: Sheet): PlaybackTempoConflict[] {
     const sheet = TMDMacroEvaluator.expand(inputSheet);
-    const directives = sheet.distinctAssignments?.().flatMap((assignment) => this.render(sheet, assignment).directives) ?? [];
+    const assignments = Array.from(new Set(
+      sheet.entries
+        .map((entry) => entry.assignment)
+        .filter((assignment): assignment is string => Boolean(assignment))
+    ));
+    const directives = assignments.flatMap((assignment) => this.render(sheet, assignment).directives);
     const grouped = new Map<number, PlaybackDirectiveEvent[]>();
     for (const directive of directives) {
       const values = grouped.get(directive.position) ?? [];
@@ -150,7 +157,7 @@ export class TMDPlaybackRenderer {
       : Array.from(new Set(sheet.entries.map((p) => p.name))).map((n) => ({ type: "name", name: n }));
 
     let state: PlaybackState = {
-      tempo: sheet.speed > 0 ? sheet.speed : 120,
+      tempo: sheet.speed > 0 ? sheet.speed : DEFAULT_TEMPO_BPM,
       keyOffset: sheet.keySignature.semitoneOffset,
       timeSignature: sheet.beat,
       dynamicLevel: "mf"
@@ -268,7 +275,7 @@ export class TMDPlaybackRenderer {
     }
 
     let state: PlaybackState = {
-      tempo: sheet.speed > 0 ? sheet.speed : 120,
+      tempo: sheet.speed > 0 ? sheet.speed : DEFAULT_TEMPO_BPM,
       keyOffset: sheet.keySignature.semitoneOffset,
       timeSignature: sheet.beat,
       dynamicLevel: "mf",
@@ -366,7 +373,7 @@ export class TMDPlaybackRenderer {
 
       while (directiveIndex < sortedDirectives.length) {
         const dir = sortedDirectives[directiveIndex];
-        state = TMDPlaybackRenderer.applyDirective(dir.kind, state);
+        state = TMDPlaybackRenderer.applyDirective(dir.kind, state, fixedPitch);
         directives.push({ position, kind: dir.kind, state });
         directiveIndex++;
       }
@@ -429,7 +436,7 @@ export class TMDPlaybackRenderer {
 
   private static globalEarliestPosition(sheet: Sheet): number {
     let state: PlaybackState = {
-      tempo: sheet.speed > 0 ? sheet.speed : 120,
+      tempo: sheet.speed > 0 ? sheet.speed : DEFAULT_TEMPO_BPM,
       keyOffset: sheet.keySignature.semitoneOffset,
       timeSignature: sheet.beat,
       dynamicLevel: "mf"

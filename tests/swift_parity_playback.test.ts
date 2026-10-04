@@ -69,6 +69,24 @@ A:Violin@|0|{
     ]);
   });
 
+  it("validates tempo conflicts for canonical sheets without parser helper methods", () => {
+    const sheet = TmdParser.parse(`::SCORE::
+** Canonical Tempo Conflict **
+!= 120
+?= C
+<4/4>
+
+A:Piano@|0|{ <4*> 1 {!=90} 2 3 4 }
+A:Violin@|0|{ <4*> 1 {!=100} 2 3 4 }
+-> A ->#
+`);
+    sheet.distinctAssignments = undefined;
+
+    expect(TMDPlaybackRenderer.validateTempoConflicts(sheet)).toEqual([
+      { position: 1, tempos: [90, 100] },
+    ]);
+  });
+
   it("parses and plays + connected notes at the same position", () => {
     const sheet = TmdParser.parse(`::SCORE::
 ** Multi-note **

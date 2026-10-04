@@ -5,6 +5,7 @@ import {
   Accidental,
   Beat,
   ChordSymbol,
+  DEFAULT_TEMPO_BPM,
   Entry,
   KeySignature,
   Note,
@@ -16,7 +17,7 @@ import {
   Sheet,
   Unit,
   UnitGroup
-} from "./types";
+} from "./types.js";
 
 export type TokenType =
   | "scoreHeader"
@@ -664,7 +665,7 @@ export class TmdParser {
     }
 
     let name = "";
-    let speed = 120.0;
+    let speed = DEFAULT_TEMPO_BPM;
     let keySignature = new KeySignature();
     let declaredKey: string | undefined;
     let beat: Beat = { count: 4, noteValue: 4 };

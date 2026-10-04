@@ -59,6 +59,31 @@ A:Piano@|0|{
     }
   });
 
+  it('uses the state at the measure boundary for summaries and padded rests', () => {
+    const sheet = TmdParser.parse(`
+::SCORE::
+** Measure State Boundary **
+!= 120
+?= C
+<4/4>
+
+A:Piano@|0|{
+    <4*>
+    {!=60}
+    1 2 3 4
+}
+-> A ->#
+`)!;
+    // A fractional start creates a leading gap in the first measure while keeping
+    // the source notation valid for the renderer's canonical model.
+    sheet.entries[0].start = 0.25;
+
+    const measure = TMDMeasureRenderer.renderMeasures(sheet, 'Piano')[0];
+    expect(measure.tempo).toBe(120);
+    expect(measure.events[0].content.type).toBe('rest');
+    expect(measure.events[0].state.tempo).toBe(120);
+  });
+
   it('splits cross-barline notes into measure events with tieStart and tieStop', () => {
     const tmd = `
 ::SCORE::

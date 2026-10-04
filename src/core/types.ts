@@ -304,6 +304,7 @@ export interface Section {
 export type EntryPitchMode = "transposing" | "fixed";
 
 export const DEFAULT_INSTRUMENT = "Piano";
+export const DEFAULT_TEMPO_BPM = 120;
 
 export interface Entry {
   name: string;

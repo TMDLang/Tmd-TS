@@ -343,7 +343,8 @@ export class TMDMacroEvaluator {
               if (transform.length === 0) continue;
               const tOp = String(transform[0]).toLowerCase();
               if (tOp === "transpose") {
-                const semitones = Number(transform[1]) || 0;
+                const semitoneValue = transform[1];
+                const semitones = integer(semitoneValue ?? "", "Transpose offset");
                 current = {
                   name: `${current.name}_tr${semitones >= 0 ? "+" + semitones : semitones}`,
                   sections: transposeSections(current.sections, semitones),

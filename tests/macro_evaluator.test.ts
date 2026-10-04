@@ -819,6 +819,10 @@ Theme { <4*> 1 2 3 4 }
         expect(() => expandMacro("(play (vary) Violin)")).toThrow(/Macro error.*: 'vary' requires a target theme/);
       });
 
+      it('rejects invalid nested vary transpose offsets instead of treating them as zero', () => {
+        expect(() => expandMacro("(play (vary Theme (transpose nope)) Violin)")).toThrow(/Macro error.*Transpose offset must be an integer/);
+      });
+
       it('validates unknown theme reference', () => {
         expect(() => expandMacro("(play NonExistent Violin)")).toThrow(/Macro error.*: Theme 'NonExistent' is not a prototype/);
       });

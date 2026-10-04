@@ -4,6 +4,7 @@ import { PlaybackDirectiveEvent,PlaybackEvent, PlaybackState, TMDPlaybackRendere
 import {
   chordQualityIntervals,
   ChordSymbol,
+  DEFAULT_TEMPO_BPM,
   Entry,
   KeySignature,
   noteToMIDIPitch,
@@ -250,7 +251,7 @@ export class TMDSongInspector {
   ): TMDSongProfile {
     const effectiveSheet = TMDMacroEvaluator.expand(sheet);
     const title = effectiveSheet.name || "Untitled";
-    const initialTempo = effectiveSheet.speed && effectiveSheet.speed > 0 ? effectiveSheet.speed : 120.0;
+    const initialTempo = effectiveSheet.speed && effectiveSheet.speed > 0 ? effectiveSheet.speed : DEFAULT_TEMPO_BPM;
     const initialKey = effectiveSheet.keySignature ? effectiveSheet.keySignature.toString() : "C";
     const initialMeter = effectiveSheet.beat ? `${effectiveSheet.beat.count}/${effectiveSheet.beat.noteValue}` : "4/4";
 
@@ -308,7 +309,7 @@ export class TMDSongInspector {
           }));
 
     let state: PlaybackState = {
-      tempo: sheet.speed && sheet.speed > 0 ? sheet.speed : 120.0,
+      tempo: sheet.speed && sheet.speed > 0 ? sheet.speed : DEFAULT_TEMPO_BPM,
       keyOffset: sheet.keySignature ? sheet.keySignature.semitoneOffset : 0,
       timeSignature: sheet.beat || { count: 4, noteValue: 4 },
       dynamicLevel: "mf",
@@ -1183,12 +1184,12 @@ export class TMDSongInspector {
       const vocal = profile.vocalRange;
       const octaves = vocal.spanOctaves.toFixed(1);
       lines.push(
-        `🎤 Vocal Range:    ${vocal.lowestNote.noteName} (MIDI ${vocal.lowestNote.midiPitch}) – ${vocal.highestNote.noteName} (MIDI ${vocal.highestNote.midiPitch}) [Span: ${vocal.spanSemitones} semitones / ${octaves} octaves, Difficulty: ${vocal.difficulty}]`
+        `🎤 ${localizer.text(TMDLocalizationKey.vocalRange)}:    ${vocal.lowestNote.noteName} (MIDI ${vocal.lowestNote.midiPitch}) – ${vocal.highestNote.noteName} (MIDI ${vocal.highestNote.midiPitch}) [${localizer.text(TMDLocalizationKey.span)}: ${vocal.spanSemitones} ${localizer.text(TMDLocalizationKey.semitones)} / ${octaves} ${localizer.text(TMDLocalizationKey.octaves)}, ${localizer.text(TMDLocalizationKey.difficulty)}: ${vocal.difficulty}]`
       );
-      lines.push(`   - Lowest Note:  ${vocal.lowestNote.noteName} in ${TMDSongInspector.formatNoteLocation(vocal.lowestNote)}`);
-      lines.push(`   - Highest Note: ${vocal.highestNote.noteName} in ${TMDSongInspector.formatNoteLocation(vocal.highestNote)}`);
+      lines.push(`   - ${localizer.text(TMDLocalizationKey.lowestNote)}:  ${vocal.lowestNote.noteName} in ${TMDSongInspector.formatNoteLocation(vocal.lowestNote)}`);
+      lines.push(`   - ${localizer.text(TMDLocalizationKey.highestNote)}: ${vocal.highestNote.noteName} in ${TMDSongInspector.formatNoteLocation(vocal.highestNote)}`);
       if (vocal.suitableVoiceTypes.length > 0) {
-        lines.push(`   - Suitable For: ${vocal.suitableVoiceTypes.join(", ")}`);
+        lines.push(`   - ${localizer.text(TMDLocalizationKey.suitableFor)}: ${vocal.suitableVoiceTypes.join(", ")}`);
       }
     }
 
@@ -1250,10 +1251,10 @@ export class TMDSongInspector {
 
       // ASCII Visualizations
       lines.push("");
-      lines.push("  [ Circle of Fifths Trajectory ]");
+      lines.push(`  [ ${localizer.text(TMDLocalizationKey.circleOfFifthsTitle)} ]`);
       lines.push(this.renderAsciiCircleOfFifths(tonality));
       lines.push("");
-      lines.push("  [ Pitch Class Weight Distribution ]");
+      lines.push(`  [ ${localizer.text(TMDLocalizationKey.pitchClassDistributionTitle)} ]`);
       lines.push(this.renderPitchClassHistogram(tonality));
     }
 
@@ -1263,7 +1264,7 @@ export class TMDSongInspector {
       const padded = inst.assignment.padEnd(14, " ");
       const octaves = inst.spanOctaves.toFixed(1);
       lines.push(
-        `  - ${padded}: ${inst.lowestNote.noteName} – ${inst.highestNote.noteName} (${inst.spanSemitones} semitones / ${octaves} octaves, ${inst.totalNotes} notes)`
+        `  - ${padded}: ${inst.lowestNote.noteName} – ${inst.highestNote.noteName} (${inst.spanSemitones} ${localizer.text(TMDLocalizationKey.semitones)} / ${octaves} ${localizer.text(TMDLocalizationKey.octaves)}, ${inst.totalNotes} ${localizer.text(TMDLocalizationKey.notes)})`
       );
     }
     lines.push("================================================================================");

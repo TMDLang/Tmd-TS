@@ -697,7 +697,36 @@ verse:Piano@|0|{
 
     const sheet = TmdParser.parse(inlined);
     expect(sheet.entries).toHaveLength(1);
-    expect(sheet.entries[0].sections[0].unitGroups.length).toBe(12); // 4 + 4 + 4
+    expect(sheet.entries[0].sections).toHaveLength(3);
+    expect(sheet.entries[0].sections.reduce((total, section) => total + section.unitGroups.length, 0)).toBe(12); // 4 + 4 + 4
+  });
+
+  it("preserves section grids and directives while inlining orders", () => {
+    const input = `::SCORE::
+** Preserve Inline Semantics **
+!= 120
+?= C
+<4/4>
+
+intro:Piano@|0|{
+    <4*>
+    1 2 3 4
+    <8*>
+    5 6 7 1^
+}
+
+-> intro ->#
+`;
+
+    const inlined = TMDRefactor.inlineOrders(input.replace("5 6 7 1^", "{!= 90} 5 6 7 1^"));
+    const sheet = TmdParser.parse(inlined);
+    const sections = sheet.entries[0].sections;
+
+    expect(sections.map((section) => section.noteLength)).toEqual([4, 8]);
+    expect(sections.flatMap((section) => section.directives).map((directive) => directive.kind)).toContainEqual({
+      type: "tempo",
+      bpm: 90,
+    });
   });
 
   describe("TMDRefactor.transpose (TDD)", () => {
