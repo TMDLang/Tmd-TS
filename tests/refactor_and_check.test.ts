@@ -8,6 +8,7 @@ import {
   TMDRefactor,
 } from "../src/index.js";
 import { handleCheckCommand } from "../src/commands/check.js";
+import { handleOutlineCommand } from "../src/commands/outline.js";
 import { diagnosticMeasureFixture } from "./conformanceFixtures.js";
 
 describe("TMDRefactor (TDD)", () => {
@@ -1229,6 +1230,10 @@ Grand_Terminal_Arrival:Piano@|0|{
 describe("TMD CLI subcommands check, format, and refactor (TDD)", () => {
   it("exposes the check command handler as an independent module", () => {
     expect(handleCheckCommand(["--unknown"])).toBe(2);
+  });
+
+  it("exposes the outline command handler as an independent module", () => {
+    expect(handleOutlineCommand(["--unknown"])).toBe(2);
   });
 
   it("runs check subcommand on valid and invalid TMD files", async () => {
