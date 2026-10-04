@@ -74,7 +74,48 @@ function formatIssueDescription(issue: {
 }
 
 export class TMDMeasureChecker {
+  /** Checks parser-valid structural invariants directly from the canonical AST. */
+  public static checkSheet(sheet: import("./types.js").Sheet): TMDMeasureIssue[] {
+    const measureDuration = (Math.max(1, sheet.beat.count) * 4) / Math.max(1, sheet.beat.noteValue);
+    const issues: TMDMeasureIssue[] = [];
+    for (const entry of sheet.entries ?? []) {
+      for (const section of entry.sections ?? []) {
+        const duration = section.unitGroups.reduce(
+          (total, group) => total + Math.max(0, group.length) * 4 / Math.max(1, section.noteLength), 0
+        );
+        if (duration > measureDuration + 1e-9 && (section.barlinePositions ?? []).length === 0) {
+          const measureCount = Math.round(duration / measureDuration);
+          const issueObj = {
+            paragraphName: entry.name,
+            instrument: entry.assignment ?? "",
+            lineNumber: entry.line ?? 0,
+            measureIndex: 0,
+            expectedUnits: measureCount,
+            actualUnits: measureCount,
+            deltaUnits: 0,
+            noteLength: section.noteLength,
+            beat: sheet.beat,
+            snippet: "Multi-measure section requires explicit barlines",
+          };
+          issues.push({ ...issueObj, description: formatIssueDescription(issueObj) });
+        }
+      }
+    }
+    return issues;
+  }
+
   public static check(source: string): TMDMeasureIssue[] {
+    const astIssues = (() => {
+      try {
+        return TMDMeasureChecker.checkSheet(TmdParser.parse(source));
+      } catch {
+        return [];
+      }
+    })();
+    return [...astIssues, ...TMDMeasureChecker.checkWithLexer(source)];
+  }
+
+  private static checkWithLexer(source: string): TMDMeasureIssue[] {
     const lexer = new Lexer(source);
     const tokensWithRanges = lexer.tokenizeWithRanges();
 
@@ -599,29 +640,6 @@ export class TMDMeasureChecker {
     // early exit / solos / breakdowns). TMDPlaybackRenderer pads trailing silence up to durationOf(section),
     // so shorter tracks are considered natural implicit rests rather than errors.
 
-    try {
-      const sheet = TmdParser.parse(source);
-      const measureDuration = (Math.max(1, sheet.beat.count) * 4) / Math.max(1, sheet.beat.noteValue);
-      for (const entry of sheet.entries ?? []) {
-        for (const section of entry.sections) {
-          const duration = section.unitGroups.reduce(
-            (total, group) => total + Math.max(0, group.length) * 4 / Math.max(1, section.noteLength), 0
-          );
-          if (duration > measureDuration + 1e-9 && (section.barlinePositions ?? []).length === 0) {
-            const measureCount = Math.round(duration / measureDuration);
-            const issueObj = {
-              paragraphName: entry.name, instrument: entry.assignment ?? "", lineNumber: entry.line ?? 0,
-              measureIndex: 0, expectedUnits: measureCount, actualUnits: measureCount,
-              deltaUnits: 0, noteLength: section.noteLength, beat: sheet.beat,
-              snippet: "Multi-measure section requires explicit barlines",
-            };
-            issues.push({ ...issueObj, description: formatIssueDescription(issueObj) });
-          }
-        }
-      }
-    } catch {
-      // The lexer diagnostics above remain authoritative for malformed input.
-    }
     return issues;
   }
 }

@@ -13,6 +13,20 @@ import {
 import { musicXmlExportFixture } from './conformanceFixtures.js';
 
 describe('NotationDuration and Measure Decomposition', () => {
+  it('exposes an AST-first structural path', () => {
+    const source = `::SCORE::
+<4/4>
+intro:Piano@|0|{
+  <4*>
+  1 2 3 4 5 6 7 1
+}
+-> intro ->#
+`;
+    const sheet = TmdParser.parse(source);
+    const issues = TMDMeasureChecker.checkSheet(sheet);
+
+    expect(issues.some((issue) => issue.snippet.includes('explicit barlines'))).toBe(true);
+  });
   it('decomposes quarter notes into standard notation duration atoms', () => {
     // 1.0 -> 4th note (baseDenominator: 4, isDotted: false)
     const quarter = NotationDuration.decompose(1.0);
