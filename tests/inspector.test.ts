@@ -2,6 +2,7 @@ import { describe, expect,it } from "vitest";
 
 import { TMDSongInspector } from "../src/core/inspector.js";
 import { TMDSongTimingAnalyzer } from "../src/core/timing_analyzer.js";
+import { TMDSongPitchRangeAnalyzer } from "../src/core/pitch_range_analyzer.js";
 import { TMDPlaybackRenderer } from "../src/core/playback.js";
 import { TmdParser } from "../src/core/parser.js";
 import { inspectorBasicFixture } from "./conformanceFixtures.js";
@@ -27,6 +28,31 @@ intro:Piano@|0|{
     expect(timing.totalMeasures).toBe(1);
     expect(timing.totalDurationSeconds).toBeCloseTo(2, 5);
     expect(timing.sections[0].name).toBe("intro");
+  });
+
+  it("runs pitch-range analysis independently from the Inspector facade", () => {
+    const sheet = TmdParser.parse(`::SCORE::
+** Pitch Analyzer **
+!= 120
+?= C
+<4/4>
+
+intro:Piano@|0|{
+    <4*>
+    1 3 5 1^
+}
+
+-> intro ->#
+`);
+    const timeline = TMDPlaybackRenderer.render(sheet, "Piano");
+    const timing = TMDSongTimingAnalyzer.analyze(sheet, timeline.directives);
+    const profile = TMDSongPitchRangeAnalyzer.analyze("Piano", sheet, timing, timeline.directives);
+
+    expect(profile).not.toBeNull();
+    expect(profile?.totalNotes).toBe(4);
+    expect(profile?.lowestNote.midiPitch).toBe(60);
+    expect(profile?.highestNote.midiPitch).toBe(72);
+    expect(profile?.spanSemitones).toBe(12);
   });
 
   it("matches the shared Inspector fixture's stable profile fields", () => {

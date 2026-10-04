@@ -18,6 +18,7 @@ export { TMDLocalizationKey,TMDLocalizer } from "./localization.js";
 import type { TMDLocale } from "./localization.js";
 import { TMDLocalizationKey, TMDLocalizer } from "./localization.js";
 import { TMDSongTimingAnalyzer } from "./timing_analyzer.js";
+import { TMDSongPitchRangeAnalyzer } from "./pitch_range_analyzer.js";
 
 /**
  * Pitch descriptor with MIDI note number, canonical note name (e.g. "C4", "A5"), and source section context.
@@ -310,121 +311,8 @@ export class TMDSongInspector {
     timingProfile: TMDTimingProfile,
     timelineDirectives: PlaybackDirectiveEvent[]
   ): TMDPitchRangeProfile | null {
-    const timeline = TMDPlaybackRenderer.render(sheet, instrument);
+    return TMDSongPitchRangeAnalyzer.analyze(instrument, sheet, timingProfile, timelineDirectives);
 
-    interface NoteHit {
-      midi: number;
-      name: string;
-      pos: number;
-      sectionName: string;
-      sectionOccurrence: number;
-      measure: number;
-      timeSeconds: number;
-    }
-
-    const hits: NoteHit[] = [];
-
-    for (const event of timeline.events) {
-      if (event.content.type !== "note") continue;
-      const note = event.content.note;
-
-      const pitch = noteToMIDIPitch(note, event.state.keyOffset);
-
-      const noteName = TMDNotePitchInfo.name(pitch);
-      const matchedSection = timingProfile.sections.find(
-        (s) =>
-          event.position >= s.startPositionQuarterNotes &&
-          event.position < s.startPositionQuarterNotes + s.durationQuarterNotes + 0.001
-      );
-      const sectionName = matchedSection ? matchedSection.name : "";
-      const sectionOccurrence = matchedSection ? matchedSection.occurrenceIndex : 1;
-      let measure: number;
-      let timeSeconds: number;
-      if (matchedSection) {
-        const position = Math.max(matchedSection.startPositionQuarterNotes, event.position);
-        let cursor = matchedSection.startPositionQuarterNotes;
-        let tempo = matchedSection.tempo;
-        let meter = event.state.timeSignature;
-        let elapsedSeconds = 0;
-        let elapsedMeasures = 0;
-        for (const directive of timelineDirectives) {
-          if (directive.position <= cursor || directive.position >= position) continue;
-          const segment = directive.position - cursor;
-          elapsedSeconds += segment * 60 / tempo;
-          elapsedMeasures += segment / this.measureDuration(meter);
-          cursor = directive.position;
-          tempo = directive.state.tempo;
-          meter = directive.state.timeSignature;
-        }
-        if (position > cursor) {
-          const segment = position - cursor;
-          elapsedSeconds += segment * 60 / tempo;
-          elapsedMeasures += segment / this.measureDuration(meter);
-        }
-        measure = matchedSection.startMeasure + Math.floor(elapsedMeasures + 1e-9);
-        timeSeconds = matchedSection.startSeconds + elapsedSeconds;
-      } else {
-        const nominalMeasureDur = this.measureDuration(event.state.timeSignature);
-        measure = 1 + Math.floor(event.position / nominalMeasureDur);
-        timeSeconds = event.position / (event.state.tempo / 60.0);
-      }
-
-      hits.push({
-        midi: pitch,
-        name: noteName,
-        pos: event.position,
-        sectionName,
-        sectionOccurrence,
-        measure,
-        timeSeconds,
-      });
-    }
-
-    if (hits.length === 0) return null;
-
-    let lowest = hits[0];
-    let highest = hits[0];
-    let sumPitch = 0;
-
-    for (const h of hits) {
-      if (h.midi < lowest.midi) lowest = h;
-      if (h.midi > highest.midi) highest = h;
-      sumPitch += h.midi;
-    }
-
-    const avgPitch = sumPitch / hits.length;
-    const spanSemitones = highest.midi - lowest.midi;
-    const spanOctaves = spanSemitones / 12.0;
-    const difficulty = this.evaluateDifficulty(spanSemitones);
-    const suitableVoiceTypes = this.evaluateSuitableVoiceTypes(lowest.midi, highest.midi);
-
-    return {
-      assignment: instrument,
-      lowestNote: {
-        midiPitch: lowest.midi,
-        noteName: lowest.name,
-        sectionName: lowest.sectionName,
-        timelinePosition: lowest.pos,
-        sectionOccurrence: lowest.sectionOccurrence,
-        measure: lowest.measure,
-        timeSeconds: lowest.timeSeconds,
-      },
-      highestNote: {
-        midiPitch: highest.midi,
-        noteName: highest.name,
-        sectionName: highest.sectionName,
-        timelinePosition: highest.pos,
-        sectionOccurrence: highest.sectionOccurrence,
-        measure: highest.measure,
-        timeSeconds: highest.timeSeconds,
-      },
-      spanSemitones,
-      spanOctaves,
-      totalNotes: hits.length,
-      averageMidiPitch: avgPitch,
-      difficulty,
-      suitableVoiceTypes,
-    };
   }
 
   private static collectTimelineDirectives(sheet: Sheet): PlaybackDirectiveEvent[] {
@@ -446,44 +334,11 @@ export class TMDSongInspector {
   }
 
   public static evaluateDifficulty(spanSemitones: number): PitchRangeDifficulty {
-    if (spanSemitones <= 12) return "easy";
-    if (spanSemitones <= 16) return "moderate";
-    if (spanSemitones <= 20) return "challenging";
-    return "difficult";
+    return TMDSongPitchRangeAnalyzer.evaluateDifficulty(spanSemitones);
   }
 
   public static evaluateSuitableVoiceTypes(lowestMidi: number, highestMidi: number): VocalClassification[] {
-    const voiceRanges: { type: VocalClassification; min: number; max: number }[] = [
-      { type: "soprano", min: 57, max: 86 },       // A3 - D6
-      { type: "mezzo-soprano", min: 53, max: 81 }, // F3 - A5
-      { type: "contralto", min: 50, max: 77 },     // D3 - F5
-      { type: "tenor", min: 45, max: 74 },         // A2 - D5
-      { type: "baritone", min: 41, max: 69 },      // F2 - A4
-      { type: "bass", min: 38, max: 65 },          // D2 - F4
-    ];
-
-    const suitable: VocalClassification[] = [];
-
-    // Direct range check
-    for (const vr of voiceRanges) {
-      if (lowestMidi >= vr.min && highestMidi <= vr.max) {
-        suitable.push(vr.type);
-      }
-    }
-
-    // Male octave transpose check
-    const transposedLow = lowestMidi - 12;
-    const transposedHigh = highestMidi - 12;
-    const maleVoiceTypes: VocalClassification[] = ["tenor", "baritone", "bass"];
-    for (const vr of voiceRanges) {
-      if (maleVoiceTypes.includes(vr.type) && !suitable.includes(vr.type)) {
-        if (transposedLow >= vr.min && transposedHigh <= vr.max) {
-          suitable.push(vr.type);
-        }
-      }
-    }
-
-    return suitable;
+    return TMDSongPitchRangeAnalyzer.evaluateSuitableVoiceTypes(lowestMidi, highestMidi);
   }
 
   private static buildHarmonyProfile(sheet: Sheet): TMDHarmonyProfile {
