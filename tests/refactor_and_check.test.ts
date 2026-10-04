@@ -3,6 +3,7 @@ import { describe, expect,it } from "vitest";
 import { handleCheckCommand } from "../src/commands/check.js";
 import { handleFormatCommand } from "../src/commands/format.js";
 import { handleInspectCommand } from "../src/commands/inspect.js";
+import { handleLSPCommand } from "../src/commands/lsp.js";
 import { handleOutlineCommand } from "../src/commands/outline.js";
 import { handleRefactorCommand } from "../src/commands/refactor.js";
 import {
@@ -1249,6 +1250,10 @@ describe("TMD CLI subcommands check, format, and refactor (TDD)", () => {
 
   it("exposes the refactor command family as an independent module", () => {
     expect(handleRefactorCommand(["--unknown"])).toBe(2);
+  });
+
+  it("exposes the LSP command handler as an independent module", () => {
+    expect(handleLSPCommand(["--help"])).toBe(0);
   });
 
   it("runs check subcommand on valid and invalid TMD files", async () => {

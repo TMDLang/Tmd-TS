@@ -7,6 +7,8 @@ import { TMDWAVRenderer } from "./audio.js";
 import { handleCheckCommand } from "./commands/check.js";
 import { handleFormatCommand } from "./commands/format.js";
 import { handleInspectCommand } from "./commands/inspect.js";
+import { handleLSPCommand } from "./commands/lsp.js";
+import { runLSPServer } from "./commands/lsp.js";
 import { handleOutlineCommand } from "./commands/outline.js";
 import { handleRefactorCommand } from "./commands/refactor.js";
 import {
@@ -77,46 +79,6 @@ OPTIONS:
       --version           Show the version.
   -h, --help              Show this help.
 `);
-}
-
-function handleLSPCommand(argv: string[]): number {
-  for (let i = 0; i < argv.length; i++) {
-    const arg = argv[i];
-    if (arg === "-h" || arg === "--help") {
-      console.log(`USAGE: tmd lsp
-
-Run the TMD Language Server Protocol (LSP) daemon communicating over standard I/O (JSON-RPC).
-`);
-      return 0;
-    }
-  }
-  return runLSPServer();
-}
-
-function runLSPServer(): number {
-  const server = new TMDLSPServer((data) => {
-    process.stdout.write(data);
-  });
-
-  let buffer = Buffer.alloc(0);
-
-  process.stdin.on("data", (chunk: Buffer) => {
-    buffer = Buffer.concat([buffer, chunk]);
-    const { frames, remaining } = TMDJSONRPCCodec.decodeBuffer(buffer);
-    buffer = Buffer.from(remaining);
-    for (const frame of frames) {
-      server.handle(frame);
-    }
-    if (!server.isRunning) {
-      process.exit(0);
-    }
-  });
-
-  process.stdin.on("end", () => {
-    process.exit(0);
-  });
-
-  return 0;
 }
 
 
