@@ -1,5 +1,5 @@
 import { formatParagraph,formatSheet } from "./format.js";
-import { TmdParser } from "./parser.js";
+import { Lexer, TmdParser } from "./parser.js";
 import { Entry, KeySignature,ScaleDegree, Sheet, UnitGroup } from "./types.js";
 
 export class TMDRefactorError extends Error {
@@ -801,17 +801,15 @@ export class TMDRefactor {
       }
 
       // Transpose measure / unit lines if within target scope
-      if (!isFullScore || (insideParagraph && inMatchingPara)) {
-        if (trimmed.startsWith("|") || trimmed.includes("|") || /[0-7\[\]\-]/.test(trimmed)) {
-          const indent = rawLine.match(/^\s*/)?.[0] || "";
-          const transformed = transposeUnitsInLine(trimmed, {
-            semitones,
-            diatonicSteps,
-            keySignature: currentKeySig,
-          });
-          resultLines.push(indent + transformed);
-          continue;
-        }
+      if ((!isFullScore || (insideParagraph && inMatchingPara)) && containsTransposableUnit(trimmed)) {
+        const indent = rawLine.match(/^\s*/)?.[0] || "";
+        const transformed = transposeUnitsInLine(trimmed, {
+          semitones,
+          diatonicSteps,
+          keySignature: currentKeySig,
+        });
+        resultLines.push(indent + transformed);
+        continue;
       }
 
       resultLines.push(rawLine);
@@ -927,6 +925,15 @@ function transposeTmdNote(
   return `${mapped.degree}${mapped.accidental}${newOctStr}`;
 }
 
+function transposeTmdNoteUnit(
+  unit: string,
+  options: { semitones: number; diatonicSteps: number; keySignature: string }
+): string {
+  const tieStart = unit.indexOf("-");
+  if (tieStart < 0) return transposeTmdNote(unit, options);
+  return transposeTmdNote(unit.slice(0, tieStart), options) + unit.slice(tieStart);
+}
+
 function transposeChordToken(
   chordStr: string,
   options: { semitones: number; diatonicSteps: number }
@@ -996,7 +1003,7 @@ function transposeUnitsInLine(
     working = working.slice(0, commentStart).trim();
   }
 
-  const tokens = tokenizeMeasureLine(working);
+  const tokens = measureUnits(working);
   const outTokens: string[] = [];
 
   for (const tok of tokens) {
@@ -1013,10 +1020,10 @@ function transposeUnitsInLine(
     const tuplet = parseTupletToken(tok);
     if (tuplet) {
       // Tuplet inner units: (1 2 3)%(--)
-      const innerTokens = tokenizeMeasureLine(tuplet.inner);
+      const innerTokens = measureUnits(tuplet.inner);
       const transposedInner = innerTokens.map((t) => {
         if (/^[1-7]/.test(t)) {
-          return transposeTmdNote(t, options);
+          return transposeTmdNoteUnit(t, options);
         }
         if (t.startsWith("[") && t.endsWith("]")) {
           return transposeChordToken(t, options);
@@ -1029,7 +1036,7 @@ function transposeUnitsInLine(
     }
 
     if (/^[1-7]/.test(tok)) {
-      outTokens.push(transposeTmdNote(tok, options));
+      outTokens.push(transposeTmdNoteUnit(tok, options));
       continue;
     }
 
@@ -1063,7 +1070,7 @@ function doubleGridInLine(line: string): string {
   }
 
   // Tokenize the measure content
-  const tokens = tokenizeMeasureLine(working);
+  const tokens = measureUnits(working);
   const outTokens: string[] = [];
 
   for (const tok of tokens) {
@@ -1120,7 +1127,7 @@ function halveGridInLine(line: string): string {
     working = working.slice(0, commentStart).trim();
   }
 
-  const tokens = tokenizeMeasureLine(working);
+  const tokens = measureUnits(working);
   const outTokens: string[] = [];
 
   // Group tokens by measure (between pipes)
@@ -1179,75 +1186,63 @@ function halveGridInLine(line: string): string {
   return outTokens.join(" ") + commentSuffix;
 }
 
-function tokenizeMeasureLine(line: string): string[] {
-  const tokens: string[] = [];
-  let i = 0;
-  while (i < line.length) {
-    const ch = line[i];
-    if (ch === " " || ch === "\t") {
-      i++;
+/**
+ * Groups canonical Lexer tokens into the measure units consumed by refactors.
+ * The Lexer remains the only source of token boundaries; this layer only groups
+ * adjacent syntax such as a note followed immediately by ties or a complete tuplet.
+ */
+function measureUnits(line: string): string[] {
+  const lexed = new Lexer(line).tokenizeWithRanges().filter(({ token }) => token.type !== "eof");
+  const units: string[] = [];
+  let index = 0;
+
+  while (index < lexed.length) {
+    const current = lexed[index];
+    if (current.token.type === "pipe") {
+      units.push(current.text);
+      index++;
       continue;
     }
-    if (ch === "|") {
-      tokens.push("|");
-      i++;
-      continue;
-    }
-    if (ch === "[") {
-      // Chord [Am7]
-      const end = line.indexOf("]", i);
-      if (end !== -1) {
-        tokens.push(line.slice(i, end + 1));
-        i = end + 1;
-        continue;
-      }
-    }
-    if (ch === "(") {
-      // Tuplet (1 2 3) or (1 2 3)%(--) or (1 2 3) % (--)
-      const endParen = line.indexOf(")", i);
-      if (endParen !== -1) {
-        let afterParen = endParen + 1;
-        while (afterParen < line.length && (line[afterParen] === " " || line[afterParen] === "\t")) {
-          afterParen++;
-        }
-        if (line[afterParen] === "%") {
-          let afterPercent = afterParen + 1;
-          while (afterPercent < line.length && (line[afterPercent] === " " || line[afterPercent] === "\t")) {
-            afterPercent++;
-          }
-          if (line[afterPercent] === "(") {
-            const endDashes = line.indexOf(")", afterPercent + 1);
-            if (endDashes !== -1) {
-              tokens.push(line.slice(i, endDashes + 1));
-              i = endDashes + 1;
-              continue;
-            }
+
+    if (current.token.type === "openParen") {
+      const innerEnd = lexed.findIndex((item, offset) => offset >= index && item.token.type === "closeParen");
+      if (innerEnd >= index) {
+        const inner = lexed.slice(index + 1, innerEnd).map(({ text }) => text).join(" ");
+        let end = innerEnd + 1;
+        let dashes = "";
+        if (lexed[end]?.token.type === "percentOpenParen") {
+          const dashEnd = lexed.findIndex((item, offset) => offset > end && item.token.type === "closeParen");
+          if (dashEnd > end) {
+            dashes = lexed.slice(end + 1, dashEnd)
+              .filter(({ token }) => token.type === "tie")
+              .map(() => "-")
+              .join("");
+            end = dashEnd + 1;
           }
         }
-        tokens.push(line.slice(i, endParen + 1));
-        i = endParen + 1;
-        continue;
-      }
-    }
-    // Directive {!= 120} etc
-    if (ch === "{") {
-      const end = line.indexOf("}", i);
-      if (end !== -1) {
-        tokens.push(line.slice(i, end + 1));
-        i = end + 1;
+        units.push(dashes ? `(${inner})%(${dashes})` : `(${inner})`);
+        index = end;
         continue;
       }
     }
 
-    // Normal word/note token until whitespace or pipe or bracket or paren
-    let word = "";
-    while (i < line.length && !/[\s|\[\]\(\)\{\}]/.test(line[i])) {
-      word += line[i];
-      i++;
+    let unit = current.text;
+    let end = index + 1;
+    while (
+      end < lexed.length &&
+      lexed[end].token.type === "tie" &&
+      lexed[end - 1].range.endOffset === lexed[end].range.start.offset
+    ) {
+      unit += lexed[end].text;
+      end++;
     }
-    if (word.length > 0) {
-      tokens.push(word);
-    }
+    units.push(unit);
+    index = end;
   }
-  return tokens;
+  return units;
+}
+
+function containsTransposableUnit(line: string): boolean {
+  if (line.trimStart().startsWith("<")) return false;
+  return new Lexer(line).tokenize().some(({ type }) => type === "note" || type === "chord");
 }

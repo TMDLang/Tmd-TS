@@ -731,6 +731,16 @@ verse:Piano@|0|{
       expect(transposed).toContain("[2] - [5] [6]");
     });
 
+    it("uses Lexer boundaries when transposing tied notes", () => {
+      const input = "| 1-- 2^-- |";
+      expect(new Lexer(input).tokenize().map((token) => token.type)).toEqual([
+        "pipe", "note", "tie", "tie", "note", "tie", "tie", "pipe", "eof",
+      ]);
+
+      const transposed = TMDRefactor.transpose(input, { semitones: 2, keySignature: "C" });
+      expect(transposed).toBe("| 2-- 3^-- |");
+    });
+
     it("transposes complete TMD score and updates score key signature if specified", () => {
       const input = `::SCORE::
 /* My intro comment */
