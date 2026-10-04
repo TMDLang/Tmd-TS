@@ -262,7 +262,7 @@ export function main(argv = process.argv.slice(2)): number {
   }
   let fileContent: string;
   try {
-    fileContent = fs.readFileSync(input, "utf-8");
+    fileContent = readUTF8(input);
   } catch (error) {
     console.error(
       `Error reading ${input}: ${error instanceof Error ? error.message : String(error)}`
@@ -329,23 +329,23 @@ export function main(argv = process.argv.slice(2)): number {
         })
       );
     if (outputs.musicxml)
-      fs.writeFileSync(outputs.musicxml, TMDMusicXMLGenerator.generateMusicXML(sheet));
+      writeUTF8(outputs.musicxml, TMDMusicXMLGenerator.generateMusicXML(sheet));
     if (outputs.lilypond)
-      fs.writeFileSync(outputs.lilypond, TMDLilyPondGenerator.generateLilyPond(sheet));
-    if (outputs.abc) fs.writeFileSync(outputs.abc, TMDABCGenerator.generateABC(sheet));
+      writeUTF8(outputs.lilypond, TMDLilyPondGenerator.generateLilyPond(sheet));
+    if (outputs.abc) writeUTF8(outputs.abc, TMDABCGenerator.generateABC(sheet));
     if (outputs.reaper)
-      fs.writeFileSync(outputs.reaper, TMDReaperGenerator.generateRPP(sheet));
+      writeUTF8(outputs.reaper, TMDReaperGenerator.generateRPP(sheet));
     if (outputs.chordpro)
-      fs.writeFileSync(outputs.chordpro, TMDChordProGenerator.generateChordPro(sheet));
+      writeUTF8(outputs.chordpro, TMDChordProGenerator.generateChordPro(sheet));
     if (outputs.vsq)
       fs.writeFileSync(outputs.vsq, TMDVSQGenerator.generateVSQ(sheet, { singerName: singer }));
     if (outputs.vsqx)
       fs.writeFileSync(outputs.vsqx, TMDVSQXGenerator.generateVSQX(sheet, { singerName: singer }));
     if (outputs.ust)
-      fs.writeFileSync(outputs.ust, TMDUSTGenerator.generateUST(sheet));
+      writeUTF8(outputs.ust, TMDUSTGenerator.generateUST(sheet));
     if (outputs.pdf) {
       const temp = path.join(os.tmpdir(), `tmd-${Date.now()}.ly`);
-      fs.writeFileSync(temp, TMDLilyPondGenerator.generateLilyPond(sheet));
+      writeUTF8(temp, TMDLilyPondGenerator.generateLilyPond(sheet));
       execFileSync("lilypond", ["--pdf", "-o", outputs.pdf.replace(/\.pdf$/, ""), temp], {
         stdio: "inherit",
       });

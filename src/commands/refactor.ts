@@ -1,7 +1,7 @@
-import * as fs from "node:fs";
 import * as path from "node:path";
 
 import { TMDRefactor } from "../core/index.js";
+import { readUTF8, writeUTF8 } from "../core/text_io.js";
 
 export function handleRefactorCommand(argv: string[]): number {
   const sub = argv[0];
@@ -70,7 +70,7 @@ SUBCOMMANDS:
 
     let content: string;
     try {
-      content = fs.readFileSync(inputPath, "utf-8");
+      content = readUTF8(inputPath);
     } catch (error: any) {
       console.error(`Error reading ${inputPath}: ${error.message || String(error)}`);
       return 1;
@@ -85,10 +85,10 @@ SUBCOMMANDS:
     }
 
     if (inPlace) {
-      fs.writeFileSync(inputPath, refactored, "utf-8");
+      writeUTF8(inputPath, refactored);
       console.log(`Renamed instrument in ${inputPath} in-place.`);
     } else if (outputPath) {
-      fs.writeFileSync(outputPath, refactored, "utf-8");
+      writeUTF8(outputPath, refactored);
       console.log(`Refactored score written to ${outputPath}.`);
     } else {
       process.stdout.write(refactored);
@@ -140,7 +140,7 @@ SUBCOMMANDS:
 
     let content: string;
     try {
-      content = fs.readFileSync(inputPath, "utf-8");
+      content = readUTF8(inputPath);
     } catch (error: any) {
       console.error(`Error reading ${inputPath}: ${error.message || String(error)}`);
       return 1;
@@ -155,10 +155,10 @@ SUBCOMMANDS:
     }
 
     if (inPlace) {
-      fs.writeFileSync(inputPath, refactored, "utf-8");
+      writeUTF8(inputPath, refactored);
       console.log(`Renamed section in ${inputPath} in-place.`);
     } else if (outputPath) {
-      fs.writeFileSync(outputPath, refactored, "utf-8");
+      writeUTF8(outputPath, refactored);
       console.log(`Refactored score written to ${outputPath}.`);
     } else {
       process.stdout.write(refactored);
@@ -200,7 +200,7 @@ SUBCOMMANDS:
 
     let content: string;
     try {
-      content = fs.readFileSync(inputPath, "utf-8");
+      content = readUTF8(inputPath);
     } catch (error: any) {
       console.error(`Error reading ${inputPath}: ${error.message || String(error)}`);
       return 1;
@@ -215,7 +215,7 @@ SUBCOMMANDS:
     }
 
     if (outputPath) {
-      fs.writeFileSync(outputPath, extracted, "utf-8");
+      writeUTF8(outputPath, extracted);
       console.log(`Extracted instrument '${instrument}' to ${outputPath}.`);
     } else {
       process.stdout.write(extracted);
@@ -267,7 +267,7 @@ SUBCOMMANDS:
 
     let content: string;
     try {
-      content = fs.readFileSync(inputPath, "utf-8");
+      content = readUTF8(inputPath);
     } catch (error: any) {
       console.error(`Error reading ${inputPath}: ${error.message || String(error)}`);
       return 1;
@@ -289,10 +289,10 @@ SUBCOMMANDS:
     }
 
     if (inPlace) {
-      fs.writeFileSync(inputPath, transformed, "utf-8");
+      writeUTF8(inputPath, transformed);
       console.log(`Transformed grid (${sub}) in ${inputPath} in-place.`);
     } else if (outputPath) {
-      fs.writeFileSync(outputPath, transformed, "utf-8");
+      writeUTF8(outputPath, transformed);
       console.log(`Transformed score written to ${outputPath}.`);
     } else {
       process.stdout.write(transformed);
@@ -354,7 +354,7 @@ SUBCOMMANDS:
 
     let content: string;
     try {
-      content = fs.readFileSync(inputPath, "utf-8");
+      content = readUTF8(inputPath);
     } catch (error: any) {
       console.error(`Error reading ${inputPath}: ${error.message || String(error)}`);
       return 1;
@@ -369,10 +369,10 @@ SUBCOMMANDS:
     }
 
     if (inPlace) {
-      fs.writeFileSync(inputPath, transformed, "utf-8");
+      writeUTF8(inputPath, transformed);
       console.log(`Duplicated track ${source} -> ${target} in ${inputPath} in-place.`);
     } else if (outputPath) {
-      fs.writeFileSync(outputPath, transformed, "utf-8");
+      writeUTF8(outputPath, transformed);
       console.log(`Duplicated track output written to ${outputPath}.`);
     } else {
       process.stdout.write(transformed);
@@ -434,7 +434,7 @@ SUBCOMMANDS:
 
     let content: string;
     try {
-      content = fs.readFileSync(inputPath, "utf-8");
+      content = readUTF8(inputPath);
     } catch (error: any) {
       console.error(`Error reading ${inputPath}: ${error.message || String(error)}`);
       return 1;
@@ -449,10 +449,10 @@ SUBCOMMANDS:
     }
 
     if (inPlace) {
-      fs.writeFileSync(inputPath, transformed, "utf-8");
+      writeUTF8(inputPath, transformed);
       console.log(`Generated harmony ${source} -> ${target} in ${inputPath} in-place.`);
     } else if (outputPath) {
-      fs.writeFileSync(outputPath, transformed, "utf-8");
+      writeUTF8(outputPath, transformed);
       console.log(`Harmony output written to ${outputPath}.`);
     } else {
       process.stdout.write(transformed);
@@ -494,7 +494,7 @@ SUBCOMMANDS:
 
     let content: string;
     try {
-      content = fs.readFileSync(inputPath, "utf-8");
+      content = readUTF8(inputPath);
     } catch (error: any) {
       console.error(`Error reading ${inputPath}: ${error.message || String(error)}`);
       return 1;
@@ -509,10 +509,10 @@ SUBCOMMANDS:
     }
 
     if (inPlace) {
-      fs.writeFileSync(inputPath, transformed, "utf-8");
+      writeUTF8(inputPath, transformed);
       console.log(`Inlined orders in ${inputPath} in-place.`);
     } else if (outputPath) {
-      fs.writeFileSync(outputPath, transformed, "utf-8");
+      writeUTF8(outputPath, transformed);
       console.log(`Inlined output written to ${outputPath}.`);
     } else {
       process.stdout.write(transformed);
@@ -591,7 +591,7 @@ OPTIONS:
 
     let content: string;
     try {
-      content = fs.readFileSync(inputPath, "utf-8");
+      content = readUTF8(inputPath);
     } catch (error: any) {
       console.error(`Error reading ${inputPath}: ${error.message || String(error)}`);
       return 1;
@@ -612,10 +612,10 @@ OPTIONS:
     }
 
     if (inPlace) {
-      fs.writeFileSync(inputPath, transformed, "utf-8");
+      writeUTF8(inputPath, transformed);
       console.log(`Transposed score in ${inputPath} in-place.`);
     } else if (outputPath) {
-      fs.writeFileSync(outputPath, transformed, "utf-8");
+      writeUTF8(outputPath, transformed);
       console.log(`Transposed output written to ${outputPath}.`);
     } else {
       process.stdout.write(transformed);
