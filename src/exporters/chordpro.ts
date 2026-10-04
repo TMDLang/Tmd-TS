@@ -17,7 +17,7 @@ export class TMDChordProGenerator {
     rawSheet: Sheet,
     options: ChordProOptions = {}
   ): string {
-    const sheet = TMDMacroEvaluator.expand(rawSheet);
+    const sheet = TMDMacroEvaluator.expandThrowing(rawSheet);
     const lines: string[] = [];
 
     // Title and Metadata directives

@@ -42,7 +42,7 @@ export class TMDWAVRenderer {
       );
     }
 
-    let sheet = TMDMacroEvaluator.expand(rawSheet);
+    let sheet = TMDMacroEvaluator.expandThrowing(rawSheet);
     if (options?.targetParagraph) {
       const filteredParagraphs = sheet.entries.filter(p => p.name === options.targetParagraph);
       sheet = {

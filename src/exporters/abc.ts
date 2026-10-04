@@ -18,7 +18,7 @@ interface ABCKeyInfo {
 
 export class TMDABCGenerator {
   public static generateABC(rawSheet: Sheet): string {
-    const sheet = TMDMacroEvaluator.expand(rawSheet);
+    const sheet = TMDMacroEvaluator.expandThrowing(rawSheet);
     let abc = "";
 
     abc += "X:1\n";

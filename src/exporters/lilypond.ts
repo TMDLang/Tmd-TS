@@ -15,7 +15,7 @@ import {
 
 export class TMDLilyPondGenerator {
   public static generateLilyPond(rawSheet: Sheet): string {
-    const sheet = TMDMacroEvaluator.expand(rawSheet);
+    const sheet = TMDMacroEvaluator.expandThrowing(rawSheet);
     const composer = sheet.metadata["composer"] || "TMD";
     let ly = `\\version "2.24.0"\n\n`;
     ly += `\\header {\n`;

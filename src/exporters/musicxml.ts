@@ -2,7 +2,7 @@ import { ChordSymbol, Note, PitchMapping, PlaybackDirectiveEvent, Sheet, SheetIn
 
 export class TMDMusicXMLGenerator {
   public static generateMusicXML(rawSheet: Sheet): string {
-    const sheet = TMDMacroEvaluator.expand(rawSheet);
+    const sheet = TMDMacroEvaluator.expandThrowing(rawSheet);
     const metaCreators = Object.keys(sheet.metadata)
       .sort()
       .map((key) => {

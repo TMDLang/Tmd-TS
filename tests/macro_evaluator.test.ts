@@ -102,6 +102,23 @@ Theme {
   });
 
   describe('TMDMacroEvaluator (Desugaring AST Expansion)', () => {
+    it('exposes the throwing expansion API as the canonical entry point', () => {
+      const input = `::SCORE::
+** Throwing Expansion API **
+!= 120
+?= C
+<4/4>
+
+Theme {
+    <4*>
+    1 2 3 4
+}
+
+-> (play Missing Violin) ->#`;
+
+      expect(() => TMDMacroEvaluator.expandThrowing(TmdParser.parse(input))).toThrow(/Theme 'Missing'/);
+    });
+
     it('evaluates (play Theme Violin) by binding abstract theme to instrument', () => {
       const input = `::SCORE::
 ** Play Combinator **

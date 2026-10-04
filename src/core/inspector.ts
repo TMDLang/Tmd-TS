@@ -249,7 +249,7 @@ export class TMDSongInspector {
     targetInstrument?: string,
     locale: TMDLocale = "zh-Hant"
   ): TMDSongProfile {
-    const effectiveSheet = TMDMacroEvaluator.expand(sheet);
+    const effectiveSheet = TMDMacroEvaluator.expandThrowing(sheet);
     const title = effectiveSheet.name || "Untitled";
     const initialTempo = effectiveSheet.speed && effectiveSheet.speed > 0 ? effectiveSheet.speed : DEFAULT_TEMPO_BPM;
     const initialKey = effectiveSheet.keySignature ? effectiveSheet.keySignature.toString() : "C";

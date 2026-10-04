@@ -203,7 +203,13 @@ export class TMDMacroEvaluator {
    * paragraphs and concrete order sequences.
    * If the sheet contains no macro orders, it returns the paragraphs and orders as-is.
    */
+  /** @deprecated Use expandThrowing() and handle TMDMacroError explicitly. */
   public static expand(sheet: Sheet): Sheet {
+    return this.expandThrowing(sheet);
+  }
+
+  /** Canonical macro expansion API; macro diagnostics are always thrown. */
+  public static expandThrowing(sheet: Sheet): Sheet {
   const hasMacro = sheet.playback.some((o) => o.type === "macro");
     if (!hasMacro) {
       return sheet;

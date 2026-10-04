@@ -851,7 +851,7 @@ export class TMDMIDIGenerator {
     ticksPerQuarter: number = TMDMIDIGenerator.defaultTicksPerQuarterNote,
     options?: TMDMIDIGeneratorOptions
   ): Uint8Array {
-    let effectiveSheet = TMDMacroEvaluator.expand(rawSheet);
+    let effectiveSheet = TMDMacroEvaluator.expandThrowing(rawSheet);
     if (options?.targetParagraph) {
       const filteredParagraphs = effectiveSheet.entries.filter(p => p.name === options.targetParagraph);
       effectiveSheet = {

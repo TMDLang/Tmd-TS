@@ -101,7 +101,7 @@ export class TMDPlaybackRenderer {
   }
 
   public static validateTempoConflicts(inputSheet: Sheet): PlaybackTempoConflict[] {
-    const sheet = TMDMacroEvaluator.expand(inputSheet);
+    const sheet = TMDMacroEvaluator.expandThrowing(inputSheet);
     const assignments = Array.from(new Set(
       sheet.entries
         .map((entry) => entry.assignment)
@@ -124,7 +124,7 @@ export class TMDPlaybackRenderer {
   }
 
   public static validate(inputSheet: Sheet): PlaybackValidationIssue[] {
-    const sheet = TMDMacroEvaluator.expand(inputSheet);
+    const sheet = TMDMacroEvaluator.expandThrowing(inputSheet);
     const grouped = new Map<string, Entry[]>();
     for (const entry of sheet.entries.filter((paragraph) => paragraph.assignment)) {
       const assignment = entry.assignment!;
@@ -171,7 +171,7 @@ export class TMDPlaybackRenderer {
     instrument: string,
     options?: TMDPlaybackRendererOptions
   ): PlaybackTimeline {
-    const sheet = TMDMacroEvaluator.expand(inputSheet);
+    const sheet = TMDMacroEvaluator.expandThrowing(inputSheet);
     const targetInst = instrument || DEFAULT_INSTRUMENT;
       const paragraphs = sheet.entries.filter((p) => {
       const pInst = p.assignment || DEFAULT_INSTRUMENT;
@@ -270,7 +270,7 @@ export class TMDPlaybackRenderer {
 
   /** Renders a score-level conductor timeline by merging directives from every concrete instrument. */
   public static renderConductor(inputSheet: Sheet, options?: TMDPlaybackRendererOptions): PlaybackTimeline {
-    const sheet = TMDMacroEvaluator.expand(inputSheet);
+    const sheet = TMDMacroEvaluator.expandThrowing(inputSheet);
     const instruments = Array.from(new Set(
       sheet.entries.map((p) => p.assignment).filter((assignment): assignment is string => Boolean(assignment && assignment.trim()))
     )).sort();
@@ -448,7 +448,7 @@ export class TMDPlaybackRenderer {
   }
 
   public static globalEarliestPosition(inputSheet: Sheet): number {
-    const sheet = TMDMacroEvaluator.expand(inputSheet);
+    const sheet = TMDMacroEvaluator.expandThrowing(inputSheet);
     let state = this.initialStateFor(sheet);
     let timelinePosition = 0;
     let earliest = 0;

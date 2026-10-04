@@ -12,7 +12,7 @@ export class SheetInstrumentHelper {
    * Automatically expands S-Expression macros so dynamically generated instruments are discovered.
    */
   public static distinctInstruments(rawSheet: Sheet, fallbackToDefault = true): string[] {
-    const sheet = TMDMacroEvaluator.expand(rawSheet);
+    const sheet = TMDMacroEvaluator.expandThrowing(rawSheet);
     const distinct = Array.from(
       new Set(
         sheet.entries

@@ -28,7 +28,7 @@ export class TMDReaperGenerator {
     rawSheet: Sheet,
     ppq: number = TMDReaperGenerator.defaultPPQ
   ): string {
-    const sheet = TMDMacroEvaluator.expand(rawSheet);
+    const sheet = TMDMacroEvaluator.expandThrowing(rawSheet);
     const distinctInstruments = SheetInstrumentHelper.distinctInstruments(sheet, false);
 
     const conductorTimeline = TMDPlaybackRenderer.renderConductor(sheet);
