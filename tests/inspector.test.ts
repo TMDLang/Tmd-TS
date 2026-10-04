@@ -1,12 +1,12 @@
 import { describe, expect,it } from "vitest";
 
-import { TMDSongInspector } from "../src/core/inspector.js";
-import { TMDSongTimingAnalyzer } from "../src/core/timing_analyzer.js";
-import { TMDSongPitchRangeAnalyzer } from "../src/core/pitch_range_analyzer.js";
 import { TMDSongHarmonyAnalyzer } from "../src/core/harmony_analyzer.js";
-import { TMDSongTonalityAnalyzer } from "../src/core/tonality_analyzer.js";
-import { TMDPlaybackRenderer } from "../src/core/playback.js";
+import { TMDSongInspector } from "../src/core/inspector.js";
 import { TmdParser } from "../src/core/parser.js";
+import { TMDSongPitchRangeAnalyzer } from "../src/core/pitch_range_analyzer.js";
+import { TMDPlaybackRenderer } from "../src/core/playback.js";
+import { TMDSongTimingAnalyzer } from "../src/core/timing_analyzer.js";
+import { TMDSongTonalityAnalyzer } from "../src/core/tonality_analyzer.js";
 import { inspectorBasicFixture } from "./conformanceFixtures.js";
 
 describe("TMDSongInspector (TDD port from TmdSwift)", () => {

@@ -1,5 +1,5 @@
-import { TMDPlaybackRenderer, PlaybackDirectiveEvent } from "./playback.js";
-import type { TMDNotePitchInfo, TMDPitchRangeProfile, TMDTimingProfile, PitchRangeDifficulty, VocalClassification } from "./inspector.js";
+import type { PitchRangeDifficulty, TMDNotePitchInfo, TMDPitchRangeProfile, TMDTimingProfile, VocalClassification } from "./inspector.js";
+import { PlaybackDirectiveEvent,TMDPlaybackRenderer } from "./playback.js";
 import { noteToMIDIPitch, Sheet } from "./types.js";
 
 /** Computes instrument pitch ranges independently from the Inspector facade. */

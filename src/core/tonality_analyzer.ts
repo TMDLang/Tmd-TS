@@ -1,11 +1,9 @@
-import { SheetInstrumentHelper } from "./instruments.js";
-import { PlaybackEvent, TMDPlaybackRenderer } from "./playback.js";
-import { chordQualityIntervals, ChordSymbol, noteToMIDIPitch, Sheet } from "./types.js";
-import { TMDLocalizationKey, TMDLocalizer } from "./localization.js";
-import type { TMDLocale } from "./localization.js";
 import type {
-  TMDTimingProfile,
+  TMDKeyStability,
   TMDPitchClassDistribution,
+  TMDScaleFamily,
+  TMDSectionTonalityProfile,
+  TMDTimingProfile,
   TMDTonalityCandidate,
   TMDTonalityEvidence,
   TMDTonalityInference,
@@ -13,10 +11,12 @@ import type {
   TMDTonalityMood,
   TMDTonalityNarrative,
   TMDTonalityProfile,
-  TMDScaleFamily,
-  TMDSectionTonalityProfile,
-  TMDKeyStability,
 } from "./inspector.js";
+import { SheetInstrumentHelper } from "./instruments.js";
+import type { TMDLocale } from "./localization.js";
+import { TMDLocalizationKey, TMDLocalizer } from "./localization.js";
+import { PlaybackEvent, TMDPlaybackRenderer } from "./playback.js";
+import { chordQualityIntervals, ChordSymbol, noteToMIDIPitch, Sheet } from "./types.js";
 
 export class TMDSongTonalityAnalyzer {
 private static readonly KS_MAJOR_PROFILE: number[] = [

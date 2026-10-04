@@ -1,5 +1,8 @@
 import { describe, expect,it } from "vitest";
 
+import { handleCheckCommand } from "../src/commands/check.js";
+import { handleInspectCommand } from "../src/commands/inspect.js";
+import { handleOutlineCommand } from "../src/commands/outline.js";
 import {
   Lexer,
   TMDMeasureChecker,
@@ -7,8 +10,6 @@ import {
   TmdParser,
   TMDRefactor,
 } from "../src/index.js";
-import { handleCheckCommand } from "../src/commands/check.js";
-import { handleOutlineCommand } from "../src/commands/outline.js";
 import { diagnosticMeasureFixture } from "./conformanceFixtures.js";
 
 describe("TMDRefactor (TDD)", () => {
@@ -1234,6 +1235,10 @@ describe("TMD CLI subcommands check, format, and refactor (TDD)", () => {
 
   it("exposes the outline command handler as an independent module", () => {
     expect(handleOutlineCommand(["--unknown"])).toBe(2);
+  });
+
+  it("exposes the inspect command handler as an independent module", () => {
+    expect(handleInspectCommand(["--unknown"])).toBe(2);
   });
 
   it("runs check subcommand on valid and invalid TMD files", async () => {
