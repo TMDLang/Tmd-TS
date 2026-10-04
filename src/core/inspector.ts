@@ -19,6 +19,7 @@ import type { TMDLocale } from "./localization.js";
 import { TMDLocalizationKey, TMDLocalizer } from "./localization.js";
 import { TMDSongTimingAnalyzer } from "./timing_analyzer.js";
 import { TMDSongPitchRangeAnalyzer } from "./pitch_range_analyzer.js";
+import { TMDSongHarmonyAnalyzer } from "./harmony_analyzer.js";
 
 /**
  * Pitch descriptor with MIDI note number, canonical note name (e.g. "C4", "A5"), and source section context.
@@ -342,36 +343,7 @@ export class TMDSongInspector {
   }
 
   private static buildHarmonyProfile(sheet: Sheet): TMDHarmonyProfile {
-    const chords: string[] = [];
-    for (const p of sheet.entries) {
-      for (const sec of p.sections) {
-        for (const group of sec.unitGroups) {
-          for (const unit of group.units) {
-            if (unit.type === "chord") {
-              const raw = `[${unit.chord.toString()}]`;
-              if (!chords.includes(raw)) {
-                chords.push(raw);
-              }
-            }
-          }
-        }
-      }
-    }
-
-    const modulations: string[] = [];
-    for (const order of sheet.playback) {
-      if (order.type === "relative") {
-        modulations.push(`Relative: ${order.value} semitones`);
-      } else if (order.type === "absolute") {
-        modulations.push(`Key: ${order.value}`);
-      }
-    }
-
-    return {
-      distinctChords: chords,
-      chordCount: chords.length,
-      modulations,
-    };
+    return TMDSongHarmonyAnalyzer.analyze(sheet);
   }
 
   private static buildDensityProfile(sheet: Sheet): TMDArrangementDensityProfile {
