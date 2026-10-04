@@ -64,6 +64,25 @@ Theme{
     expect((TMDPlaybackRenderer as any).globalEarliestPosition(sheet)).toBe(-4);
   });
 
+  it("uses one state transition path for playback order modifiers", () => {
+    const sheet = TmdParser.parse(`::SCORE::
+** Playback Order State **
+!= 120
+?= C
+<4/4>
+
+A:Piano@|0|{
+    <4*>
+    1
+}
+
+-> {?+2} -> A -> {?=E} -> A ->#
+`);
+
+    const timeline = TMDPlaybackRenderer.render(sheet, "Piano");
+    expect(timeline.events.map((event) => event.state.keyOffset)).toEqual([2, 4]);
+  });
+
   it("merges conductor directives from all instruments", () => {
     const sheet = TmdParser.parse(`::SCORE::
 ** Conductor Directives **

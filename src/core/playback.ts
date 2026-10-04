@@ -74,6 +74,17 @@ export interface TMDPlaybackRendererOptions {
 }
 
 export class TMDPlaybackRenderer {
+  private static visitOrder(order: Playback, state: PlaybackState): { state: PlaybackState; name?: string } {
+    if (order.type === "relative") {
+      const delta = parseInt(order.value.replace("+", ""), 10);
+      return Number.isNaN(delta) ? { state } : { state: { ...state, keyOffset: state.keyOffset + delta } };
+    }
+    if (order.type === "absolute") {
+      return { state: { ...state, keyOffset: KeySignature.parse(order.value).semitoneOffset } };
+    }
+    return order.type === "name" ? { state, name: order.name } : { state };
+  }
+
   private static ordersFor(sheet: Sheet): Playback[] {
     if (sheet.playback.length > 0) return sheet.playback;
     return Array.from(new Set(sheet.entries.map((entry) => entry.name)))
@@ -177,16 +188,11 @@ export class TMDPlaybackRenderer {
 
     for (let i = 0; i < orders.length; i++) {
       const order = orders[i];
-      if (order.type === "relative") {
-        const delta = parseInt(order.value.replace("+", ""), 10);
-        if (!isNaN(delta)) {
-          state = { ...state, keyOffset: state.keyOffset + delta };
-        }
-      } else if (order.type === "absolute") {
-        state = { ...state, keyOffset: KeySignature.parse(order.value).semitoneOffset };
-      } else if (order.type === "name") {
-        const matchingParagraphs = paragraphs.filter((p) => p.name === order.name);
-        const paragraphDuration = TMDPlaybackRenderer.durationOf(order.name, sheet, state.timeSignature);
+      const visited = this.visitOrder(order, state);
+      state = visited.state;
+      if (visited.name !== undefined) {
+        const matchingParagraphs = paragraphs.filter((p) => p.name === visited.name);
+        const paragraphDuration = TMDPlaybackRenderer.durationOf(visited.name, sheet, state.timeSignature);
         if (i < startIndex) {
           // If before startOrderIndex, accumulate directives and key/tempo/meter state from paragraph
           for (const paragraph of matchingParagraphs) {
@@ -448,13 +454,15 @@ export class TMDPlaybackRenderer {
     let earliest = 0;
     const orders = this.ordersFor(sheet);
     for (const order of orders) {
-      if (order.type !== "name") continue;
-      const matching = sheet.entries.filter((p) => p.name === order.name);
+      const visited = this.visitOrder(order, state);
+      state = visited.state;
+      if (visited.name === undefined) continue;
+      const matching = sheet.entries.filter((p) => p.name === visited.name);
       for (const paragraph of matching) {
         earliest = Math.min(earliest, timelinePosition + paragraph.start * TMDPlaybackRenderer.measureDuration(state.timeSignature));
         state = TMDPlaybackRenderer.renderParagraph(paragraph, timelinePosition, state).state;
       }
-      timelinePosition += TMDPlaybackRenderer.durationOf(order.name, sheet, state.timeSignature);
+      timelinePosition += TMDPlaybackRenderer.durationOf(visited.name, sheet, state.timeSignature);
     }
     return earliest;
   }
