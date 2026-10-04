@@ -16,3 +16,4 @@ export * from './playback.js';
 export * from './refactor.js';
 export * from './tonality_visualizer.js';
 export * from './types.js';
+export * from './text_io.js';

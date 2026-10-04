@@ -29,6 +29,7 @@ import { TMDJSONRPCCodec,TMDLSPServer } from "./lsp/index.js";
 import { TmdMcpInstaller,TmdMcpServer } from "./mcp/index.js";
 import { TmdSkill } from "./skill.js";
 import { TMD_VERSION } from "./version.js";
+import { readUTF8, writeUTF8 } from "./core/text_io.js";
 
 export function printHelp(): void {
   console.log(`OVERVIEW: A compiler and toolkit for TMD (Timebase Mark Down) music notation.
@@ -139,7 +140,7 @@ Check measure consistency and report incorrect beat counts between bar lines '|'
 
   let content: string;
   try {
-    content = fs.readFileSync(inputPath, "utf-8");
+    content = readUTF8(inputPath);
   } catch (error: any) {
     console.error(`Error reading ${inputPath}: ${error.message || String(error)}`);
     return 1;
@@ -197,7 +198,7 @@ OPTIONS:
 
   let content: string;
   try {
-    content = fs.readFileSync(inputPath, "utf-8");
+    content = readUTF8(inputPath);
   } catch (error: any) {
     console.error(`Error reading ${inputPath}: ${error.message || String(error)}`);
     return 1;
@@ -287,7 +288,7 @@ OPTIONS:
 
   let content: string;
   try {
-    content = fs.readFileSync(inputPath, "utf-8");
+    content = readUTF8(inputPath);
   } catch (error: any) {
     console.error(`Error reading ${inputPath}: ${error.message || String(error)}`);
     return 1;
@@ -372,7 +373,7 @@ OPTIONS:
 
   if (inPlace) {
     try {
-      fs.writeFileSync(inputPath, formatted, "utf-8");
+      writeUTF8(inputPath, formatted);
       console.log(`Formatted ${inputPath} in-place.`);
       return 0;
     } catch (error: any) {
@@ -381,7 +382,7 @@ OPTIONS:
     }
   } else if (outputPath) {
     try {
-      fs.writeFileSync(outputPath, formatted, "utf-8");
+      writeUTF8(outputPath, formatted);
       console.log(`Formatted output written to ${outputPath}.`);
       return 0;
     } catch (error: any) {
