@@ -6,10 +6,10 @@ import {
   ChordSymbol,
   Entry,
   KeySignature,
+  noteToMIDIPitch,
   Playback,
   ScaleDegree,
   scaleDegreeLetter,
-  scaleDegreeSemitoneOffset,
   Sheet,
 } from "./types.js";
 export type { TMDLocale } from "./localization.js";
@@ -414,10 +414,7 @@ export class TMDSongInspector {
       if (event.content.type !== "note") continue;
       const note = event.content.note;
 
-      let pitch = 60 + event.state.keyOffset + scaleDegreeSemitoneOffset(note.degree);
-      if (note.accidental === "sharp") pitch += 1;
-      else if (note.accidental === "flat") pitch -= 1;
-      pitch += note.octave * 12;
+      const pitch = noteToMIDIPitch(note, event.state.keyOffset);
 
       const noteName = TMDNotePitchInfo.name(pitch);
       const matchedSection = timingProfile.sections.find(
@@ -681,10 +678,7 @@ export class TMDSongInspector {
     for (const event of allEvents) {
       if (event.content.type !== "note") continue;
       const note = event.content.note;
-      let pitch = 60 + event.state.keyOffset + scaleDegreeSemitoneOffset(note.degree);
-      if (note.accidental === "sharp") pitch += 1;
-      else if (note.accidental === "flat") pitch -= 1;
-      pitch += note.octave * 12;
+      const pitch = noteToMIDIPitch(note, event.state.keyOffset);
 
       const pc = ((pitch % 12) + 12) % 12;
       const dur = event.duration;

@@ -5,6 +5,7 @@ import {
   ChordSymbol,
   DEFAULT_INSTRUMENT,
   Note,
+  noteToMIDIPitch,
   PlaybackTimeline,
   Sheet,
   SheetInstrumentHelper,
@@ -1138,20 +1139,7 @@ export class TMDMIDIGenerator {
   }
 
   public static noteToMIDIPitch(note: Note, keyOffset: number): number {
-    const semitones = [0, 2, 4, 5, 7, 9, 11];
-    let pitch = 60 + keyOffset + semitones[note.degree - 1];
-    switch (note.accidental) {
-      case Accidental.Sharp:
-        pitch += 1;
-        break;
-      case Accidental.Flat:
-        pitch -= 1;
-        break;
-      case Accidental.Natural:
-        break;
-    }
-    pitch += note.octave * 12;
-    return pitch;
+    return noteToMIDIPitch(note, keyOffset);
   }
 
   private static percussionMIDIPitch(char: string): number | undefined {

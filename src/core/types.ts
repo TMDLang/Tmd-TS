@@ -344,9 +344,48 @@ export interface Sheet {
 }
 
 export const PitchMapping = {
+  tmdKeyNames: ["C", "C'", "D", "E,", "E", "F", "F'", "G", "A,", "A", "B,", "B"],
   musicXMLSteps: ["C", "C", "D", "D", "E", "F", "F", "G", "G", "A", "A", "B"],
   musicXMLAlters: [0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0],
   lilyPondNames: ["c", "cis", "d", "dis", "e", "f", "fis", "g", "gis", "a", "ais", "b"],
   abcUpperNames: ["C", "^C", "D", "^D", "E", "F", "^F", "G", "^G", "A", "^A", "B"],
-  abcLowerNames: ["c", "^c", "d", "^d", "e", "f", "^f", "g", "^g", "a", "^a", "b"]
+  abcLowerNames: ["c", "^c", "d", "^d", "e", "f", "^f", "g", "^g", "a", "^a", "b"],
+  normalizedSemitone(semitone: number): number {
+    return ((semitone % 12) + 12) % 12;
+  },
+  keyName(semitone: number): string {
+    return this.tmdKeyNames[this.normalizedSemitone(semitone)];
+  },
+  semitoneToDegreeAccidental(semitone: number): { degree: ScaleDegree; accidental: Accidental } {
+    switch (this.normalizedSemitone(semitone)) {
+      case 0: return { degree: ScaleDegree.C, accidental: Accidental.Natural };
+      case 1: return { degree: ScaleDegree.C, accidental: Accidental.Sharp };
+      case 2: return { degree: ScaleDegree.D, accidental: Accidental.Natural };
+      case 3: return { degree: ScaleDegree.D, accidental: Accidental.Sharp };
+      case 4: return { degree: ScaleDegree.E, accidental: Accidental.Natural };
+      case 5: return { degree: ScaleDegree.F, accidental: Accidental.Natural };
+      case 6: return { degree: ScaleDegree.F, accidental: Accidental.Sharp };
+      case 7: return { degree: ScaleDegree.G, accidental: Accidental.Natural };
+      case 8: return { degree: ScaleDegree.G, accidental: Accidental.Sharp };
+      case 9: return { degree: ScaleDegree.A, accidental: Accidental.Natural };
+      case 10: return { degree: ScaleDegree.B, accidental: Accidental.Flat };
+      case 11: return { degree: ScaleDegree.B, accidental: Accidental.Natural };
+      default: throw new Error("Normalized semitone must be between 0 and 11");
+    }
+  },
+  accidentalSymbol(accidental: Accidental): string {
+    switch (accidental) {
+      case Accidental.Natural: return "";
+      case Accidental.Sharp: return "'";
+      case Accidental.Flat: return ",";
+    }
+  }
 };
+
+export function noteToMIDIPitch(note: Note, keyOffset: number): number {
+  return 60 + keyOffset + scaleDegreeSemitoneOffset(note.degree) + accidentalToSemitone(note.accidental) + note.octave * 12;
+}
+
+export function noteToTotalSemitones(note: Note): number {
+  return scaleDegreeSemitoneOffset(note.degree) + accidentalToSemitone(note.accidental) + note.octave * 12;
+}

@@ -1,13 +1,13 @@
 import { TMDPlaybackRenderer } from "./playback.js";
 import {
   Accidental,
-  accidentalToSemitone,
   Beat,
   Entry,
   Note,
+  noteToTotalSemitones,
+  PitchMapping,
   Playback,
   ScaleDegree,
-  scaleDegreeSemitoneOffset,
   Section,
   SExpr,
   Sheet,
@@ -24,26 +24,7 @@ export interface MacroExpansionResult {
  * Maps pitch in semitones (0-11) to ScaleDegree and Accidental.
  */
 function semitoneToDegreeAccidental(semi: number): { degree: ScaleDegree; accidental: Accidental } {
-  // semi: 0 to 11
-  switch (semi) {
-    case 0: return { degree: ScaleDegree.C, accidental: Accidental.Natural };
-    case 1: return { degree: ScaleDegree.C, accidental: Accidental.Sharp };
-    case 2: return { degree: ScaleDegree.D, accidental: Accidental.Natural };
-    case 3: return { degree: ScaleDegree.D, accidental: Accidental.Sharp };
-    case 4: return { degree: ScaleDegree.E, accidental: Accidental.Natural };
-    case 5: return { degree: ScaleDegree.F, accidental: Accidental.Natural };
-    case 6: return { degree: ScaleDegree.F, accidental: Accidental.Sharp };
-    case 7: return { degree: ScaleDegree.G, accidental: Accidental.Natural };
-    case 8: return { degree: ScaleDegree.G, accidental: Accidental.Sharp };
-    case 9: return { degree: ScaleDegree.A, accidental: Accidental.Natural };
-    case 10: return { degree: ScaleDegree.A, accidental: Accidental.Sharp };
-    case 11: return { degree: ScaleDegree.B, accidental: Accidental.Natural };
-    default: return { degree: ScaleDegree.C, accidental: Accidental.Natural };
-  }
-}
-
-function noteToTotalSemitones(note: Note): number {
-  return scaleDegreeSemitoneOffset(note.degree) + accidentalToSemitone(note.accidental) + note.octave * 12;
+  return PitchMapping.semitoneToDegreeAccidental(semi);
 }
 
 function totalSemitonesToNote(totalSemitones: number): Note {

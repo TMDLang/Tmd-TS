@@ -1,6 +1,14 @@
 import { formatParagraph,formatSheet } from "./format.js";
 import { Lexer, TmdParser } from "./parser.js";
-import { Entry, KeySignature,ScaleDegree, Sheet, UnitGroup } from "./types.js";
+import {
+  Entry,
+  KeySignature,
+  PitchMapping,
+  ScaleDegree,
+  scaleDegreeSemitoneOffset,
+  Sheet,
+  UnitGroup,
+} from "./types.js";
 
 export class TMDRefactorError extends Error {
   constructor(message: string) {
@@ -827,49 +835,8 @@ function transposeKeySignature(keyStr: string, semitones: number): string {
   const currentKey = KeySignature.parse(keyStr || "C");
   const oldOffset = currentKey.semitoneOffset;
   const newOffset = ((oldOffset + semitones) % 12 + 12) % 12;
-  const offsetToKey: Record<number, string> = {
-    0: "C",
-    1: "C'",
-    2: "D",
-    3: "E,",
-    4: "E",
-    5: "F",
-    6: "F'",
-    7: "G",
-    8: "A,",
-    9: "A",
-    10: "B,",
-    11: "B",
-  };
-  return offsetToKey[newOffset] || "C";
+  return PitchMapping.keyName(newOffset);
 }
-
-const SCALE_DEGREE_SEMITONES: Record<number, number> = {
-  1: 0,
-  2: 2,
-  3: 4,
-  4: 5,
-  5: 7,
-  6: 9,
-  7: 11,
-};
-
-const NOTE_NAMES_12 = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
-
-const SEMITONE_TO_DEGREE_MAP: Record<number, { degree: number; accidental: string }> = {
-  0: { degree: 1, accidental: "" },
-  1: { degree: 1, accidental: "'" },
-  2: { degree: 2, accidental: "" },
-  3: { degree: 2, accidental: "'" },
-  4: { degree: 3, accidental: "" },
-  5: { degree: 4, accidental: "" },
-  6: { degree: 4, accidental: "'" },
-  7: { degree: 5, accidental: "" },
-  8: { degree: 5, accidental: "'" },
-  9: { degree: 6, accidental: "" },
-  10: { degree: 7, accidental: "," },
-  11: { degree: 7, accidental: "" },
-};
 
 function transposeTmdNote(
   noteStr: string,
@@ -911,18 +878,18 @@ function transposeTmdNote(
   else if (acc.includes(",")) accSemitone = -1;
 
   // Semitone position relative to tonic of key
-  const baseDegreeSemitone = SCALE_DEGREE_SEMITONES[deg] + accSemitone;
+  const baseDegreeSemitone = scaleDegreeSemitoneOffset(deg as ScaleDegree) + accSemitone;
   const totalSemitonesRelTonic = baseDegreeSemitone + octaveDelta * 12 + options.semitones;
 
   const semitoneInOct = ((totalSemitonesRelTonic % 12) + 12) % 12;
   const finalOctave = Math.floor(totalSemitonesRelTonic / 12);
 
-  const mapped = SEMITONE_TO_DEGREE_MAP[semitoneInOct];
+  const mapped = PitchMapping.semitoneToDegreeAccidental(semitoneInOct);
   let newOctStr = "";
   if (finalOctave > 0) newOctStr = "^".repeat(finalOctave);
   else if (finalOctave < 0) newOctStr = "_".repeat(-finalOctave);
 
-  return `${mapped.degree}${mapped.accidental}${newOctStr}`;
+  return `${mapped.degree}${PitchMapping.accidentalSymbol(mapped.accidental)}${newOctStr}`;
 }
 
 function transposeTmdNoteUnit(
