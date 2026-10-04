@@ -44,6 +44,26 @@ describe("Swift playback parity", () => {
     expect(timpani.events.map((event) => event.position)).toEqual([4, 5, 6, 7]);
     expect(timpani.events.map((event) => event.state.keyOffset)).toEqual([0, 0, 0, 0]);
   });
+
+  it("expands macros before calculating the global earliest playback position", () => {
+    const sheet = TmdParser.parse(`::SCORE::
+** Macro Earliest Position **
+!= 120
+?= C
+<4/4>
+
+Theme{
+    <4*>
+    1 2 3 4
+}
+
+-> (play Theme Piano :at -1) ->#
+`);
+
+    sheet.playback[0] = { type: "macro", expr: ["play", "Theme", "Piano", -1] };
+    expect((TMDPlaybackRenderer as any).globalEarliestPosition(sheet)).toBe(-4);
+  });
+
   it("merges conductor directives from all instruments", () => {
     const sheet = TmdParser.parse(`::SCORE::
 ** Conductor Directives **

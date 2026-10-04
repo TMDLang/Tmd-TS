@@ -74,6 +74,21 @@ export interface TMDPlaybackRendererOptions {
 }
 
 export class TMDPlaybackRenderer {
+  private static ordersFor(sheet: Sheet): Playback[] {
+    if (sheet.playback.length > 0) return sheet.playback;
+    return Array.from(new Set(sheet.entries.map((entry) => entry.name)))
+      .map((name) => ({ type: "name" as const, name }));
+  }
+
+  private static initialStateFor(sheet: Sheet): PlaybackState {
+    return {
+      tempo: sheet.speed > 0 ? sheet.speed : DEFAULT_TEMPO_BPM,
+      keyOffset: sheet.keySignature.semitoneOffset,
+      timeSignature: sheet.beat,
+      dynamicLevel: "mf"
+    };
+  }
+
   public static validateTempoConflicts(inputSheet: Sheet): PlaybackTempoConflict[] {
     const sheet = TMDMacroEvaluator.expand(inputSheet);
     const assignments = Array.from(new Set(
@@ -152,16 +167,8 @@ export class TMDPlaybackRenderer {
       return pInst.toLocaleLowerCase() === targetInst.toLocaleLowerCase()
         || p.assignment?.toLocaleLowerCase() === instrument.toLocaleLowerCase();
     });
-    const orders: Playback[] = sheet.playback.length > 0
-      ? sheet.playback
-      : Array.from(new Set(sheet.entries.map((p) => p.name))).map((n) => ({ type: "name", name: n }));
-
-    let state: PlaybackState = {
-      tempo: sheet.speed > 0 ? sheet.speed : DEFAULT_TEMPO_BPM,
-      keyOffset: sheet.keySignature.semitoneOffset,
-      timeSignature: sheet.beat,
-      dynamicLevel: "mf"
-    };
+    const orders = this.ordersFor(sheet);
+    let state = this.initialStateFor(sheet);
 
     let events: PlaybackEvent[] = [];
     let directives: PlaybackDirectiveEvent[] = [];
@@ -434,18 +441,12 @@ export class TMDPlaybackRenderer {
     );
   }
 
-  private static globalEarliestPosition(sheet: Sheet): number {
-    let state: PlaybackState = {
-      tempo: sheet.speed > 0 ? sheet.speed : DEFAULT_TEMPO_BPM,
-      keyOffset: sheet.keySignature.semitoneOffset,
-      timeSignature: sheet.beat,
-      dynamicLevel: "mf"
-    };
+  public static globalEarliestPosition(inputSheet: Sheet): number {
+    const sheet = TMDMacroEvaluator.expand(inputSheet);
+    let state = this.initialStateFor(sheet);
     let timelinePosition = 0;
     let earliest = 0;
-    const orders = sheet.playback.length > 0
-      ? sheet.playback
-      : Array.from(new Set(sheet.entries.map((p) => p.name))).map((name) => ({ type: "name" as const, name }));
+    const orders = this.ordersFor(sheet);
     for (const order of orders) {
       if (order.type !== "name") continue;
       const matching = sheet.entries.filter((p) => p.name === order.name);
