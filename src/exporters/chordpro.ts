@@ -1,17 +1,17 @@
 import { SheetInstrumentHelper } from "../domain/index.js";
-import { TMDMacroEvaluator, TMDMeasureRenderer } from "../playback/index.js";
+import { TmdMacroEvaluator, TmdMeasureRenderer } from "../playback/index.js";
 import { ChordSymbol, KeySignature, Playback, Sheet } from "../syntax/index.js";
 
 export interface ChordProOptions {
   measuresPerLine?: number;
 }
 
-export class TMDChordProGenerator {
+export class TmdChordProGenerator {
   public static generateChordPro(
     rawSheet: Sheet,
     options: ChordProOptions = {}
   ): string {
-    const sheet = TMDMacroEvaluator.expandThrowing(rawSheet);
+    const sheet = TmdMacroEvaluator.expandThrowing(rawSheet);
     const lines: string[] = [];
 
     // Title and Metadata directives
@@ -86,7 +86,7 @@ export class TMDChordProGenerator {
           keySignature: keySignatureForOffset(currentKeyOffset),
         };
 
-        const sectionMeasures = TMDMeasureRenderer.renderMeasures(
+        const sectionMeasures = TmdMeasureRenderer.renderMeasures(
           sectionSheet,
           targetInstrument
         );

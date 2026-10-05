@@ -1,6 +1,6 @@
 import { FULLWIDTH_PUNCT_MAP, type SourceRange, type Token } from "./tokens.js";
 
-export class TMDParseError extends Error {
+export class TmdParseError extends Error {
   public readonly expectedTokens: string[];
   public readonly source?: string;
 
@@ -55,7 +55,7 @@ export class TMDParseError extends Error {
     }
 
     super(fullMessage);
-    this.name = "TMDParseError";
+    this.name = "TmdParseError";
     this.expectedTokens = expectedTokens;
     this.source = source;
   }

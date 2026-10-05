@@ -1,4 +1,4 @@
-import { TMDSkill } from "../../../src/skill.js";
+import { TmdSkill } from "../../../src/skill.js";
 import {
   AIProviderType,
   AISettingsState,
@@ -14,7 +14,7 @@ import {
   validateTmdCode,
   validateTmdCodeWithIssues,
 } from "../ai/index.js";
-import type { TMDWebEditor } from "../editor.js";
+import type { TmdWebEditor } from "../editor.js";
 import { escapeHtml } from "../html.js";
 import { getCurrentLocale, t } from "../i18n.js";
 
@@ -58,7 +58,7 @@ export interface AIDrawerElements {
   inspectorPanel: HTMLElement;
 }
 
-export class TMDAIDrawerController {
+export class TmdAIDrawerController {
   private aiSettings: AISettingsState;
   private aiAbortController: AbortController | null = null;
   private aiCurrentGeneratedCode: string = "";
@@ -67,7 +67,7 @@ export class TMDAIDrawerController {
 
   constructor(
     private elements: AIDrawerElements,
-    private getEditor: () => TMDWebEditor,
+    private getEditor: () => TmdWebEditor,
     private onScoreUpdated: (text: string) => void,
     private onSavePanelsState: () => void,
     private downloadSkillFile: () => void,
@@ -117,7 +117,7 @@ export class TMDAIDrawerController {
 
     aiBtnCopySkill?.addEventListener("click", async () => {
       try {
-        await navigator.clipboard.writeText(TMDSkill.skillMarkdown);
+        await navigator.clipboard.writeText(TmdSkill.skillMarkdown);
         const prevText = aiBtnCopySkill.textContent;
         aiBtnCopySkill.textContent = `✓ ${t("aiSkillCopied")}`;
         setTimeout(() => {

@@ -2,7 +2,7 @@ import * as fs from "node:fs";
 
 import { FilePathNormalizer, TextEncodingDetector } from "../utils/index.js";
 import { Lexer } from "./lexer.js";
-import { TMDParseError } from "./parse_diagnostics.js";
+import { TmdParseError } from "./parse_diagnostics.js";
 import { type LexedToken, type Token, tokenExpectedDescription, type TokenType } from "./tokens.js";
 import {
   Accidental,
@@ -23,10 +23,10 @@ import {
 } from "./types.js";
 
 export { Lexer } from "./lexer.js";
-export { TMDParseError } from "./parse_diagnostics.js";
+export { TmdParseError } from "./parse_diagnostics.js";
 export type { LexedToken, SourcePosition, SourceRange, Token, TokenType } from "./tokens.js";
 
-export class TMDParser {
+export class TmdParser {
   private tokens: Token[];
   private pos = 0;
   public failureIndex?: number;
@@ -42,7 +42,7 @@ export class TMDParser {
 
   public static parseThrowing(input: string): Sheet {
     const lexedTokens = new Lexer(input).tokenizeWithRanges();
-    const parser = new TMDParser(lexedTokens.map(lt => lt.token));
+    const parser = new TmdParser(lexedTokens.map(lt => lt.token));
     const sheet = parser.parseSheet();
 
     const diagnosticIndex = (idx: number, tokenCount: number): number => {
@@ -53,7 +53,7 @@ export class TMDParser {
     if (!sheet) {
       const index = diagnosticIndex(parser.failureIndex ?? parser.pos, lexedTokens.length);
       const offending = lexedTokens[index];
-      throw new TMDParseError(
+      throw new TmdParseError(
         "Unexpected token",
         offending.token,
         offending.text,
@@ -66,7 +66,7 @@ export class TMDParser {
     if (parser.failureIndex !== undefined) {
       const index = diagnosticIndex(parser.failureIndex, lexedTokens.length);
       const offending = lexedTokens[index];
-      throw new TMDParseError(
+      throw new TmdParseError(
         "Unexpected token",
         offending.token,
         offending.text,

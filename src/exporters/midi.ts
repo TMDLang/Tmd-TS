@@ -1,7 +1,7 @@
 import { SheetInstrumentHelper } from "../domain/index.js";
-import { PlaybackTimeline, TMDMacroEvaluator, TMDPlaybackRenderer } from "../playback/index.js";
+import { PlaybackTimeline, TmdMacroEvaluator, TmdPlaybackRenderer } from "../playback/index.js";
 import { Accidental, Beat, chordQualityIntervals, ChordSymbol, DEFAULT_INSTRUMENT, Note, noteToMIDIPitch, Sheet } from "../syntax/index.js";
-import { type MIDIEvent, type MIDIMessage,TMDMIDIEncoder } from './midi_encoder.js';
+import { type MIDIEvent, type MIDIMessage,TmdMIDIEncoder } from './midi_encoder.js';
 
 export enum MIDIInstrument {
   // 0-7: Piano
@@ -824,23 +824,23 @@ export namespace MIDIInstrument {
 }
 
 export type { MIDIEvent,MIDIMessage } from './midi_encoder.js';
-export { TMDMIDIEncoder } from './midi_encoder.js';
+export { TmdMIDIEncoder } from './midi_encoder.js';
 
-export interface TMDMIDIGeneratorOptions {
+export interface TmdMIDIGeneratorOptions {
   targetParagraph?: string;
   targetInstrument?: string;
   startOrderIndex?: number;
 }
 
-export class TMDMIDIGenerator {
+export class TmdMIDIGenerator {
   public static readonly defaultTicksPerQuarterNote = 480;
 
   public static generateMIDI(
     rawSheet: Sheet,
-    ticksPerQuarter: number = TMDMIDIGenerator.defaultTicksPerQuarterNote,
-    options?: TMDMIDIGeneratorOptions
+    ticksPerQuarter: number = TmdMIDIGenerator.defaultTicksPerQuarterNote,
+    options?: TmdMIDIGeneratorOptions
   ): Uint8Array {
-    let effectiveSheet = TMDMacroEvaluator.expandThrowing(rawSheet);
+    let effectiveSheet = TmdMacroEvaluator.expandThrowing(rawSheet);
     if (options?.targetParagraph) {
       const filteredParagraphs = effectiveSheet.entries.filter(p => p.name === options.targetParagraph);
       effectiveSheet = {
@@ -861,9 +861,9 @@ export class TMDMIDIGenerator {
     }
 
     const renderOpts = { startOrderIndex: options?.startOrderIndex };
-    const timeline = TMDPlaybackRenderer.renderConductor(effectiveSheet, renderOpts);
+    const timeline = TmdPlaybackRenderer.renderConductor(effectiveSheet, renderOpts);
     const trackData: Uint8Array[] = [
-      TMDMIDIEncoder.encodeTrack(
+      TmdMIDIEncoder.encodeTrack(
         this.conductorEvents(effectiveSheet, timeline, ticksPerQuarter)
       ),
     ];
@@ -872,7 +872,7 @@ export class TMDMIDIGenerator {
     let nextMelodyChannel = 0;
 
     for (const instrument of distinctInstruments) {
-      const instTimeline = TMDPlaybackRenderer.render(effectiveSheet, instrument, renderOpts);
+      const instTimeline = TmdPlaybackRenderer.render(effectiveSheet, instrument, renderOpts);
       if (!instTimeline.events.some((event) => event.content.type !== 'rest')) continue;
       const midiInst = MIDIInstrument.resolve(instrument);
       let channel: number;
@@ -893,7 +893,7 @@ export class TMDMIDIGenerator {
       }
 
       trackData.push(
-        TMDMIDIEncoder.encodeTrack(
+        TmdMIDIEncoder.encodeTrack(
           this.instrumentEvents(
             instTimeline,
             instrument,
@@ -905,7 +905,7 @@ export class TMDMIDIGenerator {
       );
     }
 
-    return TMDMIDIEncoder.encodeFile(trackData, ticksPerQuarter);
+    return TmdMIDIEncoder.encodeFile(trackData, ticksPerQuarter);
   }
 
   private static conductorEvents(

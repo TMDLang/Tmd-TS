@@ -1,11 +1,11 @@
 import { describe, expect,it } from "vitest";
 
-import { TMDWebLSPClient } from "../web/src/lsp/client.js";
+import { TmdWebLSPClient } from "../web/src/lsp/client.js";
 
-describe("TMDWebLSPClient (In-Memory LSP Client for Web Studio)", () => {
+describe("TmdWebLSPClient (In-Memory LSP Client for Web Studio)", () => {
   it("initializes and handles document open and diagnostics notification", () => {
     let receivedDiagnostics: any[] | null = null;
-    const client = new TMDWebLSPClient({
+    const client = new TmdWebLSPClient({
       onDiagnostics: (diags) => {
         receivedDiagnostics = diags;
       },
@@ -29,7 +29,7 @@ verse:Piano {
 
   it("updates document and receives updated diagnostics", () => {
     let count = 0;
-    const client = new TMDWebLSPClient({
+    const client = new TmdWebLSPClient({
       onDiagnostics: () => {
         count++;
       },
@@ -43,7 +43,7 @@ verse:Piano {
   });
 
   it("requests completions at position and formats snippets correctly", async () => {
-    const client = new TMDWebLSPClient();
+    const client = new TmdWebLSPClient();
     const source = "-> (ca";
     client.openDocument(source);
 
@@ -60,7 +60,7 @@ verse:Piano {
     try {
       (globalThis as any).Buffer = undefined;
 
-      const client = new TMDWebLSPClient();
+      const client = new TmdWebLSPClient();
       client.openDocument("-> (ca");
       const completions = await client.requestCompletions(0, 6);
 
@@ -71,7 +71,7 @@ verse:Piano {
   });
 
   it("requests document formatting", async () => {
-    const client = new TMDWebLSPClient();
+    const client = new TmdWebLSPClient();
     const unformatted = `::SCORE::
 **Test**
 !=120
@@ -94,7 +94,7 @@ verse:Piano@|0|{
   });
 
   it("requests document symbols (outline hierarchy)", async () => {
-    const client = new TMDWebLSPClient();
+    const client = new TmdWebLSPClient();
     const source = `tempo: 120
 verse:Piano {
   1 2 3 4
@@ -106,7 +106,7 @@ verse:Piano {
   });
 
   it("converts LSP positions to and from CodeMirror offsets correctly", () => {
-    const client = new TMDWebLSPClient();
+    const client = new TmdWebLSPClient();
     const text = "abc\ndefgh\nijk";
     // line 0: 'abc' (len 3), line 1: 'defgh' (len 5), line 2: 'ijk' (len 3)
     // offsets: 'a'=0, 'b'=1, 'c'=2, '\n'=3, 'd'=4, 'e'=5, 'f'=6, 'g'=7, 'h'=8, '\n'=9, 'i'=10
@@ -116,7 +116,7 @@ verse:Piano {
   });
 
   it("converts LSP diagnostics to CodeMirror diagnostics with accurate offsets", () => {
-    const client = new TMDWebLSPClient();
+    const client = new TmdWebLSPClient();
     const doc = "tempo: 120\nverse:Piano {\n  1 2 3\n}\n";
     const lspDiags = [
       {
@@ -142,7 +142,7 @@ verse:Piano {
   });
 
   it("converts LSP completions to CodeMirror completions", () => {
-    const client = new TMDWebLSPClient();
+    const client = new TmdWebLSPClient();
     const lspItems = [
       {
         label: "canon",

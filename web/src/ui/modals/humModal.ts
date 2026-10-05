@@ -4,7 +4,7 @@ import {
   quantizeNoteEventsToTmdSection,
   resampleAudioBuffer,
 } from "../../audio/quantizer.js";
-import type { TMDWebEditor } from "../../editor.js";
+import type { TmdWebEditor } from "../../editor.js";
 import { t } from "../../i18n.js";
 
 export interface HumModalElements {
@@ -35,7 +35,7 @@ export interface HumModalElements {
 
 export function setupHumModal(
   elements: HumModalElements,
-  editor: TMDWebEditor
+  editor: TmdWebEditor
 ): {
   openHumModal: () => void;
 } {

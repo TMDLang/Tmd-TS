@@ -1,6 +1,6 @@
 import { SheetInstrumentHelper } from "../domain/instruments.js";
-import { TMDMacroEvaluator } from "../playback/macro.js";
-import { PlaybackDirectiveEvent,PlaybackEvent, PlaybackState, TMDPlaybackRenderer } from "../playback/playback.js";
+import { TmdMacroEvaluator } from "../playback/macro.js";
+import { PlaybackDirectiveEvent,PlaybackEvent, PlaybackState, TmdPlaybackRenderer } from "../playback/playback.js";
 import {
   chordQualityIntervals,
   ChordSymbol,
@@ -13,19 +13,19 @@ import {
   scaleDegreeLetter,
   Sheet,
 } from "../syntax/types.js";
-export type { TMDLocale } from "./localization.js";
-export { TMDLocalizationKey,TMDLocalizer } from "./localization.js";
-import { TMDSongHarmonyAnalyzer } from "./harmony_analyzer.js";
-import type { TMDLocale } from "./localization.js";
-import { TMDLocalizationKey, TMDLocalizer } from "./localization.js";
-import { TMDSongPitchRangeAnalyzer } from "./pitch_range_analyzer.js";
-import { TMDSongTimingAnalyzer } from "./timing_analyzer.js";
-import { TMDSongTonalityAnalyzer } from "./tonality_analyzer.js";
+export type { TmdLocale } from "./localization.js";
+export { TmdLocalizationKey,TmdLocalizer } from "./localization.js";
+import { TmdSongHarmonyAnalyzer } from "./harmony_analyzer.js";
+import type { TmdLocale } from "./localization.js";
+import { TmdLocalizationKey, TmdLocalizer } from "./localization.js";
+import { TmdSongPitchRangeAnalyzer } from "./pitch_range_analyzer.js";
+import { TmdSongTimingAnalyzer } from "./timing_analyzer.js";
+import { TmdSongTonalityAnalyzer } from "./tonality_analyzer.js";
 
 /**
  * Pitch descriptor with MIDI note number, canonical note name (e.g. "C4", "A5"), and source section context.
  */
-export interface TMDNotePitchInfo {
+export interface TmdNotePitchInfo {
   midiPitch: number;
   noteName: string;
   sectionName: string;
@@ -35,7 +35,7 @@ export interface TMDNotePitchInfo {
   timeSeconds: number;
 }
 
-export namespace TMDNotePitchInfo {
+export namespace TmdNotePitchInfo {
   const NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 
   /**
@@ -55,11 +55,11 @@ export type VocalClassification = "soprano" | "mezzo-soprano" | "contralto" | "t
 /**
  * Vocal or instrument pitch range and tessitura summary.
  */
-export interface TMDPitchRangeProfile {
+export interface TmdPitchRangeProfile {
   /** Canonical assignment represented by this pitch profile. */
   assignment: string;
-  lowestNote: TMDNotePitchInfo;
-  highestNote: TMDNotePitchInfo;
+  lowestNote: TmdNotePitchInfo;
+  highestNote: TmdNotePitchInfo;
   spanSemitones: number;
   spanOctaves: number;
   totalNotes: number;
@@ -71,7 +71,7 @@ export interface TMDPitchRangeProfile {
 /**
  * Timing span descriptor for a section in the song's playback timeline.
  */
-export interface TMDSectionTimingProfile {
+export interface TmdSectionTimingProfile {
   name: string;
   orderIndex: number;
   occurrenceIndex: number;
@@ -88,16 +88,16 @@ export interface TMDSectionTimingProfile {
 /**
  * Song playback timeline timing and duration breakdown.
  */
-export interface TMDTimingProfile {
+export interface TmdTimingProfile {
   totalDurationSeconds: number;
   totalMeasures: number;
-  sections: TMDSectionTimingProfile[];
+  sections: TmdSectionTimingProfile[];
 }
 
 /**
  * Harmonic content and progression analysis.
  */
-export interface TMDHarmonyProfile {
+export interface TmdHarmonyProfile {
   distinctChords: string[];
   chordCount: number;
   modulations: string[];
@@ -106,7 +106,7 @@ export interface TMDHarmonyProfile {
 /**
  * Section arrangement density descriptor.
  */
-export interface TMDSectionDensity {
+export interface TmdSectionDensity {
   sectionName: string;
   trackCount: number;
   instruments: string[];
@@ -115,15 +115,15 @@ export interface TMDSectionDensity {
 /**
  * Arrangement orchestration and concurrent track layering density.
  */
-export interface TMDArrangementDensityProfile {
+export interface TmdArrangementDensityProfile {
   maxConcurrentTracks: number;
-  sectionDensities: TMDSectionDensity[];
+  sectionDensities: TmdSectionDensity[];
 }
 
 /**
  * Distribution of the 12 chromatic pitch classes across a section or entire score.
  */
-export interface TMDPitchClassDistribution {
+export interface TmdPitchClassDistribution {
   /** Accumulated quarter-note duration weights for each pitch class (0: C, 1: C#, ..., 11: B). */
   weights: number[];
   /** Ratio of diatonic notes to total pitch weight (0.0 ~ 1.0). */
@@ -134,35 +134,35 @@ export interface TMDPitchClassDistribution {
   topPitchClasses: string[];
 }
 
-export type TMDTonalityMode = "major" | "minor" | "modal" | "ambiguous" | "insufficient";
-export type TMDScaleFamily = "major" | "naturalMinor" | "harmonicMinor" | "melodicMinor" | "modal" | "chromatic" | "unknown";
-export type TMDKeyStability = "high" | "moderate" | "ambiguous" | "insufficient";
+export type TmdTonalityMode = "major" | "minor" | "modal" | "ambiguous" | "insufficient";
+export type TmdScaleFamily = "major" | "naturalMinor" | "harmonicMinor" | "melodicMinor" | "modal" | "chromatic" | "unknown";
+export type TmdKeyStability = "high" | "moderate" | "ambiguous" | "insufficient";
 
-export interface TMDTonalityCandidate {
+export interface TmdTonalityCandidate {
   tonic: string;
   mode: "major" | "minor";
-  scaleFamily: TMDScaleFamily;
+  scaleFamily: TmdScaleFamily;
   correlation: number;
 }
 
-export interface TMDTonalityEvidence {
+export interface TmdTonalityEvidence {
   noteWeight: number;
   chordWeight: number;
 }
 
-export interface TMDTonalityInference {
+export interface TmdTonalityInference {
   tonic: string | null;
-  mode: TMDTonalityMode;
-  scaleFamily: TMDScaleFamily;
+  mode: TmdTonalityMode;
+  scaleFamily: TmdScaleFamily;
   confidence: number;
   margin: number;
-  stability: TMDKeyStability;
+  stability: TmdKeyStability;
   bestCorrelation: number;
-  topCandidates: TMDTonalityCandidate[];
-  evidence: TMDTonalityEvidence;
+  topCandidates: TmdTonalityCandidate[];
+  evidence: TmdTonalityEvidence;
 }
 
-export interface TMDPlaybackContext {
+export interface TmdPlaybackContext {
   movableDoBase: string;
   transpositionOffset: number;
   fixedPitch: boolean;
@@ -171,21 +171,21 @@ export interface TMDPlaybackContext {
 /**
  * Tonality and pitch-class distribution metrics for an individual section.
  */
-export interface TMDSectionTonalityProfile {
+export interface TmdSectionTonalityProfile {
   sectionName: string;
   occurrenceIndex: number;
-  playbackContext: TMDPlaybackContext;
+  playbackContext: TmdPlaybackContext;
   fifthsPosition: number;
-  pitchClasses: TMDPitchClassDistribution;
-  inferredTonality: TMDTonalityInference;
+  pitchClasses: TmdPitchClassDistribution;
+  inferredTonality: TmdTonalityInference;
   nonDiatonicNotes: string[];
 }
 
-export type TMDTonalityMood = "cleanMajor" | "contemporaryMajor" | "cleanMinor" | "contemporaryMinor" | "modal" | "insufficient";
+export type TmdTonalityMood = "cleanMajor" | "contemporaryMajor" | "cleanMinor" | "contemporaryMinor" | "modal" | "insufficient";
 
-export interface TMDTonalityNarrative {
+export interface TmdTonalityNarrative {
   tonic: string;
-  mood: TMDTonalityMood;
+  mood: TmdTonalityMood;
   transitions: Array<{
     sectionName: string;
     tonic: string;
@@ -198,45 +198,45 @@ export interface TMDTonalityNarrative {
 /**
  * Holistic tonality profile across sections and the full song.
  */
-export interface TMDTonalityProfile {
-  globalPitchClasses: TMDPitchClassDistribution;
-  globalInference: TMDTonalityInference;
+export interface TmdTonalityProfile {
+  globalPitchClasses: TmdPitchClassDistribution;
+  globalInference: TmdTonalityInference;
   /** Explicit `key=` declaration, distinct from movable-do playback context. */
   declaredKey?: string;
-  playbackContext: TMDPlaybackContext;
+  playbackContext: TmdPlaybackContext;
   playbackTranspositionPath: number[];
-  inferredModulationPath: TMDTonalityNarrative["transitions"];
+  inferredModulationPath: TmdTonalityNarrative["transitions"];
   circleOfFifthsPath: number[];
-  sections: TMDSectionTonalityProfile[];
+  sections: TmdSectionTonalityProfile[];
   summaryText: string;
   moodDescription: string;
   modulationStory: string;
-  narrative?: TMDTonalityNarrative;
-  locale: TMDLocale;
+  narrative?: TmdTonalityNarrative;
+  locale: TmdLocale;
 }
 
 /**
  * Complete structural, vocal range, harmonic, and temporal profile of a TMD score.
  */
-export interface TMDSongProfile {
+export interface TmdSongProfile {
   title: string;
   initialTempo: number;
   initialKey: string;
   initialTimeSignature: string;
-  timing: TMDTimingProfile;
-  vocalRange?: TMDPitchRangeProfile;
-  instrumentRanges: TMDPitchRangeProfile[];
-  harmony: TMDHarmonyProfile;
-  density: TMDArrangementDensityProfile;
-  tonality?: TMDTonalityProfile;
-  locale?: TMDLocale;
+  timing: TmdTimingProfile;
+  vocalRange?: TmdPitchRangeProfile;
+  instrumentRanges: TmdPitchRangeProfile[];
+  harmony: TmdHarmonyProfile;
+  density: TmdArrangementDensityProfile;
+  tonality?: TmdTonalityProfile;
+  locale?: TmdLocale;
 }
 
 /**
  * Inspector engine extracting holistic musical metrics, vocal tessitura, and arrangement profiles from a TMD Sheet.
  * Ported faithfully from TmdSwift.
  */
-export class TMDSongInspector {
+export class TmdSongInspector {
   // Krumhansl-Schmuckler 12-pitch-class profiles for Major and Minor
   private static readonly KS_MAJOR_PROFILE: number[] = [
     6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88
@@ -246,14 +246,14 @@ export class TMDSongInspector {
   ];
 
   /**
-   * Inspects a parsed TMD Sheet and produces an in-depth TMDSongProfile.
+   * Inspects a parsed TMD Sheet and produces an in-depth TmdSongProfile.
    */
   public static inspect(
     sheet: Sheet,
     targetInstrument?: string,
-    locale: TMDLocale = "zh-Hant"
-  ): TMDSongProfile {
-    const effectiveSheet = TMDMacroEvaluator.expandThrowing(sheet);
+    locale: TmdLocale = "zh-Hant"
+  ): TmdSongProfile {
+    const effectiveSheet = TmdMacroEvaluator.expandThrowing(sheet);
     const title = effectiveSheet.name || "Untitled";
     const initialTempo = effectiveSheet.speed && effectiveSheet.speed > 0 ? effectiveSheet.speed : DEFAULT_TEMPO_BPM;
     const initialKey = effectiveSheet.keySignature ? effectiveSheet.keySignature.toString() : "C";
@@ -265,7 +265,7 @@ export class TMDSongInspector {
 
     // 2. Instrument Ranges
     const distinctInsts = SheetInstrumentHelper.distinctInstruments(effectiveSheet, false);
-    const instrumentRanges: TMDPitchRangeProfile[] = [];
+    const instrumentRanges: TmdPitchRangeProfile[] = [];
     for (const inst of distinctInsts) {
       const profile = this.buildPitchProfile(inst, effectiveSheet, timingProfile, timelineDirectives);
       if (profile) {
@@ -303,17 +303,17 @@ export class TMDSongInspector {
     };
   }
 
-  private static buildTimingProfile(sheet: Sheet, timelineDirectives: PlaybackDirectiveEvent[]): TMDTimingProfile {
-    return TMDSongTimingAnalyzer.analyze(sheet, timelineDirectives);
+  private static buildTimingProfile(sheet: Sheet, timelineDirectives: PlaybackDirectiveEvent[]): TmdTimingProfile {
+    return TmdSongTimingAnalyzer.analyze(sheet, timelineDirectives);
   }
 
   private static buildPitchProfile(
     instrument: string,
     sheet: Sheet,
-    timingProfile: TMDTimingProfile,
+    timingProfile: TmdTimingProfile,
     timelineDirectives: PlaybackDirectiveEvent[]
-  ): TMDPitchRangeProfile | null {
-    return TMDSongPitchRangeAnalyzer.analyze(instrument, sheet, timingProfile, timelineDirectives);
+  ): TmdPitchRangeProfile | null {
+    return TmdSongPitchRangeAnalyzer.analyze(instrument, sheet, timingProfile, timelineDirectives);
 
   }
 
@@ -321,7 +321,7 @@ export class TMDSongInspector {
     const instruments = new Set(sheet.entries.map((paragraph) => paragraph.assignment).filter((instrument): instrument is string => Boolean(instrument && instrument.trim().length > 0)));
     const directives: PlaybackDirectiveEvent[] = [];
     for (const instrument of instruments) {
-      directives.push(...TMDPlaybackRenderer.render(sheet, instrument).directives);
+      directives.push(...TmdPlaybackRenderer.render(sheet, instrument).directives);
     }
     return directives
       .sort((a, b) => a.position - b.position)
@@ -336,18 +336,18 @@ export class TMDSongInspector {
   }
 
   public static evaluateDifficulty(spanSemitones: number): PitchRangeDifficulty {
-    return TMDSongPitchRangeAnalyzer.evaluateDifficulty(spanSemitones);
+    return TmdSongPitchRangeAnalyzer.evaluateDifficulty(spanSemitones);
   }
 
   public static evaluateSuitableVoiceTypes(lowestMidi: number, highestMidi: number): VocalClassification[] {
-    return TMDSongPitchRangeAnalyzer.evaluateSuitableVoiceTypes(lowestMidi, highestMidi);
+    return TmdSongPitchRangeAnalyzer.evaluateSuitableVoiceTypes(lowestMidi, highestMidi);
   }
 
-  private static buildHarmonyProfile(sheet: Sheet): TMDHarmonyProfile {
-    return TMDSongHarmonyAnalyzer.analyze(sheet);
+  private static buildHarmonyProfile(sheet: Sheet): TmdHarmonyProfile {
+    return TmdSongHarmonyAnalyzer.analyze(sheet);
   }
 
-  private static buildDensityProfile(sheet: Sheet): TMDArrangementDensityProfile {
+  private static buildDensityProfile(sheet: Sheet): TmdArrangementDensityProfile {
     const sectionDict: Record<string, string[]> = {};
     for (const p of sheet.entries) {
       const assignment = p.assignment;
@@ -359,7 +359,7 @@ export class TMDSongInspector {
       sectionDict[p.name].push(assignment);
     }
 
-    const sectionDensities: TMDSectionDensity[] = [];
+    const sectionDensities: TmdSectionDensity[] = [];
     let maxTracks = 0;
 
     for (const [secName, instList] of Object.entries(sectionDict)) {
@@ -382,7 +382,7 @@ export class TMDSongInspector {
     };
   }
 
-  private static formatNoteLocation(note: TMDNotePitchInfo): string {
+  private static formatNoteLocation(note: TmdNotePitchInfo): string {
     const mins = Math.floor(note.timeSeconds / 60);
     const secs = Math.floor(note.timeSeconds % 60);
     const timeStr = `${mins}:${secs.toString().padStart(2, "0")}`;
@@ -397,29 +397,29 @@ export class TMDSongInspector {
 
   private static buildTonalityProfile(
     sheet: Sheet,
-    timingProfile: TMDTimingProfile,
-    locale: TMDLocale
-  ): TMDTonalityProfile {
-    return TMDSongTonalityAnalyzer.analyze(sheet, timingProfile, locale);
+    timingProfile: TmdTimingProfile,
+    locale: TmdLocale
+  ): TmdTonalityProfile {
+    return TmdSongTonalityAnalyzer.analyze(sheet, timingProfile, locale);
   }
 
-  private static modeLabel(mode: TMDTonalityMode, localizer: TMDLocalizer): string {
-    return TMDSongTonalityAnalyzer.modeLabel(mode, localizer);
+  private static modeLabel(mode: TmdTonalityMode, localizer: TmdLocalizer): string {
+    return TmdSongTonalityAnalyzer.modeLabel(mode, localizer);
   }
 
   public static localizeTonalityNarrative(
-    tonality: TMDTonalityProfile,
-    locale: TMDLocale,
-  ): Pick<TMDTonalityProfile, "summaryText" | "moodDescription" | "modulationStory"> {
-    return TMDSongTonalityAnalyzer.localizeTonalityNarrative(tonality, locale);
+    tonality: TmdTonalityProfile,
+    locale: TmdLocale,
+  ): Pick<TmdTonalityProfile, "summaryText" | "moodDescription" | "modulationStory"> {
+    return TmdSongTonalityAnalyzer.localizeTonalityNarrative(tonality, locale);
   }
 
   /**
    * Generates a human-readable plain text / ASCII inspection report.
    */
-  public static generateReport(profile: TMDSongProfile, locale?: TMDLocale): string {
+  public static generateReport(profile: TmdSongProfile, locale?: TmdLocale): string {
     const activeLocale = locale || profile.locale || "zh-Hant";
-    const localizer = new TMDLocalizer(activeLocale);
+    const localizer = new TmdLocalizer(activeLocale);
     const localizedTonality = profile.tonality
       ? this.localizeTonalityNarrative(profile.tonality, activeLocale)
       : undefined;
@@ -429,37 +429,37 @@ export class TMDSongInspector {
 
     const lines: string[] = [];
     lines.push("================================================================================");
-    lines.push(`📊 ${localizer.text(TMDLocalizationKey.reportTitle)}: [ ${profile.title} ]`);
+    lines.push(`📊 ${localizer.text(TmdLocalizationKey.reportTitle)}: [ ${profile.title} ]`);
     lines.push("================================================================================");
-    lines.push(`⏱  ${localizer.text(TMDLocalizationKey.duration)}:       ${timeFormatted}, ${profile.timing.totalMeasures} ${localizer.text(TMDLocalizationKey.measuresTotal)}`);
+    lines.push(`⏱  ${localizer.text(TmdLocalizationKey.duration)}:       ${timeFormatted}, ${profile.timing.totalMeasures} ${localizer.text(TmdLocalizationKey.measuresTotal)}`);
     lines.push(
-      `🎼 ${localizer.text(TMDLocalizationKey.keyAndTempo)}:    ${localizer.text(TMDLocalizationKey.playbackBase)} ${profile.initialKey}, != ${profile.initialTempo} BPM, <${profile.initialTimeSignature}>`
+      `🎼 ${localizer.text(TmdLocalizationKey.keyAndTempo)}:    ${localizer.text(TmdLocalizationKey.playbackBase)} ${profile.initialKey}, != ${profile.initialTempo} BPM, <${profile.initialTimeSignature}>`
     );
-    lines.push(`   - ${localizer.text(TMDLocalizationKey.analysisScope)}`);
+    lines.push(`   - ${localizer.text(TmdLocalizationKey.analysisScope)}`);
 
     if (profile.vocalRange) {
       const vocal = profile.vocalRange;
       const octaves = vocal.spanOctaves.toFixed(1);
       lines.push(
-        `🎤 ${localizer.text(TMDLocalizationKey.vocalRange)}:    ${vocal.lowestNote.noteName} (MIDI ${vocal.lowestNote.midiPitch}) – ${vocal.highestNote.noteName} (MIDI ${vocal.highestNote.midiPitch}) [${localizer.text(TMDLocalizationKey.span)}: ${vocal.spanSemitones} ${localizer.text(TMDLocalizationKey.semitones)} / ${octaves} ${localizer.text(TMDLocalizationKey.octaves)}, ${localizer.text(TMDLocalizationKey.difficulty)}: ${vocal.difficulty}]`
+        `🎤 ${localizer.text(TmdLocalizationKey.vocalRange)}:    ${vocal.lowestNote.noteName} (MIDI ${vocal.lowestNote.midiPitch}) – ${vocal.highestNote.noteName} (MIDI ${vocal.highestNote.midiPitch}) [${localizer.text(TmdLocalizationKey.span)}: ${vocal.spanSemitones} ${localizer.text(TmdLocalizationKey.semitones)} / ${octaves} ${localizer.text(TmdLocalizationKey.octaves)}, ${localizer.text(TmdLocalizationKey.difficulty)}: ${vocal.difficulty}]`
       );
-      lines.push(`   - ${localizer.text(TMDLocalizationKey.lowestNote)}:  ${vocal.lowestNote.noteName} in ${TMDSongInspector.formatNoteLocation(vocal.lowestNote)}`);
-      lines.push(`   - ${localizer.text(TMDLocalizationKey.highestNote)}: ${vocal.highestNote.noteName} in ${TMDSongInspector.formatNoteLocation(vocal.highestNote)}`);
+      lines.push(`   - ${localizer.text(TmdLocalizationKey.lowestNote)}:  ${vocal.lowestNote.noteName} in ${TmdSongInspector.formatNoteLocation(vocal.lowestNote)}`);
+      lines.push(`   - ${localizer.text(TmdLocalizationKey.highestNote)}: ${vocal.highestNote.noteName} in ${TmdSongInspector.formatNoteLocation(vocal.highestNote)}`);
       if (vocal.suitableVoiceTypes.length > 0) {
-        lines.push(`   - ${localizer.text(TMDLocalizationKey.suitableFor)}: ${vocal.suitableVoiceTypes.join(", ")}`);
+        lines.push(`   - ${localizer.text(TmdLocalizationKey.suitableFor)}: ${vocal.suitableVoiceTypes.join(", ")}`);
       }
     }
 
     lines.push(
-      `🏛  ${localizer.text(TMDLocalizationKey.structure)}:      ` +
+      `🏛  ${localizer.text(TmdLocalizationKey.structure)}:      ` +
         profile.timing.sections
           .map((s) => `${s.name} (${s.durationSeconds.toFixed(1)}s)`)
           .join(" -> ")
     );
-    lines.push(`⚡ ${localizer.text(TMDLocalizationKey.density)}:        Peak ${profile.density.maxConcurrentTracks} ${localizer.text(TMDLocalizationKey.tracksConcurrently)}`);
+    lines.push(`⚡ ${localizer.text(TmdLocalizationKey.density)}:        Peak ${profile.density.maxConcurrentTracks} ${localizer.text(TmdLocalizationKey.tracksConcurrently)}`);
 
     if (profile.harmony.distinctChords.length > 0) {
-      lines.push(`🎹 ${localizer.text(TMDLocalizationKey.harmony)}:        ` + profile.harmony.distinctChords.join(" "));
+      lines.push(`🎹 ${localizer.text(TmdLocalizationKey.harmony)}:        ` + profile.harmony.distinctChords.join(" "));
     }
 
     if (profile.tonality) {
@@ -469,12 +469,12 @@ export class TMDSongInspector {
       const diatonicPct = `${(tonality.globalPitchClasses.diatonicRatio * 100.0).toFixed(1)}%`;
       const topPitches = tonality.globalPitchClasses.topPitchClasses.slice(0, 5).join(", ");
 
-      lines.push(`🗝  ${localizer.text(TMDLocalizationKey.tonalityDiagnosis)}       ${localizedTonality?.summaryText ?? tonality.summaryText}`);
-      lines.push(`   - ${localizer.text(TMDLocalizationKey.mood)}:    ${localizedTonality?.moodDescription ?? tonality.moodDescription}`);
-      lines.push(`   - ${localizer.text(TMDLocalizationKey.modulationJourney)}:    ${localizedTonality?.modulationStory ?? tonality.modulationStory}`);
-      lines.push(`   - ${localizer.text(TMDLocalizationKey.tonalCore)}:  ${topPitches}`);
+      lines.push(`🗝  ${localizer.text(TmdLocalizationKey.tonalityDiagnosis)}       ${localizedTonality?.summaryText ?? tonality.summaryText}`);
+      lines.push(`   - ${localizer.text(TmdLocalizationKey.mood)}:    ${localizedTonality?.moodDescription ?? tonality.moodDescription}`);
+      lines.push(`   - ${localizer.text(TmdLocalizationKey.modulationJourney)}:    ${localizedTonality?.modulationStory ?? tonality.modulationStory}`);
+      lines.push(`   - ${localizer.text(TmdLocalizationKey.tonalCore)}:  ${topPitches}`);
       lines.push(
-        `   - ${localizer.text(TMDLocalizationKey.tonalMetrics)}:    ${tonality.globalInference.tonic ?? "?"} ${this.modeLabel(tonality.globalInference.mode, localizer)} [${localizer.text(TMDLocalizationKey.correlation)}: ${corrStr}, ${localizer.text(TMDLocalizationKey.stability)}: ${stabStr}, ${localizer.text(TMDLocalizationKey.diatonicPurity)}: ${diatonicPct}]`
+        `   - ${localizer.text(TmdLocalizationKey.tonalMetrics)}:    ${tonality.globalInference.tonic ?? "?"} ${this.modeLabel(tonality.globalInference.mode, localizer)} [${localizer.text(TmdLocalizationKey.correlation)}: ${corrStr}, ${localizer.text(TmdLocalizationKey.stability)}: ${stabStr}, ${localizer.text(TmdLocalizationKey.diatonicPurity)}: ${diatonicPct}]`
       );
 
       const candidateStr = tonality.globalInference.topCandidates
@@ -482,24 +482,24 @@ export class TMDSongInspector {
         .map((c) => `${c.tonic} ${this.modeLabel(c.mode, localizer)} (${c.correlation.toFixed(2)})`)
         .join(", ");
       if (candidateStr.length > 0) {
-        lines.push(`   - ${localizer.text(TMDLocalizationKey.candidateKeys)}: ${candidateStr}`);
+        lines.push(`   - ${localizer.text(TmdLocalizationKey.candidateKeys)}: ${candidateStr}`);
       }
 
       const pathStr = tonality.circleOfFifthsPath
         .map((step) => `${step >= 0 ? "+" : ""}${step}`)
         .join(" -> ");
       if (pathStr.length > 0) {
-        lines.push(`   - ${localizer.text(TMDLocalizationKey.circleOfFifths)}:   ${pathStr}`);
+        lines.push(`   - ${localizer.text(TmdLocalizationKey.circleOfFifths)}:   ${pathStr}`);
       }
 
       if (tonality.sections.length > 0) {
-        lines.push(`   - ${localizer.text(TMDLocalizationKey.sectionDetails)}:`);
+        lines.push(`   - ${localizer.text(TmdLocalizationKey.sectionDetails)}:`);
         for (const sec of tonality.sections) {
           const secCorr = sec.inferredTonality.bestCorrelation.toFixed(2);
           const secDiatonic = `${(sec.pitchClasses.diatonicRatio * 100.0).toFixed(1)}%`;
-          let secLine = `     • [${sec.sectionName} #${sec.occurrenceIndex}]: ${sec.inferredTonality.tonic ?? "?"} ${this.modeLabel(sec.inferredTonality.mode, localizer)} (r: ${secCorr}, ${localizer.text(TMDLocalizationKey.diatonicPurity)}: ${secDiatonic}`;
+          let secLine = `     • [${sec.sectionName} #${sec.occurrenceIndex}]: ${sec.inferredTonality.tonic ?? "?"} ${this.modeLabel(sec.inferredTonality.mode, localizer)} (r: ${secCorr}, ${localizer.text(TmdLocalizationKey.diatonicPurity)}: ${secDiatonic}`;
           if (sec.nonDiatonicNotes.length > 0) {
-            secLine += `, ${localizer.text(TMDLocalizationKey.nonDiatonic)}: ${sec.nonDiatonicNotes.join(", ")}`;
+            secLine += `, ${localizer.text(TmdLocalizationKey.nonDiatonic)}: ${sec.nonDiatonicNotes.join(", ")}`;
           }
           secLine += ")";
           lines.push(secLine);
@@ -508,20 +508,20 @@ export class TMDSongInspector {
 
       // ASCII Visualizations
       lines.push("");
-      lines.push(`  [ ${localizer.text(TMDLocalizationKey.circleOfFifthsTitle)} ]`);
+      lines.push(`  [ ${localizer.text(TmdLocalizationKey.circleOfFifthsTitle)} ]`);
       lines.push(this.renderAsciiCircleOfFifths(tonality));
       lines.push("");
-      lines.push(`  [ ${localizer.text(TMDLocalizationKey.pitchClassDistributionTitle)} ]`);
+      lines.push(`  [ ${localizer.text(TmdLocalizationKey.pitchClassDistributionTitle)} ]`);
       lines.push(this.renderPitchClassHistogram(tonality));
     }
 
     lines.push("--------------------------------------------------------------------------------");
-    lines.push(localizer.text(TMDLocalizationKey.instrumentRanges));
+    lines.push(localizer.text(TmdLocalizationKey.instrumentRanges));
     for (const inst of profile.instrumentRanges) {
       const padded = inst.assignment.padEnd(14, " ");
       const octaves = inst.spanOctaves.toFixed(1);
       lines.push(
-        `  - ${padded}: ${inst.lowestNote.noteName} – ${inst.highestNote.noteName} (${inst.spanSemitones} ${localizer.text(TMDLocalizationKey.semitones)} / ${octaves} ${localizer.text(TMDLocalizationKey.octaves)}, ${inst.totalNotes} ${localizer.text(TMDLocalizationKey.notes)})`
+        `  - ${padded}: ${inst.lowestNote.noteName} – ${inst.highestNote.noteName} (${inst.spanSemitones} ${localizer.text(TmdLocalizationKey.semitones)} / ${octaves} ${localizer.text(TmdLocalizationKey.octaves)}, ${inst.totalNotes} ${localizer.text(TmdLocalizationKey.notes)})`
       );
     }
     lines.push("================================================================================");
@@ -529,7 +529,7 @@ export class TMDSongInspector {
     return lines.join("\n");
   }
 
-  private static renderAsciiCircleOfFifths(tonality: TMDTonalityProfile): string {
+  private static renderAsciiCircleOfFifths(tonality: TmdTonalityProfile): string {
     const activeSteps = new Set<number>(tonality.sections.map((sec) => sec.fifthsPosition));
 
     function node(name: string, step: number): string {
@@ -562,7 +562,7 @@ export class TMDSongInspector {
     return lines.join("\n");
   }
 
-  private static renderPitchClassHistogram(tonality: TMDTonalityProfile): string {
+  private static renderPitchClassHistogram(tonality: TmdTonalityProfile): string {
     const pitchClassNames = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
     const weights = tonality.globalPitchClasses.weights;
     const maxWeight = Math.max(...weights);

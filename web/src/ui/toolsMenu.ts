@@ -1,5 +1,5 @@
-import { TMDRefactor } from "../../../src/refactoring/refactor.js";
-import type { TMDWebEditor } from "../editor.js";
+import { TmdRefactor } from "../../../src/refactoring/refactor.js";
+import type { TmdWebEditor } from "../editor.js";
 import { t } from "../i18n.js";
 
 export interface ContextMenuElements {
@@ -33,11 +33,11 @@ export interface ToolsDropdownElements {
   exportDropdown: HTMLElement;
 }
 
-export class TMDToolsAndContextMenuController {
+export class TmdToolsAndContextMenuController {
   constructor(
     private contextElements: ContextMenuElements,
     private toolsElements: ToolsDropdownElements,
-    private getEditor: () => TMDWebEditor,
+    private getEditor: () => TmdWebEditor,
     private onScoreUpdated: (text: string) => void,
     private showToast: (message: string, type?: "success" | "error") => void
   ) {}
@@ -55,7 +55,7 @@ export class TMDToolsAndContextMenuController {
         await editor.formatDocument();
       } else {
         const current = editor.getContent();
-        const formatted = TMDRefactor.format(current);
+        const formatted = TmdRefactor.format(current);
         editor.setContent(formatted);
       }
       this.onScoreUpdated(editor.getContent());
@@ -71,11 +71,11 @@ export class TMDToolsAndContextMenuController {
     const selection = editor.getSelection();
     try {
       if (selection && selection.trim().length > 0) {
-        const doubled = TMDRefactor.doubleGrid(selection);
+        const doubled = TmdRefactor.doubleGrid(selection);
         editor.replaceSelection(doubled);
       } else {
         const full = editor.getContent();
-        const doubled = TMDRefactor.doubleGrid(full);
+        const doubled = TmdRefactor.doubleGrid(full);
         editor.setContent(doubled);
       }
       const updated = editor.getContent();
@@ -92,11 +92,11 @@ export class TMDToolsAndContextMenuController {
     const selection = editor.getSelection();
     try {
       if (selection && selection.trim().length > 0) {
-        const halved = TMDRefactor.halveGrid(selection);
+        const halved = TmdRefactor.halveGrid(selection);
         editor.replaceSelection(halved);
       } else {
         const full = editor.getContent();
-        const halved = TMDRefactor.halveGrid(full);
+        const halved = TmdRefactor.halveGrid(full);
         editor.setContent(halved);
       }
       const updated = editor.getContent();
@@ -113,12 +113,12 @@ export class TMDToolsAndContextMenuController {
     const selection = editor.getSelection();
     try {
       if (selection && selection.trim().length > 0) {
-        const optimized = TMDRefactor.optimizeGrid(selection);
+        const optimized = TmdRefactor.optimizeGrid(selection);
         editor.replaceSelection(optimized);
       } else {
         const full = editor.getContent();
         const ctx = editor.getCursorContext();
-        const optimized = TMDRefactor.optimizeGrid(
+        const optimized = TmdRefactor.optimizeGrid(
           full,
           ctx.section && ctx.instrument ? { section: ctx.section, instrument: ctx.instrument } : undefined
         );

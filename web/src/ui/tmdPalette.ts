@@ -1,4 +1,4 @@
-import type { TMDWebEditor } from "../editor.js";
+import type { TmdWebEditor } from "../editor.js";
 import { onLanguageChange, t } from "../i18n.js";
 
 export interface TmdPaletteEntry {
@@ -62,7 +62,7 @@ export function applyPaletteInsertion(
 export class TmdPaletteController {
   constructor(
     private readonly root: HTMLElement,
-    private readonly editor: TMDWebEditor
+    private readonly editor: TmdWebEditor
   ) {
     this.render();
     onLanguageChange(() => this.render());

@@ -1,7 +1,7 @@
 import { SheetInstrumentHelper } from "../domain/index.js";
-import { TMDPlaybackRenderer } from "../playback/index.js";
+import { TmdPlaybackRenderer } from "../playback/index.js";
 import { Sheet } from "../syntax/index.js";
-import { TMDMIDIGenerator } from "./midi.js";
+import { TmdMIDIGenerator } from "./midi.js";
 
 /** Options for configuring UTAU .ust exports. */
 export interface USTExportOptions {
@@ -21,7 +21,7 @@ export interface USTExportOptions {
  * Exporter for UTAU sequence text (.ust) format, fully compatible with
  * original UTAU and modern cross-platform OpenUtau.
  */
-export class TMDUSTGenerator {
+export class TmdUSTGenerator {
   /**
    * Generates a .ust formatted string from a parsed TMD Sheet.
    */
@@ -31,7 +31,7 @@ export class TMDUSTGenerator {
     options: USTExportOptions = {}
   ): string {
     const selectedInstrument = this.resolveTargetInstrument(sheet, targetInstrument);
-    const timeline = TMDPlaybackRenderer.render(sheet, selectedInstrument);
+    const timeline = TmdPlaybackRenderer.render(sheet, selectedInstrument);
 
     const initialTempo = sheet.speed > 0 ? sheet.speed : 120.0;
     const title =
@@ -72,12 +72,12 @@ export class TMDUSTGenerator {
       const ev = timeline.events[i];
       if (ev.content.type === "note") {
         let bestNoteEvent = ev;
-        let bestPitch = TMDMIDIGenerator.noteToMIDIPitch(ev.content.note, ev.state.keyOffset);
+        let bestPitch = TmdMIDIGenerator.noteToMIDIPitch(ev.content.note, ev.state.keyOffset);
         let j = i + 1;
         while (j < timeline.events.length && Math.abs(timeline.events[j].position - ev.position) < 1e-4) {
           const nextEv = timeline.events[j];
           if (nextEv.content.type === "note") {
-            const p = TMDMIDIGenerator.noteToMIDIPitch(nextEv.content.note, nextEv.state.keyOffset);
+            const p = TmdMIDIGenerator.noteToMIDIPitch(nextEv.content.note, nextEv.state.keyOffset);
             if (p > bestPitch) {
               bestPitch = p;
               bestNoteEvent = nextEv;
@@ -107,7 +107,7 @@ export class TMDUSTGenerator {
 
       if (event.content.type === "note") {
         const ticks = Math.max(1, Math.round(event.duration * ticksPerQuarter));
-        const pitch = TMDMIDIGenerator.noteToMIDIPitch(event.content.note, event.state.keyOffset);
+        const pitch = TmdMIDIGenerator.noteToMIDIPitch(event.content.note, event.state.keyOffset);
         const lyric = lyricIndex < lyrics.length ? lyrics[lyricIndex++] : defaultLyric;
 
         const noteLines: string[] = [

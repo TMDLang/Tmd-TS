@@ -1,7 +1,7 @@
 import * as path from "node:path";
 
 import { readUTF8, writeUTF8 } from "../io/text_io.js";
-import { TMDRefactor } from "../refactoring/index.js";
+import { TmdRefactor } from "../refactoring/index.js";
 
 export function handleRefactorCommand(argv: string[]): number {
   const sub = argv[0];
@@ -78,7 +78,7 @@ SUBCOMMANDS:
 
     let refactored: string;
     try {
-      refactored = TMDRefactor.renameInstrument(content, from, to);
+      refactored = TmdRefactor.renameInstrument(content, from, to);
     } catch (error: any) {
       console.error(`Refactor error: ${error.message || String(error)}`);
       return 1;
@@ -148,7 +148,7 @@ SUBCOMMANDS:
 
     let refactored: string;
     try {
-      refactored = TMDRefactor.renameSection(content, from, to);
+      refactored = TmdRefactor.renameSection(content, from, to);
     } catch (error: any) {
       console.error(`Refactor error: ${error.message || String(error)}`);
       return 1;
@@ -208,7 +208,7 @@ SUBCOMMANDS:
 
     let extracted: string;
     try {
-      extracted = TMDRefactor.extractInstrument(content, instrument);
+      extracted = TmdRefactor.extractInstrument(content, instrument);
     } catch (error: any) {
       console.error(`Refactor error: ${error.message || String(error)}`);
       return 1;
@@ -277,11 +277,11 @@ SUBCOMMANDS:
     try {
       const target = targetSection || targetInstrument ? { section: targetSection, instrument: targetInstrument } : undefined;
       if (sub === "double-grid") {
-        transformed = TMDRefactor.doubleGrid(content, target);
+        transformed = TmdRefactor.doubleGrid(content, target);
       } else if (sub === "halve-grid") {
-        transformed = TMDRefactor.halveGrid(content, target);
+        transformed = TmdRefactor.halveGrid(content, target);
       } else {
-        transformed = TMDRefactor.optimizeGrid(content, target);
+        transformed = TmdRefactor.optimizeGrid(content, target);
       }
     } catch (error: any) {
       console.error(`Refactor error: ${error.message || String(error)}`);
@@ -362,7 +362,7 @@ SUBCOMMANDS:
 
     let transformed: string;
     try {
-      transformed = TMDRefactor.duplicateTrack(content, source, target, { section, octaveShift });
+      transformed = TmdRefactor.duplicateTrack(content, source, target, { section, octaveShift });
     } catch (error: any) {
       console.error(`Refactor error: ${error.message || String(error)}`);
       return 1;
@@ -442,7 +442,7 @@ SUBCOMMANDS:
 
     let transformed: string;
     try {
-      transformed = TMDRefactor.generateHarmony(content, source, target, { section, intervalSteps });
+      transformed = TmdRefactor.generateHarmony(content, source, target, { section, intervalSteps });
     } catch (error: any) {
       console.error(`Refactor error: ${error.message || String(error)}`);
       return 1;
@@ -502,7 +502,7 @@ SUBCOMMANDS:
 
     let transformed: string;
     try {
-      transformed = TMDRefactor.inlineOrders(content);
+      transformed = TmdRefactor.inlineOrders(content);
     } catch (error: any) {
       console.error(`Refactor error: ${error.message || String(error)}`);
       return 1;
@@ -599,7 +599,7 @@ OPTIONS:
 
     let transformed: string;
     try {
-      transformed = TMDRefactor.transpose(content, {
+      transformed = TmdRefactor.transpose(content, {
         semitones,
         diatonicSteps,
         updateKeySignature,

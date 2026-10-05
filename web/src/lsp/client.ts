@@ -1,30 +1,30 @@
 import {
-  TMDJSONRPCCodec,
-  TMDJSONRPCFrame,
-  TMDLSPCompletionItem,
-  TMDLSPDiagnostic,
-  TMDLSPPosition,
-  TMDLSPServer,
+  TmdJSONRPCCodec,
+  TmdJSONRPCFrame,
+  TmdLSPCompletionItem,
+  TmdLSPDiagnostic,
+  TmdLSPPosition,
+  TmdLSPServer,
 } from "../../../src/lsp/index.js";
 
-export interface TMDWebLSPClientOptions {
+export interface TmdWebLSPClientOptions {
   uri?: string;
-  onDiagnostics?: (diagnostics: TMDLSPDiagnostic[]) => void;
+  onDiagnostics?: (diagnostics: TmdLSPDiagnostic[]) => void;
 }
 
-export class TMDWebLSPClient {
+export class TmdWebLSPClient {
   public readonly uri: string;
-  private server: TMDLSPServer;
+  private server: TmdLSPServer;
   private nextId: number = 1;
   private pendingRequests: Map<number | string, (response: any) => void> = new Map();
-  private onDiagnostics?: (diagnostics: TMDLSPDiagnostic[]) => void;
-  private diagnosticWaiters: Array<(diagnostics: TMDLSPDiagnostic[]) => void> = [];
+  private onDiagnostics?: (diagnostics: TmdLSPDiagnostic[]) => void;
+  private diagnosticWaiters: Array<(diagnostics: TmdLSPDiagnostic[]) => void> = [];
 
-  constructor(options?: TMDWebLSPClientOptions) {
+  constructor(options?: TmdWebLSPClientOptions) {
     this.uri = options?.uri || "inmemory://score.tmd";
     this.onDiagnostics = options?.onDiagnostics;
 
-    this.server = new TMDLSPServer((outputString) => {
+    this.server = new TmdLSPServer((outputString) => {
       this.handleServerOutput(outputString);
     });
 
@@ -37,7 +37,7 @@ export class TMDWebLSPClient {
   }
 
   private handleServerOutput(raw: string) {
-    const frames = TMDJSONRPCCodec.decode(raw);
+    const frames = TmdJSONRPCCodec.decode(raw);
     for (const frame of frames) {
       // Check if notification
       if (frame.method === "textDocument/publishDiagnostics") {
@@ -89,7 +89,7 @@ export class TMDWebLSPClient {
     });
   }
 
-  public diagnose(text: string, version: number = 1): Promise<TMDLSPDiagnostic[]> {
+  public diagnose(text: string, version: number = 1): Promise<TmdLSPDiagnostic[]> {
     return new Promise((resolve) => {
       this.diagnosticWaiters.push(resolve);
       this.changeDocument(text, version);
@@ -104,16 +104,16 @@ export class TMDWebLSPClient {
     });
   }
 
-  public async requestCompletions(line: number, character: number): Promise<TMDLSPCompletionItem[]> {
+  public async requestCompletions(line: number, character: number): Promise<TmdLSPCompletionItem[]> {
     const resp = await this.sendRequest("textDocument/completion", {
       textDocument: { uri: this.uri },
       position: { line, character },
     });
     // In our JSON-RPC decode, if the message returned result, frame will have it or we decode it
-    // Wait, let's look at how TMDJSONRPCCodec encodes response:
+    // Wait, let's look at how TmdJSONRPCCodec encodes response:
     // payload: { jsonrpc: '2.0', id, result, error }
     // decode turns it into { id, method, params, result, error }
-    return (resp?.result || []) as TMDLSPCompletionItem[];
+    return (resp?.result || []) as TmdLSPCompletionItem[];
   }
 
   public async requestFormatting(): Promise<Array<{ range: any; newText: string }>> {
@@ -153,7 +153,7 @@ export class TMDWebLSPClient {
     return { line, character };
   }
 
-  public convertToCMDiagnostics(doc: string, lspDiagnostics: TMDLSPDiagnostic[]): Array<{
+  public convertToCMDiagnostics(doc: string, lspDiagnostics: TmdLSPDiagnostic[]): Array<{
     from: number;
     to: number;
     severity: "error" | "warning" | "info" | "hint";
@@ -181,7 +181,7 @@ export class TMDWebLSPClient {
     });
   }
 
-  public convertToCMCompletions(items: TMDLSPCompletionItem[]): Array<{
+  public convertToCMCompletions(items: TmdLSPCompletionItem[]): Array<{
     label: string;
     detail?: string;
     info?: string;

@@ -22,7 +22,7 @@ vi.mock("jzz-synth-tiny", () => ({ default: () => {} }));
 vi.mock("jzz-midi-smf", () => ({ default: () => {} }));
 vi.mock("soundfont-player", () => ({ default: {} }));
 
-import { TMDMidiPlayer,tmdPlayer } from "../web/src/midi-player.js";
+import { TmdMidiPlayer,tmdPlayer } from "../web/src/midi-player.js";
 
 describe("TMD Player Replay & End-of-Track Invariants (TDD)", () => {
   beforeEach(() => {

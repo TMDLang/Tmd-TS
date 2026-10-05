@@ -1,17 +1,17 @@
 import { describe, expect,it } from "vitest";
 
-import { TMDSongHarmonyAnalyzer } from "../src/analysis/harmony_analyzer.js";
-import { TMDSongInspector } from "../src/analysis/inspector.js";
-import { TMDSongPitchRangeAnalyzer } from "../src/analysis/pitch_range_analyzer.js";
-import { TMDSongTimingAnalyzer } from "../src/analysis/timing_analyzer.js";
-import { TMDSongTonalityAnalyzer } from "../src/analysis/tonality_analyzer.js";
-import { TMDPlaybackRenderer } from "../src/playback/playback.js";
-import { TMDParser } from "../src/syntax/parser.js";
+import { TmdSongHarmonyAnalyzer } from "../src/analysis/harmony_analyzer.js";
+import { TmdSongInspector } from "../src/analysis/inspector.js";
+import { TmdSongPitchRangeAnalyzer } from "../src/analysis/pitch_range_analyzer.js";
+import { TmdSongTimingAnalyzer } from "../src/analysis/timing_analyzer.js";
+import { TmdSongTonalityAnalyzer } from "../src/analysis/tonality_analyzer.js";
+import { TmdPlaybackRenderer } from "../src/playback/playback.js";
+import { TmdParser } from "../src/syntax/parser.js";
 import { inspectorBasicFixture } from "./conformanceFixtures.js";
 
-describe("TMDSongInspector (TDD port from TmdSwift)", () => {
+describe("TmdSongInspector (TDD port from TmdSwift)", () => {
   it("runs timing analysis independently from the Inspector facade", () => {
-    const sheet = TMDParser.parse(`::SCORE::
+    const sheet = TmdParser.parse(`::SCORE::
 ** Timing Analyzer **
 != 120
 ?= C
@@ -24,8 +24,8 @@ intro:Piano@|0|{
 
 -> intro ->#
 `);
-    const directives = TMDPlaybackRenderer.render(sheet, "Piano").directives;
-    const timing = TMDSongTimingAnalyzer.analyze(sheet, directives);
+    const directives = TmdPlaybackRenderer.render(sheet, "Piano").directives;
+    const timing = TmdSongTimingAnalyzer.analyze(sheet, directives);
 
     expect(timing.totalMeasures).toBe(1);
     expect(timing.totalDurationSeconds).toBeCloseTo(2, 5);
@@ -33,7 +33,7 @@ intro:Piano@|0|{
   });
 
   it("runs pitch-range analysis independently from the Inspector facade", () => {
-    const sheet = TMDParser.parse(`::SCORE::
+    const sheet = TmdParser.parse(`::SCORE::
 ** Pitch Analyzer **
 != 120
 ?= C
@@ -46,9 +46,9 @@ intro:Piano@|0|{
 
 -> intro ->#
 `);
-    const timeline = TMDPlaybackRenderer.render(sheet, "Piano");
-    const timing = TMDSongTimingAnalyzer.analyze(sheet, timeline.directives);
-    const profile = TMDSongPitchRangeAnalyzer.analyze("Piano", sheet, timing, timeline.directives);
+    const timeline = TmdPlaybackRenderer.render(sheet, "Piano");
+    const timing = TmdSongTimingAnalyzer.analyze(sheet, timeline.directives);
+    const profile = TmdSongPitchRangeAnalyzer.analyze("Piano", sheet, timing, timeline.directives);
 
     expect(profile).not.toBeNull();
     expect(profile?.totalNotes).toBe(4);
@@ -58,7 +58,7 @@ intro:Piano@|0|{
   });
 
   it("runs harmony analysis independently from the Inspector facade", () => {
-    const sheet = TMDParser.parse(`::SCORE::
+    const sheet = TmdParser.parse(`::SCORE::
 ** Harmony Analyzer **
 != 120
 ?= C
@@ -71,7 +71,7 @@ intro:Piano@|0|{
 
 -> intro ->#
 `);
-    const profile = TMDSongHarmonyAnalyzer.analyze(sheet);
+    const profile = TmdSongHarmonyAnalyzer.analyze(sheet);
 
     expect(profile.distinctChords).toEqual(["[C]", "[G]"]);
     expect(profile.chordCount).toBe(2);
@@ -79,7 +79,7 @@ intro:Piano@|0|{
   });
 
   it("runs tonality analysis independently from the Inspector facade", () => {
-    const sheet = TMDParser.parse(`::SCORE::
+    const sheet = TmdParser.parse(`::SCORE::
 ** Tonality Analyzer **
 != 120
 ?= C
@@ -92,9 +92,9 @@ intro:Piano@|0|{
 
 -> intro ->#
 `);
-    const timeline = TMDPlaybackRenderer.render(sheet, "Piano");
-    const timing = TMDSongTimingAnalyzer.analyze(sheet, timeline.directives);
-    const profile = TMDSongTonalityAnalyzer.analyze(sheet, timing, "zh-Hant");
+    const timeline = TmdPlaybackRenderer.render(sheet, "Piano");
+    const timing = TmdSongTimingAnalyzer.analyze(sheet, timeline.directives);
+    const profile = TmdSongTonalityAnalyzer.analyze(sheet, timing, "zh-Hant");
 
     expect(profile.globalPitchClasses.weights[0]).toBeGreaterThan(0);
     expect(profile.globalInference.tonic).not.toBeNull();
@@ -102,8 +102,8 @@ intro:Piano@|0|{
   });
 
   it("matches the shared Inspector fixture's stable profile fields", () => {
-    const sheet = TMDParser.parse(inspectorBasicFixture);
-    const profile = TMDSongInspector.inspect(sheet);
+    const sheet = TmdParser.parse(inspectorBasicFixture);
+    const profile = TmdSongInspector.inspect(sheet);
 
     expect(profile.timing.totalMeasures).toBe(1);
     expect(profile.timing.totalDurationSeconds).toBeCloseTo(2, 5);
@@ -116,7 +116,7 @@ intro:Piano@|0|{
   });
 
   it("localizes vocal range report labels in Traditional Chinese", () => {
-    const sheet = TMDParser.parse(`::SCORE::
+    const sheet = TmdParser.parse(`::SCORE::
 ** Vocal Report **
 != 120
 ?= C
@@ -129,7 +129,7 @@ verse:Vocal@|0|{
 -> verse ->#
 `);
 
-    const report = TMDSongInspector.generateReport(TMDSongInspector.inspect(sheet, "Vocal", "zh-Hant"));
+    const report = TmdSongInspector.generateReport(TmdSongInspector.inspect(sheet, "Vocal", "zh-Hant"));
     expect(report).not.toContain("Vocal Range");
     expect(report).not.toContain("Lowest Note");
     expect(report).not.toContain("Highest Note");
@@ -137,7 +137,7 @@ verse:Vocal@|0|{
   });
 
   it("does not create an Inspector Piano track for a prototype-only score", () => {
-    const sheet = TMDParser.parse(`::SCORE::
+    const sheet = TmdParser.parse(`::SCORE::
 ** Prototype Only **
 != 120
 ?= C
@@ -149,14 +149,14 @@ Theme{
 }
 `);
 
-    const profile = TMDSongInspector.inspect(sheet);
+    const profile = TmdSongInspector.inspect(sheet);
 
     expect(profile.instrumentRanges).toHaveLength(0);
     expect(profile.density.sectionDensities.every((section) => !section.instruments.includes(""))).toBe(true);
   });
 
   it("uses section tempo directives for timing duration and note timestamps", () => {
-    const sheet = TMDParser.parse(`::SCORE::
+    const sheet = TmdParser.parse(`::SCORE::
 ** Inspector Tempo **
 != 60
 ?= C
@@ -172,7 +172,7 @@ A:Vocal@|0|{
 -> A ->#
 `);
 
-    const profile = TMDSongInspector.inspect(sheet, "Vocal");
+    const profile = TmdSongInspector.inspect(sheet, "Vocal");
     expect(profile.timing.totalDurationSeconds).toBeCloseTo(6, 5);
     expect(profile.timing.sections[0].durationSeconds).toBeCloseTo(6, 5);
     expect(profile.vocalRange?.highestNote.timeSeconds).toBeCloseTo(5.5, 5);
@@ -218,10 +218,10 @@ chorus:Bass@|0|{
 -> intro -> verse -> {?+2} -> chorus ->#
 `;
 
-    const sheet = TMDParser.parse(tmd);
+    const sheet = TmdParser.parse(tmd);
     expect(sheet).toBeDefined();
 
-    const profile = TMDSongInspector.inspect(sheet);
+    const profile = TmdSongInspector.inspect(sheet);
 
     // 1. Basic Metadata & Keys
     expect(profile.title).toBe("Inspector Test Song");
@@ -286,7 +286,7 @@ chorus:Bass@|0|{
     expect(verseDensity!.instruments).toContain("Bass");
 
     // 7. Human-readable Report
-    const report = TMDSongInspector.generateReport(profile);
+    const report = TmdSongInspector.generateReport(profile);
     expect(report).toContain("TMD Song Profile: [ Inspector Test Song ]");
     expect(report).toContain("Duration:");
     expect(report).toContain("人聲音域:");
@@ -314,10 +314,10 @@ Bass {
 -> (canon Theme (V1 V2) 0) -> (loop Bass Cello 2) ->#
 `;
 
-    const sheet = TMDParser.parse(tmd);
+    const sheet = TmdParser.parse(tmd);
     expect(sheet).toBeDefined();
 
-    const profile = TMDSongInspector.inspect(sheet!);
+    const profile = TmdSongInspector.inspect(sheet!);
 
     // Should not contain empty string instrument
     const instruments = profile.instrumentRanges.map(r => r.assignment);
@@ -429,9 +429,9 @@ chorus:Vocal@|0|{
 -> verse -> chorus -> {?+2} -> verse -> chorus ->#
 `;
 
-    const sheet = TMDParser.parse(tmd);
+    const sheet = TmdParser.parse(tmd);
     expect(sheet).toBeDefined();
-    const profile = TMDSongInspector.inspect(sheet);
+    const profile = TmdSongInspector.inspect(sheet);
 
     expect(profile.vocalRange).toBeDefined();
     const vocal = profile.vocalRange!;
@@ -452,7 +452,7 @@ chorus:Vocal@|0|{
 
     expect(vocal.spanOctaves).toBeCloseTo(21 / 12.0, 2);
 
-    const report = TMDSongInspector.generateReport(profile);
+    const report = TmdSongInspector.generateReport(profile);
     expect(report).toContain("in [verse #1 @ m.1, 0:00]");
     expect(report).toContain("in [chorus #2 @ m.7, 0:13]");
     expect(report).toContain("/ 1.8 個八度");
@@ -480,9 +480,9 @@ chorus:Piano@|0|{
 -> verse -> {?+2} -> chorus ->#
 `;
 
-    const sheet = TMDParser.parse(tmd);
+    const sheet = TmdParser.parse(tmd);
     expect(sheet).toBeDefined();
-    const profile = TMDSongInspector.inspect(sheet!);
+    const profile = TmdSongInspector.inspect(sheet!);
 
     expect(profile.tonality).toBeDefined();
     const tonality = profile.tonality!;
@@ -512,7 +512,7 @@ chorus:Piano@|0|{
     expect(tonality.circleOfFifthsPath).toEqual([0, 2]);
 
     // 3. Human-readable Producer Report
-    const report = TMDSongInspector.generateReport(profile);
+    const report = TmdSongInspector.generateReport(profile);
     expect(report).toContain("調性診斷：");
     expect(report).toContain("由實際發聲的音符與和弦推測調性");
     expect(report).toContain("五度圈歷程:");
@@ -537,9 +537,9 @@ verse:Vocal@|0|{
 -> verse ->#
 `;
 
-    const sheet = TMDParser.parse(tmd);
+    const sheet = TmdParser.parse(tmd);
     expect(sheet).toBeDefined();
-    const profile = TMDSongInspector.inspect(sheet!);
+    const profile = TmdSongInspector.inspect(sheet!);
 
     expect(profile.tonality).toBeDefined();
     const tonality = profile.tonality!;
@@ -554,7 +554,7 @@ verse:Vocal@|0|{
     expect(hasAccidentals).toBe(true);
     expect(verseSec.pitchClasses.chromaticRatio).toBeGreaterThan(0.1);
 
-    const report = TMDSongInspector.generateReport(profile);
+    const report = TmdSongInspector.generateReport(profile);
     expect(report).toContain("調外音:");
   });
 
@@ -574,9 +574,9 @@ verse:Piano@|0|{
 -> verse ->#
 `;
 
-    const sheet = TMDParser.parse(tmd);
+    const sheet = TmdParser.parse(tmd);
     expect(sheet).toBeDefined();
-    const profile = TMDSongInspector.inspect(sheet!);
+    const profile = TmdSongInspector.inspect(sheet!);
     expect(profile.tonality).toBeDefined();
     const tonality = profile.tonality!;
     const section = tonality.sections[0];
@@ -610,9 +610,9 @@ chorus:Piano@|0|{
 -> verse -> {?+2} -> chorus ->#
 `;
 
-    const sheet = TMDParser.parse(tmd);
+    const sheet = TmdParser.parse(tmd);
     expect(sheet).toBeDefined();
-    const profile = TMDSongInspector.inspect(sheet!);
+    const profile = TmdSongInspector.inspect(sheet!);
     expect(profile.tonality).toBeDefined();
     const tonality = profile.tonality!;
 
@@ -622,7 +622,7 @@ chorus:Piano@|0|{
     expect(tonality.playbackTranspositionPath).toEqual([2, 4]);
   });
 
-  it("generates standalone SVG and HTML visualizer reports using TMDTonalityVisualizer", async () => {
+  it("generates standalone SVG and HTML visualizer reports using TmdTonalityVisualizer", async () => {
     const tmd = `::SCORE::
 ** Visualizer Test Song **
 != 120
@@ -644,14 +644,14 @@ chorus:Piano@|0|{
 -> verse -> {?+2} -> chorus ->#
 `;
 
-    const sheet = TMDParser.parse(tmd);
+    const sheet = TmdParser.parse(tmd);
     expect(sheet).toBeDefined();
-    const profile = TMDSongInspector.inspect(sheet!);
+    const profile = TmdSongInspector.inspect(sheet!);
 
-    const { TMDTonalityVisualizer } = await import("../src/presentation/tonality_visualizer.js");
+    const { TmdTonalityVisualizer } = await import("../src/presentation/tonality_visualizer.js");
 
     // 1. SVG Generation
-    const svg = TMDTonalityVisualizer.generateSVG(profile, "en");
+    const svg = TmdTonalityVisualizer.generateSVG(profile, "en");
     expect(svg).toContain("<svg");
     expect(svg).toContain("Circle of Fifths Trajectory");
     expect(svg).toContain("12-Tone Pitch Class Distribution");
@@ -659,7 +659,7 @@ chorus:Piano@|0|{
     expect(svg).toContain("Visualizer Test Song");
 
     // 2. HTML Generation
-    const html = TMDTonalityVisualizer.generateHTML(profile, "en");
+    const html = TmdTonalityVisualizer.generateHTML(profile, "en");
     expect(html).toContain("<!DOCTYPE html>");
     expect(html).toContain("<svg");
     expect(html).toContain("Detailed Text Analysis");
@@ -680,10 +680,10 @@ verse:Piano@|0|{
 -> verse ->#
 `;
 
-    const sheet = TMDParser.parse(tmd);
+    const sheet = TmdParser.parse(tmd);
     expect(sheet).toBeDefined();
-    const profile = TMDSongInspector.inspect(sheet!, undefined, "en");
-    const report = TMDSongInspector.generateReport(profile);
+    const profile = TmdSongInspector.inspect(sheet!, undefined, "en");
+    const report = TmdSongInspector.generateReport(profile);
 
     expect(profile.locale).toBe("en");
     expect(report).toContain("TMD Song Profile");
@@ -691,8 +691,8 @@ verse:Piano@|0|{
     expect(report).toContain("Inferred tonality from sounding note and chord evidence");
     expect(report).not.toContain("調性診斷");
 
-    const zhProfile = TMDSongInspector.inspect(sheet!);
-    const overriddenReport = TMDSongInspector.generateReport(zhProfile, "en");
+    const zhProfile = TmdSongInspector.inspect(sheet!);
+    const overriddenReport = TmdSongInspector.generateReport(zhProfile, "en");
     expect(overriddenReport).toContain("no modulation");
     expect(overriddenReport).not.toContain("全曲無轉調");
   });

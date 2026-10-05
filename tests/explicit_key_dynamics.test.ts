@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { MIDIInstrument, TMDMIDIGenerator } from "../src/exporters/midi.js";
-import { formatSectionDirective, formatSheet, TMDABCGenerator, TMDLilyPondGenerator, TMDMusicXMLGenerator,TMDParser, TMDPlaybackRenderer } from "../src/index.js";
+import { MIDIInstrument, TmdMIDIGenerator } from "../src/exporters/midi.js";
+import { formatSectionDirective, formatSheet, TmdABCGenerator, TmdLilyPondGenerator, TmdMusicXMLGenerator,TmdParser, TmdPlaybackRenderer } from "../src/index.js";
 
 describe("explicit key and dynamics syntax", () => {
   const score = `
@@ -22,7 +22,7 @@ main:Piano@|0|{
 `;
 
   it("keeps movable-do base separate from the declared key and parses inline directives", () => {
-    const sheet = TMDParser.parse(score);
+    const sheet = TmdParser.parse(score);
 
     expect(sheet.keySignature.toString()).toBe("D");
     expect(sheet.declaredKey).toBe("Bm");
@@ -42,7 +42,7 @@ main:Piano@|0|{
   });
 
   it("formats explicit key and dynamics directives without changing their meaning", () => {
-    const sheet = TMDParser.parse(score);
+    const sheet = TmdParser.parse(score);
     const directives = sheet.entries[0].sections[0].directives;
 
     expect(formatSectionDirective(directives[0])).toBe("{key= F#m}");
@@ -53,8 +53,8 @@ main:Piano@|0|{
   });
 
   it("propagates explicit key and dynamic state to subsequent playback events", () => {
-    const sheet = TMDParser.parse(score);
-    const timeline = TMDPlaybackRenderer.render(sheet, "Piano");
+    const sheet = TmdParser.parse(score);
+    const timeline = TmdPlaybackRenderer.render(sheet, "Piano");
     const notes = timeline.events.filter((event) => event.content.type === "note");
 
     expect(notes.map((event) => event.state.keyOffset)).toEqual([
@@ -66,12 +66,12 @@ main:Piano@|0|{
   });
 
   it("uses the declared key and dynamics in notation and MIDI exporters", () => {
-    const sheet = TMDParser.parse(score);
-    const abc = TMDABCGenerator.generateABC(sheet);
-    const lily = TMDLilyPondGenerator.generateLilyPond(sheet);
-    const xml = TMDMusicXMLGenerator.generateMusicXML(sheet);
-    const timeline = TMDPlaybackRenderer.render(sheet, "Piano");
-    const midiEvents = TMDMIDIGenerator.instrumentEvents(
+    const sheet = TmdParser.parse(score);
+    const abc = TmdABCGenerator.generateABC(sheet);
+    const lily = TmdLilyPondGenerator.generateLilyPond(sheet);
+    const xml = TmdMusicXMLGenerator.generateMusicXML(sheet);
+    const timeline = TmdPlaybackRenderer.render(sheet, "Piano");
+    const midiEvents = TmdMIDIGenerator.instrumentEvents(
       timeline,
       "Piano",
       MIDIInstrument.Piano,

@@ -1,11 +1,11 @@
 import { SheetInstrumentHelper } from "../domain/index.js";
-import { PlaybackTimeline, TMDMacroEvaluator, TMDPlaybackRenderer } from "../playback/index.js";
+import { PlaybackTimeline, TmdMacroEvaluator, TmdPlaybackRenderer } from "../playback/index.js";
 import { Beat, Playback, Sheet } from "../syntax/index.js";
 import {
   MIDIEvent,
   MIDIInstrument,
   MIDIInstrumentValue,
-  TMDMIDIGenerator,
+  TmdMIDIGenerator,
 } from './midi.js';
 
 interface TempoSegment {
@@ -15,17 +15,17 @@ interface TempoSegment {
   timeSignature: Beat;
 }
 
-export class TMDReaperGenerator {
+export class TmdReaperGenerator {
   public static readonly defaultPPQ = 960;
 
   public static generateRPP(
     rawSheet: Sheet,
-    ppq: number = TMDReaperGenerator.defaultPPQ
+    ppq: number = TmdReaperGenerator.defaultPPQ
   ): string {
-    const sheet = TMDMacroEvaluator.expandThrowing(rawSheet);
+    const sheet = TmdMacroEvaluator.expandThrowing(rawSheet);
     const distinctInstruments = SheetInstrumentHelper.distinctInstruments(sheet, false);
 
-    const conductorTimeline = TMDPlaybackRenderer.renderConductor(sheet);
+    const conductorTimeline = TmdPlaybackRenderer.renderConductor(sheet);
 
     // Build timeline tempo segments
     const initialBpm = sheet.speed > 0 ? sheet.speed : 120;
@@ -104,7 +104,7 @@ export class TMDReaperGenerator {
           }
           markerDirectiveIndex++;
         }
-        const paragraphDuration = TMDPlaybackRenderer.durationOf(order.name, sheet, markerTimeSignature);
+        const paragraphDuration = TmdPlaybackRenderer.durationOf(order.name, sheet, markerTimeSignature);
         const secondPos = quarterToSeconds(currentQuarter);
         markerLines.push(`  MARKER ${markerId} ${secondPos.toFixed(8)} "${order.name}" 0`);
         markerId++;
@@ -126,7 +126,7 @@ export class TMDReaperGenerator {
     let melodyChannel = 0;
 
     for (const instrument of distinctInstruments) {
-      const instTimeline = TMDPlaybackRenderer.render(sheet, instrument);
+      const instTimeline = TmdPlaybackRenderer.render(sheet, instrument);
       if (!instTimeline.events.some((event) => event.content.type !== 'rest')) continue;
       const midiInst = MIDIInstrument.resolve(instrument);
       let channel: number;
@@ -151,7 +151,7 @@ export class TMDReaperGenerator {
       const color = this.getTrackColor(midiInst);
 
       // Render track events
-      const events: MIDIEvent[] = TMDMIDIGenerator.instrumentEvents(
+      const events: MIDIEvent[] = TmdMIDIGenerator.instrumentEvents(
         instTimeline,
         instrument,
         midiInst,

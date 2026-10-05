@@ -1,5 +1,5 @@
-import { TMDLocale, TMDSectionTimingProfile, TMDSongInspector,TMDTonalityProfile } from "../../../src/analysis/inspector.js";
-import { TMDLocalizationKey, TMDLocalizer } from "../../../src/analysis/localization.js";
+import { TmdLocale, TmdSectionTimingProfile, TmdSongInspector,TmdTonalityProfile } from "../../../src/analysis/inspector.js";
+import { TmdLocalizationKey, TmdLocalizer } from "../../../src/analysis/localization.js";
 import { escapeHtml } from "../html.js";
 import { en } from "../locales/en.js";
 import { zhTW } from "../locales/zh-TW.js";
@@ -20,26 +20,26 @@ type TonalityLabelKey =
   | "tonalityPlaybackContext" | "tonalityAmbiguous" | "tonalityDeclaredKey";
 
 
-function label(locale: TMDLocale, key: TonalityLabelKey, fallback: string): string {
+function label(locale: TmdLocale, key: TonalityLabelKey, fallback: string): string {
   const dictionary = locale === "zh-Hant" || locale === "zh-TW" ? zhTW : en;
   return dictionary[key] || fallback;
 }
 
-function stabilityLabel(stability: string, locale: TMDLocale): string {
+function stabilityLabel(stability: string, locale: TmdLocale): string {
   const key = stability === "high"
     ? "tonalityStabilityHigh"
     : stability === "moderate" ? "tonalityStabilityModerate" : stability === "insufficient" ? "tonalityStabilityInsufficient" : "tonalityStabilityAmbiguous";
   return label(locale, key, stability);
 }
 
-function modeLabel(mode: TMDTonalityProfile["globalInference"]["mode"], locale: TMDLocale): string {
-  const localizer = new TMDLocalizer(locale);
+function modeLabel(mode: TmdTonalityProfile["globalInference"]["mode"], locale: TmdLocale): string {
+  const localizer = new TmdLocalizer(locale);
   switch (mode) {
-  case "major": return localizer.text(TMDLocalizationKey.major);
-  case "minor": return localizer.text(TMDLocalizationKey.minor);
-  case "ambiguous": return localizer.text(TMDLocalizationKey.modeAmbiguous);
-  case "modal": return localizer.text(TMDLocalizationKey.modeModal);
-  case "insufficient": return localizer.text(TMDLocalizationKey.modeInsufficient);
+  case "major": return localizer.text(TmdLocalizationKey.major);
+  case "minor": return localizer.text(TmdLocalizationKey.minor);
+  case "ambiguous": return localizer.text(TmdLocalizationKey.modeAmbiguous);
+  case "modal": return localizer.text(TmdLocalizationKey.modeModal);
+  case "insufficient": return localizer.text(TmdLocalizationKey.modeInsufficient);
   }
 }
 
@@ -49,9 +49,9 @@ function modeLabel(mode: TMDTonalityProfile["globalInference"]["mode"], locale: 
  * and expandable theoretical details.
  */
 export function renderTonalityProfileHtml(
-  tonality: TMDTonalityProfile,
-  locale: TMDLocale = "en",
-  timingSections: TMDSectionTimingProfile[] = []
+  tonality: TmdTonalityProfile,
+  locale: TmdLocale = "en",
+  timingSections: TmdSectionTimingProfile[] = []
 ): string {
   const stability = tonality.globalInference.stability || "insufficient";
   const stabilityClass = stability === "high" ? "valid" : stability === "moderate" ? "warn" : "error";
@@ -85,7 +85,7 @@ export function renderTonalityProfileHtml(
     </div>`;
   }).join("");
 
-  const narrative = TMDSongInspector.localizeTonalityNarrative(tonality, locale);
+  const narrative = TmdSongInspector.localizeTonalityNarrative(tonality, locale);
   const summary = narrative.summaryText || `${rootName} ${modeLabel(tonality.globalInference.mode, locale)}`;
   const mood = narrative.moodDescription || (tonality.globalPitchClasses.diatonicRatio >= 0.95
     ? label(locale, "tonalityMoodLabel", "Musical Character & Mood")

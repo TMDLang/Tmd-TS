@@ -1,8 +1,8 @@
-import { TMDRefactor } from "../../src/refactoring/refactor.js";
-import { TMDParser } from "../../src/syntax/parser.js";
+import { TmdRefactor } from "../../src/refactoring/refactor.js";
+import { TmdParser } from "../../src/syntax/parser.js";
 import { Sheet } from "../../src/syntax/types.js";
 import { AIProviderType } from "./ai/index.js";
-import { createTmdEditor, TMDWebEditor } from "./editor.js";
+import { createTmdEditor, TmdWebEditor } from "./editor.js";
 import {
   applyI18n,
   detectLanguage,
@@ -13,36 +13,36 @@ import {
 } from "./i18n.js";
 import { initTmdWebMcp } from "./mcp/webmcpIntegration.js";
 import { SAMPLES } from "./samples.js";
-import { TMDScoreService } from "./services/scoreService.js";
+import { TmdScoreService } from "./services/scoreService.js";
 import { SavedScore,TmdStorage } from "./storage/db.js";
-import { TMDAIDrawerController } from "./ui/aiDrawer.js";
+import { TmdAIDrawerController } from "./ui/aiDrawer.js";
 // Extracted UI Controllers, Services & DOM
 import { AppDOMElements,initAppDOMElements } from "./ui/dom.js";
 import { setupExportMenu } from "./ui/exportMenu.js";
 import { renderInspectorView, setupInspectorPanelEvents } from "./ui/inspector.js";
-import { TMDLibraryDrawerController } from "./ui/libraryDrawer.js";
+import { TmdLibraryDrawerController } from "./ui/libraryDrawer.js";
 import { setupHumModal } from "./ui/modals/humModal.js";
 import { setupInsertSectionModal } from "./ui/modals/insertSectionModal.js";
 import { setupRefactorModals } from "./ui/modals/refactorModals.js";
 import { applyPanelsState,savePanelsState } from "./ui/panelState.js";
-import { TMDPlayerController } from "./ui/playerBar.js";
+import { TmdPlayerController } from "./ui/playerBar.js";
 import { setupProblemsPanelEvents,updateProblemsPanel } from "./ui/problemsPanel.js";
 import { getTheme,initTheme, toggleTheme } from "./ui/theme.js";
 import { TmdPaletteController } from "./ui/tmdPalette.js";
-import { TMDToolsAndContextMenuController } from "./ui/toolsMenu.js";
+import { TmdToolsAndContextMenuController } from "./ui/toolsMenu.js";
 import { VirtualKeyboardController } from "./ui/virtualKeyboard.js";
 
-let editor: TMDWebEditor;
+let editor: TmdWebEditor;
 let currentSheet: Sheet | null = null;
 let parseDebounceTimer: any = null;
 
 // Controller and Service instances
 let dom: AppDOMElements;
-let scoreService: TMDScoreService;
-let playerController: TMDPlayerController;
-let libraryController: TMDLibraryDrawerController;
-let aiDrawerController: TMDAIDrawerController;
-let toolsAndContextController: TMDToolsAndContextMenuController;
+let scoreService: TmdScoreService;
+let playerController: TmdPlayerController;
+let libraryController: TmdLibraryDrawerController;
+let aiDrawerController: TmdAIDrawerController;
+let toolsAndContextController: TmdToolsAndContextMenuController;
 let keyboardController: VirtualKeyboardController;
 
 function showToast(message: string, type: "success" | "error" = "success") {
@@ -120,7 +120,7 @@ function updateInspector(text: string) {
         selectedPitchInstrument = inst;
       },
     },
-    (code) => TMDParser.parse(code)
+    (code) => TmdParser.parse(code)
   );
 
   if (keyboardController) {
@@ -150,7 +150,7 @@ function handleEditorChange(text: string) {
 
 function initEvents() {
   // 1. Player Controller
-  playerController = new TMDPlayerController(
+  playerController = new TmdPlayerController(
     {
       tmdPlayerBar: dom.tmdPlayerBar,
       playerTitle: dom.playerTitle,
@@ -166,7 +166,7 @@ function initEvents() {
   playerController.init();
 
   // 2. Library Drawer Controller
-  libraryController = new TMDLibraryDrawerController(
+  libraryController = new TmdLibraryDrawerController(
     {
       libraryDrawer: dom.libraryDrawer,
       btnToggleLibrary: dom.btnToggleLibrary,
@@ -203,7 +203,7 @@ function initEvents() {
   libraryController.init();
 
   // 3. Score Service for auto-save & share
-  scoreService = new TMDScoreService({
+  scoreService = new TmdScoreService({
     getIsTemplateScore: () => libraryController.getIsTemplateScore(),
     getCurrentScoreId: () => libraryController.getCurrentScoreId(),
     loadScoreIntoEditor: (score) => libraryController.loadScoreIntoEditor(score),
@@ -222,7 +222,7 @@ function initEvents() {
   });
 
   // 4. Tools and Context Menu Controller
-  toolsAndContextController = new TMDToolsAndContextMenuController(
+  toolsAndContextController = new TmdToolsAndContextMenuController(
     {
       editorContextMenu: dom.editorContextMenu,
       ctxHeaderInfo: dom.ctxHeaderInfo,
@@ -426,7 +426,7 @@ function initEvents() {
   );
 
   // 10. AI Drawer Controller
-  aiDrawerController = new TMDAIDrawerController(
+  aiDrawerController = new TmdAIDrawerController(
     {
       aiDrawer: dom.aiDrawer,
       btnToggleAi: dom.btnToggleAi,
@@ -581,14 +581,14 @@ function initEvents() {
 
   // Hash-based shared score URL change
   window.addEventListener("hashchange", () => {
-    TMDScoreService.importSharedScore()
+    TmdScoreService.importSharedScore()
       .then((score) => score && libraryController.loadScoreIntoEditor(score))
       .catch((err) => console.error("Failed to import shared score:", err));
   });
 
   // URL query parameter (?gist=) change
   window.addEventListener("popstate", () => {
-    TMDScoreService.importGistScore()
+    TmdScoreService.importGistScore()
       .then((score) => {
         if (score) {
           libraryController.loadScoreIntoEditor(score);
@@ -612,8 +612,8 @@ async function init() {
   let initialTemplateId: string | null = defaultSample.id;
 
   try {
-    const sharedHash = await TMDScoreService.importSharedScore();
-    const sharedGist = sharedHash ? null : await TMDScoreService.importGistScore();
+    const sharedHash = await TmdScoreService.importSharedScore();
+    const sharedGist = sharedHash ? null : await TmdScoreService.importGistScore();
     const shared = sharedHash ?? sharedGist;
     if (shared) {
       TmdStorage.setActiveScoreId(shared.id);

@@ -100,8 +100,8 @@ describe("Web UI Tools, Refactoring & Problems Panel (TDD)", () => {
     const problemsContent = fs.existsSync(problemsPath) ? fs.readFileSync(problemsPath, "utf-8") : "";
     const fullContent = [mainContent, domContent, toolsContent, problemsContent].join("\n");
 
-    expect(fullContent).toContain("TMDRefactor");
-    expect(fullContent).toContain("TMDMeasureChecker");
+    expect(fullContent).toContain("TmdRefactor");
+    expect(fullContent).toContain("TmdMeasureChecker");
 
     // Events bound
     expect(fullContent).toContain("tool-format-document");
@@ -305,7 +305,7 @@ describe("Web UI Tools, Refactoring & Problems Panel (TDD)", () => {
     expect(inspectorContent).toContain("jumpToOrders");
   });
 
-  it("integrates TMDSongInspector into Web Studio inspector panel", () => {
+  it("integrates TmdSongInspector into Web Studio inspector panel", () => {
     // Check i18n keys for inspector
     expect((zhTW as any).inspectorMetaTitle).toBeDefined();
     expect((zhTW as any).statLabelDuration).toBeDefined();
@@ -341,7 +341,7 @@ describe("Web UI Tools, Refactoring & Problems Panel (TDD)", () => {
     // Check inspector.ts integration
     const inspectorPath = path.join(__dirname, "../web/src/ui/inspector.ts");
     const inspectorContent = fs.readFileSync(inspectorPath, "utf-8");
-    expect(inspectorContent).toContain("TMDSongInspector.inspect");
+    expect(inspectorContent).toContain("TmdSongInspector.inspect");
     expect(inspectorContent).toContain("inspectorPitchInstSelect");
     expect(inspectorContent).toContain("difficulty");
     expect(inspectorContent).toContain("suitableVoiceTypes");

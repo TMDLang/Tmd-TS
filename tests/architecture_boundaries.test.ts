@@ -25,7 +25,7 @@ describe("core architecture boundaries", () => {
     }
     const parser = readFileSync(join(sourceRoot, "syntax", "parser.ts"), "utf8");
     expect(parser.includes("export class Lexer")).toBe(false);
-    expect(parser.includes("export class TMDParseError")).toBe(false);
+    expect(parser.includes("export class TmdParseError")).toBe(false);
   });
 
   it("keeps inspector analyzers inside the analysis boundary", () => {

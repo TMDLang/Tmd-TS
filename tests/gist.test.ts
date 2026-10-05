@@ -3,7 +3,7 @@ import "fake-indexeddb/auto";
 import { describe, expect, it, vi } from "vitest";
 
 import { extractGistId, fetchGistTmd, GistImportResult } from "../web/src/gist.js";
-import { TMDScoreService } from "../web/src/services/scoreService.js";
+import { TmdScoreService } from "../web/src/services/scoreService.js";
 import { TmdStorage } from "../web/src/storage/db.js";
 
 describe("GitHub Gist TMD Importer (TDD)", () => {
@@ -231,7 +231,7 @@ describe("GitHub Gist TMD Importer (TDD)", () => {
         replaceState: replaceStateMock,
       };
 
-      const score = await TMDScoreService.importGistScore();
+      const score = await TmdScoreService.importGistScore();
       expect(score).toBeNull();
       expect(replaceStateMock).not.toHaveBeenCalled();
     });
@@ -268,7 +268,7 @@ describe("GitHub Gist TMD Importer (TDD)", () => {
         replaceState: replaceStateMock,
       };
 
-      const score = await TMDScoreService.importGistScore(undefined, mockFetch as any);
+      const score = await TmdScoreService.importGistScore(undefined, mockFetch as any);
       expect(score).not.toBeNull();
       expect(score?.title).toBe("URL Loaded Gist");
       expect(score?.content).toBe(mockScore);
@@ -316,7 +316,7 @@ describe("GitHub Gist TMD Importer (TDD)", () => {
         replaceState: replaceStateMock,
       };
 
-      const score = await TMDScoreService.importGistScore(undefined, mockFetch as any);
+      const score = await TmdScoreService.importGistScore(undefined, mockFetch as any);
       expect(score).not.toBeNull();
       expect(score?.title).toBe("Full URL Gist");
       expect(replaceStateMock).toHaveBeenCalledWith(null, "", "/");
@@ -345,7 +345,7 @@ describe("GitHub Gist TMD Importer (TDD)", () => {
         replaceState: replaceStateMock,
       };
 
-      const score = await TMDScoreService.importGistScore(undefined, mockFetch as any);
+      const score = await TmdScoreService.importGistScore(undefined, mockFetch as any);
       expect(score).toBeNull();
       expect(alertMock).toHaveBeenCalled();
       expect(replaceStateMock).toHaveBeenCalledWith(null, "", "/");
@@ -372,7 +372,7 @@ describe("GitHub Gist TMD Importer (TDD)", () => {
         replaceState: vi.fn(),
       };
 
-      const score = await TMDScoreService.importGistScore();
+      const score = await TmdScoreService.importGistScore();
       expect(score).toBeNull();
     });
 
@@ -410,7 +410,7 @@ describe("GitHub Gist TMD Importer (TDD)", () => {
         replaceState: vi.fn(),
       };
 
-      const result = await TMDScoreService.importGistScore(undefined, mockFetch as any);
+      const result = await TmdScoreService.importGistScore(undefined, mockFetch as any);
       expect(result?.id).toBe(existing.id);
     });
 
@@ -447,7 +447,7 @@ describe("GitHub Gist TMD Importer (TDD)", () => {
         replaceState: replaceStateMock,
       };
 
-      const score = await TMDScoreService.importGistScore(undefined, mockFetch as any);
+      const score = await TmdScoreService.importGistScore(undefined, mockFetch as any);
       expect(score).toBeNull();
       expect(alertMock).toHaveBeenCalled();
       expect(replaceStateMock).toHaveBeenCalledWith(null, "", "/");

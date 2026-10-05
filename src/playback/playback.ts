@@ -13,7 +13,7 @@ import {
   Sheet,
   Unit,
 } from "../syntax/types.js";
-import { TMDMacroEvaluator } from "./macro.js";
+import { TmdMacroEvaluator } from "./macro.js";
 
 export type PlaybackContent =
   | { type: "note"; note: Note }
@@ -69,11 +69,11 @@ export interface PlaybackTempoConflict {
   tempos: number[];
 }
 
-export interface TMDPlaybackRendererOptions {
+export interface TmdPlaybackRendererOptions {
   startOrderIndex?: number;
 }
 
-export class TMDPlaybackRenderer {
+export class TmdPlaybackRenderer {
   private static visitOrder(order: Playback, state: PlaybackState): { state: PlaybackState; name?: string } {
     if (order.type === "relative") {
       const delta = parseInt(order.value.replace("+", ""), 10);
@@ -101,7 +101,7 @@ export class TMDPlaybackRenderer {
   }
 
   public static validateTempoConflicts(inputSheet: Sheet): PlaybackTempoConflict[] {
-    const sheet = TMDMacroEvaluator.expandThrowing(inputSheet);
+    const sheet = TmdMacroEvaluator.expandThrowing(inputSheet);
     const assignments = Array.from(new Set(
       sheet.entries
         .map((entry) => entry.assignment)
@@ -124,7 +124,7 @@ export class TMDPlaybackRenderer {
   }
 
   public static validate(inputSheet: Sheet): PlaybackValidationIssue[] {
-    const sheet = TMDMacroEvaluator.expandThrowing(inputSheet);
+    const sheet = TmdMacroEvaluator.expandThrowing(inputSheet);
     const grouped = new Map<string, Entry[]>();
     for (const entry of sheet.entries.filter((paragraph) => paragraph.assignment)) {
       const assignment = entry.assignment!;
@@ -169,9 +169,9 @@ export class TMDPlaybackRenderer {
   public static render(
     inputSheet: Sheet,
     instrument: string,
-    options?: TMDPlaybackRendererOptions
+    options?: TmdPlaybackRendererOptions
   ): PlaybackTimeline {
-    const sheet = TMDMacroEvaluator.expandThrowing(inputSheet);
+    const sheet = TmdMacroEvaluator.expandThrowing(inputSheet);
     const targetInst = instrument || DEFAULT_INSTRUMENT;
       const paragraphs = sheet.entries.filter((p) => {
       const pInst = p.assignment || DEFAULT_INSTRUMENT;
@@ -192,13 +192,13 @@ export class TMDPlaybackRenderer {
       state = visited.state;
       if (visited.name !== undefined) {
         const matchingParagraphs = paragraphs.filter((p) => p.name === visited.name);
-        const paragraphDuration = TMDPlaybackRenderer.durationOf(visited.name, sheet, state.timeSignature);
+        const paragraphDuration = TmdPlaybackRenderer.durationOf(visited.name, sheet, state.timeSignature);
         if (i < startIndex) {
           // If before startOrderIndex, accumulate directives and key/tempo/meter state from paragraph
           for (const paragraph of matchingParagraphs) {
-            const start = timelinePosition + paragraph.start * TMDPlaybackRenderer.measureDuration(state.timeSignature);
+            const start = timelinePosition + paragraph.start * TmdPlaybackRenderer.measureDuration(state.timeSignature);
             const paragraphState = paragraph.pitchMode === "fixed" ? { ...state, keyOffset: 0 } : state;
-            const rendered = TMDPlaybackRenderer.renderParagraph(paragraph, start, paragraphState, paragraph.pitchMode === "fixed");
+            const rendered = TmdPlaybackRenderer.renderParagraph(paragraph, start, paragraphState, paragraph.pitchMode === "fixed");
             state = {
               ...rendered.state,
               keyOffset: paragraph.pitchMode === "fixed" ? state.keyOffset : rendered.state.keyOffset,
@@ -214,9 +214,9 @@ export class TMDPlaybackRenderer {
         }
 
         for (const paragraph of matchingParagraphs) {
-          const start = timelinePosition + paragraph.start * TMDPlaybackRenderer.measureDuration(state.timeSignature);
+          const start = timelinePosition + paragraph.start * TmdPlaybackRenderer.measureDuration(state.timeSignature);
           const paragraphState = paragraph.pitchMode === "fixed" ? { ...state, keyOffset: 0 } : state;
-          const rendered = TMDPlaybackRenderer.renderParagraph(paragraph, start, paragraphState, paragraph.pitchMode === "fixed");
+          const rendered = TmdPlaybackRenderer.renderParagraph(paragraph, start, paragraphState, paragraph.pitchMode === "fixed");
           events.push(...rendered.events);
           directives.push(...rendered.directives);
           state = {
@@ -232,7 +232,7 @@ export class TMDPlaybackRenderer {
     const minEventPos = events.length > 0 ? Math.min(...events.map((e) => e.position)) : 0.0;
     const minDirPos = directives.length > 0 ? Math.min(...directives.map((d) => d.position)) : 0.0;
     const earliestPosition = Math.min(
-      TMDPlaybackRenderer.globalEarliestPosition(sheet),
+      TmdPlaybackRenderer.globalEarliestPosition(sheet),
       minEventPos,
       minDirPos
     );
@@ -269,8 +269,8 @@ export class TMDPlaybackRenderer {
   }
 
   /** Renders a score-level conductor timeline by merging directives from every concrete instrument. */
-  public static renderConductor(inputSheet: Sheet, options?: TMDPlaybackRendererOptions): PlaybackTimeline {
-    const sheet = TMDMacroEvaluator.expandThrowing(inputSheet);
+  public static renderConductor(inputSheet: Sheet, options?: TmdPlaybackRendererOptions): PlaybackTimeline {
+    const sheet = TmdMacroEvaluator.expandThrowing(inputSheet);
     const instruments = Array.from(new Set(
       sheet.entries.map((p) => p.assignment).filter((assignment): assignment is string => Boolean(assignment && assignment.trim()))
     )).sort();
@@ -329,7 +329,7 @@ export class TMDPlaybackRenderer {
       for (const group of section.unitGroups) {
         while (directiveIndex < sortedDirectives.length && sortedDirectives[directiveIndex].position <= sectionPosition) {
           const dir = sortedDirectives[directiveIndex];
-          state = TMDPlaybackRenderer.applyDirective(dir.kind, state, fixedPitch);
+          state = TmdPlaybackRenderer.applyDirective(dir.kind, state, fixedPitch);
           directives.push({ position, kind: dir.kind, state });
           directiveIndex++;
         }
@@ -365,7 +365,7 @@ export class TMDPlaybackRenderer {
                 currentEventIndices = [events.length - 1];
               }
             } else {
-              const content = TMDPlaybackRenderer.contentOf(unit);
+              const content = TmdPlaybackRenderer.contentOf(unit);
               if (unit.type === "multiNote") {
                 currentEventIndices = [];
                 for (const note of unit.notes) {
@@ -386,7 +386,7 @@ export class TMDPlaybackRenderer {
 
       while (directiveIndex < sortedDirectives.length) {
         const dir = sortedDirectives[directiveIndex];
-        state = TMDPlaybackRenderer.applyDirective(dir.kind, state, fixedPitch);
+        state = TmdPlaybackRenderer.applyDirective(dir.kind, state, fixedPitch);
         directives.push({ position, kind: dir.kind, state });
         directiveIndex++;
       }
@@ -437,7 +437,7 @@ export class TMDPlaybackRenderer {
 
     return Math.max(
       ...matching.map((p) => {
-        const lead = p.start * TMDPlaybackRenderer.measureDuration(beat);
+        const lead = p.start * TmdPlaybackRenderer.measureDuration(beat);
         const sectionsDuration = p.sections.reduce((tot, sec) => {
           const unitDuration = 4.0 / Math.max(1, sec.noteLength);
           return tot + sec.unitGroups.reduce((acc, g) => acc + Math.max(0, g.length) * unitDuration, 0);
@@ -448,7 +448,7 @@ export class TMDPlaybackRenderer {
   }
 
   public static globalEarliestPosition(inputSheet: Sheet): number {
-    const sheet = TMDMacroEvaluator.expandThrowing(inputSheet);
+    const sheet = TmdMacroEvaluator.expandThrowing(inputSheet);
     let state = this.initialStateFor(sheet);
     let timelinePosition = 0;
     let earliest = 0;
@@ -459,10 +459,10 @@ export class TMDPlaybackRenderer {
       if (visited.name === undefined) continue;
       const matching = sheet.entries.filter((p) => p.name === visited.name);
       for (const paragraph of matching) {
-        earliest = Math.min(earliest, timelinePosition + paragraph.start * TMDPlaybackRenderer.measureDuration(state.timeSignature));
-        state = TMDPlaybackRenderer.renderParagraph(paragraph, timelinePosition, state).state;
+        earliest = Math.min(earliest, timelinePosition + paragraph.start * TmdPlaybackRenderer.measureDuration(state.timeSignature));
+        state = TmdPlaybackRenderer.renderParagraph(paragraph, timelinePosition, state).state;
       }
-      timelinePosition += TMDPlaybackRenderer.durationOf(visited.name, sheet, state.timeSignature);
+      timelinePosition += TmdPlaybackRenderer.durationOf(visited.name, sheet, state.timeSignature);
     }
     return earliest;
   }

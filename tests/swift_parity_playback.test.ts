@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { TMDPlaybackRenderer } from "../src/playback/playback.js";
+import { TmdPlaybackRenderer } from "../src/playback/playback.js";
 import { formatSheet } from "../src/syntax/format.js";
-import { TMDParser } from "../src/syntax/parser.js";
+import { TmdParser } from "../src/syntax/parser.js";
 
 const canonicalPlaybackFixture = `::SCORE::
 ** Canonical Playback Fixture **
@@ -29,9 +29,9 @@ Intro:Timpani[pitchMode=fixed]@|+1|{
 
 describe("Swift playback parity", () => {
   it("matches the shared canonical playback fixture", () => {
-    const sheet = TMDParser.parse(canonicalPlaybackFixture);
-    const piano = TMDPlaybackRenderer.render(sheet, "Piano");
-    const timpani = TMDPlaybackRenderer.render(sheet, "Timpani");
+    const sheet = TmdParser.parse(canonicalPlaybackFixture);
+    const piano = TmdPlaybackRenderer.render(sheet, "Piano");
+    const timpani = TmdPlaybackRenderer.render(sheet, "Timpani");
 
     expect(sheet.name).toBe("Canonical Playback Fixture");
     expect(sheet.entries?.map((entry) => [entry.name, entry.assignment, entry.pitchMode])).toEqual([
@@ -46,7 +46,7 @@ describe("Swift playback parity", () => {
   });
 
   it("expands macros before calculating the global earliest playback position", () => {
-    const sheet = TMDParser.parse(`::SCORE::
+    const sheet = TmdParser.parse(`::SCORE::
 ** Macro Earliest Position **
 != 120
 ?= C
@@ -61,11 +61,11 @@ Theme{
 `);
 
     sheet.playback[0] = { type: "macro", expr: ["play", "Theme", "Piano", -1] };
-    expect((TMDPlaybackRenderer as any).globalEarliestPosition(sheet)).toBe(-4);
+    expect((TmdPlaybackRenderer as any).globalEarliestPosition(sheet)).toBe(-4);
   });
 
   it("uses one state transition path for playback order modifiers", () => {
-    const sheet = TMDParser.parse(`::SCORE::
+    const sheet = TmdParser.parse(`::SCORE::
 ** Playback Order State **
 != 120
 ?= C
@@ -79,12 +79,12 @@ A:Piano@|0|{
 -> {?+2} -> A -> {?=E} -> A ->#
 `);
 
-    const timeline = TMDPlaybackRenderer.render(sheet, "Piano");
+    const timeline = TmdPlaybackRenderer.render(sheet, "Piano");
     expect(timeline.events.map((event) => event.state.keyOffset)).toEqual([2, 4]);
   });
 
   it("merges conductor directives from all instruments", () => {
-    const sheet = TMDParser.parse(`::SCORE::
+    const sheet = TmdParser.parse(`::SCORE::
 ** Conductor Directives **
 != 120
 ?= C
@@ -101,7 +101,7 @@ A:Violin@|0|{
 -> A ->#
 `);
 
-    const timeline = TMDPlaybackRenderer.renderConductor(sheet);
+    const timeline = TmdPlaybackRenderer.renderConductor(sheet);
     expect(timeline.directives.map((d) => d.kind)).toEqual([
       { type: "tempo", bpm: 90 },
       { type: "timeSignature", beat: { count: 3, noteValue: 4 } },
@@ -109,7 +109,7 @@ A:Violin@|0|{
   });
 
   it("validates tempo conflicts for canonical sheets without parser helper methods", () => {
-    const sheet = TMDParser.parse(`::SCORE::
+    const sheet = TmdParser.parse(`::SCORE::
 ** Canonical Tempo Conflict **
 != 120
 ?= C
@@ -121,13 +121,13 @@ A:Violin@|0|{ <4*> 1 {!=100} 2 3 4 }
 `);
     sheet.distinctAssignments = undefined;
 
-    expect(TMDPlaybackRenderer.validateTempoConflicts(sheet)).toEqual([
+    expect(TmdPlaybackRenderer.validateTempoConflicts(sheet)).toEqual([
       { position: 1, tempos: [90, 100] },
     ]);
   });
 
   it("parses and plays + connected notes at the same position", () => {
-    const sheet = TMDParser.parse(`::SCORE::
+    const sheet = TmdParser.parse(`::SCORE::
 ** Multi-note **
 != 120
 ?= C
@@ -146,7 +146,7 @@ A:Piano@|0|{
     expect(units[0][0]).toMatchObject({ type: "multiNote" });
     expect(formatSheet(sheet)).toContain("1+3");
 
-    const timeline = TMDPlaybackRenderer.render(sheet, "Piano");
+    const timeline = TmdPlaybackRenderer.render(sheet, "Piano");
     expect(timeline.track?.assignment).toBe("Piano");
     expect(timeline.track?.events).toEqual(timeline.events);
     const notes = timeline.events.filter((event) => event.content.type === "note");
@@ -156,7 +156,7 @@ A:Piano@|0|{
   });
 
   it("merges all same-section paragraphs and preserves staggered starts", () => {
-    const sheet = TMDParser.parse(`::SCORE::
+    const sheet = TmdParser.parse(`::SCORE::
 ** Merged sections **
 != 120
 ?= C
@@ -175,7 +175,7 @@ A:Piano@|1|{
 -> A ->#
 `);
 
-    const timeline = TMDPlaybackRenderer.render(sheet, "Piano");
+    const timeline = TmdPlaybackRenderer.render(sheet, "Piano");
     const notes = timeline.events.filter((event) => event.content.type === "note");
     expect(notes).toHaveLength(8);
     expect(notes.slice(0, 4).map((event) => event.position)).toEqual([0, 1, 2, 3]);
@@ -183,7 +183,7 @@ A:Piano@|1|{
   });
 
   it("matches assignment names case-insensitively when rendering playback", () => {
-    const sheet = TMDParser.parse(`::SCORE::
+    const sheet = TmdParser.parse(`::SCORE::
 A:Piano@|0|{
 <4*>
 | 1 2 3 4 |
@@ -192,12 +192,12 @@ A:Piano@|0|{
 -> A ->#
 `);
 
-    const timeline = TMDPlaybackRenderer.render(sheet, "pIaNo");
+    const timeline = TmdPlaybackRenderer.render(sheet, "pIaNo");
     expect(timeline.events.filter((event) => event.content.type === "note")).toHaveLength(4);
   });
 
   it("reports conflicting absolute tempo directives at one position", () => {
-    const sheet = TMDParser.parse(`::SCORE::
+    const sheet = TmdParser.parse(`::SCORE::
 Intro:Piano@|0|{
 <4*>
 {!=90}{!=100} 1 2 3 4
@@ -205,14 +205,14 @@ Intro:Piano@|0|{
 -> Intro ->#
 `);
 
-    const conflicts = TMDPlaybackRenderer.validateTempoConflicts(sheet);
+    const conflicts = TmdPlaybackRenderer.validateTempoConflicts(sheet);
     expect(conflicts).toHaveLength(1);
     expect(conflicts[0].position).toBe(0);
     expect(conflicts[0].tempos).toEqual([90, 100]);
   });
 
   it("keeps meter modifiers local to the containing entry", () => {
-    const sheet = TMDParser.parse(`::SCORE::
+    const sheet = TmdParser.parse(`::SCORE::
 A:Piano@|0|{
 <4*>
 {<3/4>} 1
@@ -224,7 +224,7 @@ B:Piano@|0|{
 -> A -> B ->#
 `);
 
-    const timeline = TMDPlaybackRenderer.render(sheet, "Piano");
+    const timeline = TmdPlaybackRenderer.render(sheet, "Piano");
     const notes = timeline.events.filter((event) => event.content.type === "note");
     expect(notes).toHaveLength(2);
     expect(notes[0].state.timeSignature).toEqual({ count: 3, noteValue: 4 });
@@ -232,7 +232,7 @@ B:Piano@|0|{
   });
 
   it("persists tempo and dynamics per assignment across entries", () => {
-    const sheet = TMDParser.parse(`::SCORE::
+    const sheet = TmdParser.parse(`::SCORE::
 A:Piano@|0|{
 <4*>
 {!=90} {f} 1
@@ -248,8 +248,8 @@ A:Violin@|0|{
 -> A -> B ->#
 `);
 
-    const piano = TMDPlaybackRenderer.render(sheet, "Piano");
-    const violin = TMDPlaybackRenderer.render(sheet, "Violin");
+    const piano = TmdPlaybackRenderer.render(sheet, "Piano");
+    const violin = TmdPlaybackRenderer.render(sheet, "Violin");
     const pianoNotes = piano.events.filter((event) => event.content.type === "note");
     const violinNotes = violin.events.filter((event) => event.content.type === "note");
 
@@ -259,7 +259,7 @@ A:Violin@|0|{
   });
 
   it("applies playback and entry key modifiers in reading order per assignment", () => {
-    const sheet = TMDParser.parse(`::SCORE::
+    const sheet = TmdParser.parse(`::SCORE::
 A:Piano@|0|{
 <4*>
 {?=E} 1
@@ -279,8 +279,8 @@ B:Violin@|0|{
 -> {?+3} -> A -> B ->#
 `);
 
-    const piano = TMDPlaybackRenderer.render(sheet, "Piano");
-    const violin = TMDPlaybackRenderer.render(sheet, "Violin");
+    const piano = TmdPlaybackRenderer.render(sheet, "Piano");
+    const violin = TmdPlaybackRenderer.render(sheet, "Violin");
     const pianoNotes = piano.events.filter((event) => event.content.type === "note");
     const violinNotes = violin.events.filter((event) => event.content.type === "note");
 
@@ -289,7 +289,7 @@ B:Violin@|0|{
   });
 
   it("normalizes a negative pickup globally while retaining later section content", () => {
-    const sheet = TMDParser.parse(`::SCORE::
+    const sheet = TmdParser.parse(`::SCORE::
 ** Pickup **
 != 120
 ?= C
@@ -308,7 +308,7 @@ A:Piano@|0|{
 -> A ->#
 `);
 
-    const timeline = TMDPlaybackRenderer.render(sheet, "Piano");
+    const timeline = TmdPlaybackRenderer.render(sheet, "Piano");
     const notes = timeline.events.filter((event) => event.content.type === "note");
     expect(notes).toHaveLength(8);
     expect(notes.slice(0, 4).map((event) => event.position)).toEqual([0, 1, 2, 3]);
@@ -316,20 +316,20 @@ A:Piano@|0|{
   });
 
   it("reports overlapping entries for one assignment", () => {
-    const sheet = TMDParser.parse(`::SCORE::
+    const sheet = TmdParser.parse(`::SCORE::
 A:Piano@|0|{ <4*> 1 2 3 4 }
 A:piano@|0|{ <4*> 5 6 7 1^ }`);
 
-    const issues = TMDPlaybackRenderer.validate(sheet);
+    const issues = TmdPlaybackRenderer.validate(sheet);
     expect(issues).toHaveLength(1);
     expect(issues[0].assignment.toLowerCase()).toBe("piano");
   });
 
   it("allows adjacent entries for one assignment", () => {
-    const sheet = TMDParser.parse(`::SCORE::
+    const sheet = TmdParser.parse(`::SCORE::
 A:Piano@|0|{ <4*> 1 2 3 4 }
 A:piano@|1|{ <4*> 5 6 7 1^ }`);
 
-    expect(TMDPlaybackRenderer.validate(sheet)).toEqual([]);
+    expect(TmdPlaybackRenderer.validate(sheet)).toEqual([]);
   });
 });

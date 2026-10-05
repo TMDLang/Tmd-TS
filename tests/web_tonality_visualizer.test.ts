@@ -3,8 +3,8 @@ import * as path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { TMDSongInspector } from "../src/analysis/inspector.js";
-import { TMDParser } from "../src/syntax/parser.js";
+import { TmdSongInspector } from "../src/analysis/inspector.js";
+import { TmdParser } from "../src/syntax/parser.js";
 import { renderTonalityProfileHtml } from "../web/src/ui/tonality.js";
 
 
@@ -15,7 +15,7 @@ describe("Web Studio tonality visualization", () => {
     expect(indexHtml).not.toContain('data-i18n="statLabelKey"');
   });
   it("renders the same inspector-level tonality details as the VSCode view", () => {
-    const sheet = TMDParser.parse(`::SCORE::
+    const sheet = TmdParser.parse(`::SCORE::
 ** Tonality UI **
 != 120
 ?= C
@@ -29,7 +29,7 @@ verse:Piano@|0|{
 
 -> verse ->#
 `);
-    const profile = TMDSongInspector.inspect(sheet!, undefined, "en");
+    const profile = TmdSongInspector.inspect(sheet!, undefined, "en");
     const html = renderTonalityProfileHtml(profile.tonality!, "en", profile.timing.sections);
 
     expect(html).toContain("tonality-stability-badge");
@@ -46,7 +46,7 @@ verse:Piano@|0|{
   });
 
   it("localizes the tonality panel and uses theme tokens instead of dark-only colors", () => {
-    const sheet = TMDParser.parse(`::SCORE::
+    const sheet = TmdParser.parse(`::SCORE::
 ** 調性 l10n **
 != 120
 ?= C
@@ -55,7 +55,7 @@ verse:Piano@|0|{
 A:Piano@|0|{ <4*> 1 3 5 1^ }
 -> A ->#
 `);
-    const profile = TMDSongInspector.inspect(sheet!, undefined, "zh-Hant");
+    const profile = TmdSongInspector.inspect(sheet!, undefined, "zh-Hant");
     const html = renderTonalityProfileHtml(profile.tonality!, "zh-Hant", profile.timing.sections);
 
     expect(html).toContain("音樂性格與氣質");
@@ -70,7 +70,7 @@ A:Piano@|0|{ <4*> 1 3 5 1^ }
   });
 
   it("relocalizes stored tonality narratives when the UI locale changes", () => {
-    const sheet = TMDParser.parse(`::SCORE::
+    const sheet = TmdParser.parse(`::SCORE::
 ** Narrative Locale Override **
 != 120
 ?= C
@@ -79,7 +79,7 @@ A:Piano@|0|{ <4*> 1 3 5 1^ }
 A:Piano@|0|{ <4*> 1 3 5 1^ }
 -> A ->#
 `);
-    const profile = TMDSongInspector.inspect(sheet!, undefined, "zh-Hant");
+    const profile = TmdSongInspector.inspect(sheet!, undefined, "zh-Hant");
     const html = renderTonalityProfileHtml(profile.tonality!, "en", profile.timing.sections);
 
     expect(html).toContain("no modulation");
@@ -87,7 +87,7 @@ A:Piano@|0|{ <4*> 1 3 5 1^ }
   });
 
   it("renders declared tonality metric when sheet has declared key", () => {
-    const sheet = TMDParser.parse(`::SCORE::
+    const sheet = TmdParser.parse(`::SCORE::
 ** Declared Tonality Score **
 != 120
 ?= D
@@ -101,12 +101,12 @@ verse:Piano@|0|{
 
 -> verse ->#
 `);
-    const profileEn = TMDSongInspector.inspect(sheet!, undefined, "en");
+    const profileEn = TmdSongInspector.inspect(sheet!, undefined, "en");
     const htmlEn = renderTonalityProfileHtml(profileEn.tonality!, "en", profileEn.timing.sections);
     expect(htmlEn).toContain("Declared tonality");
     expect(htmlEn).toContain("Bm");
 
-    const profileZh = TMDSongInspector.inspect(sheet!, undefined, "zh-Hant");
+    const profileZh = TmdSongInspector.inspect(sheet!, undefined, "zh-Hant");
     const htmlZh = renderTonalityProfileHtml(profileZh.tonality!, "zh-Hant", profileZh.timing.sections);
     expect(htmlZh).toContain("宣告調性");
     expect(htmlZh).toContain("Bm");

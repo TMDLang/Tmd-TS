@@ -48,14 +48,14 @@ import {
 } from "@codemirror/view";
 
 import { DEFAULT_INSTRUMENT } from "../../src/syntax/types.js";
-import type { TMDMeasureIssue } from "../../src/validation/measure_check.js";
+import type { TmdMeasureIssue } from "../../src/validation/measure_check.js";
 import { t } from "./i18n.js";
-import { TMDWebLSPClient } from "./lsp/client.js";
-import { type TMDParserState,tmdStreamParser } from "./syntax.js";
-export { type TMDParserState,tmdStreamParser };
+import { TmdWebLSPClient } from "./lsp/client.js";
+import { type TmdParserState,tmdStreamParser } from "./syntax.js";
+export { type TmdParserState,tmdStreamParser };
 
 // Export comment tokens configuration for tests/editor integrations: tmdStreamParser.languageData.commentTokens
-export const tmdLanguage = StreamLanguage.define<TMDParserState>(tmdStreamParser);
+export const tmdLanguage = StreamLanguage.define<TmdParserState>(tmdStreamParser);
 
 export const defaultEditorExtensions = [
   lineNumbers(),
@@ -96,9 +96,9 @@ export interface CursorContext {
   selectionText: string;
 }
 
-export interface TMDWebEditor {
+export interface TmdWebEditor {
   view: EditorView;
-  lspClient: TMDWebLSPClient;
+  lspClient: TmdWebLSPClient;
   getContent(): string;
   setContent(text: string): void;
   insertAtCursor(text: string, cursorOffset?: number): void;
@@ -109,7 +109,7 @@ export interface TMDWebEditor {
   getCursorContext(): CursorContext;
   toggleComment(): void;
   formatDocument(): Promise<void>;
-  setMeasureIssues(issues: TMDMeasureIssue[]): void;
+  setMeasureIssues(issues: TmdMeasureIssue[]): void;
   setTheme(theme: "dark" | "light"): void;
   focus(): void;
 }
@@ -140,7 +140,7 @@ class SectionPlayGutterMarker extends GutterMarker {
   }
 }
 
-export function createTmdCompletionSource(lspClient: TMDWebLSPClient) {
+export function createTmdCompletionSource(lspClient: TmdWebLSPClient) {
   return async (context: CompletionContext): Promise<CompletionResult | null> => {
     const pos = context.pos;
     const doc = context.state.doc;
@@ -217,7 +217,7 @@ export function createTmdEditor(
   onCursorActivity?: (line: number, col: number) => void,
   onFormat?: () => void,
   onPlaySection?: (section: string, instrument: string) => void
-): TMDWebEditor {
+): TmdWebEditor {
   const languageCompartment = new Compartment();
   const themeCompartment = new Compartment();
 
@@ -249,7 +249,7 @@ export function createTmdEditor(
     },
   }, { dark: false });
 
-  const lspClient = new TMDWebLSPClient();
+  const lspClient = new TmdWebLSPClient();
   lspClient.openDocument(initialContent);
 
   const tmdCompletionSource = createTmdCompletionSource(lspClient);
@@ -356,9 +356,9 @@ export function createTmdEditor(
     return lspClient.convertToCMDiagnostics(docText, diags) as CMDiagnostic[];
   });
 
-  const setMeasureIssuesEffect = StateEffect.define<TMDMeasureIssue[]>();
+  const setMeasureIssuesEffect = StateEffect.define<TmdMeasureIssue[]>();
 
-  let activeIssues: TMDMeasureIssue[] = [];
+  let activeIssues: TmdMeasureIssue[] = [];
 
   const measureIssuesTooltip = hoverTooltip((view, pos, side): Tooltip | null => {
     if (!activeIssues || activeIssues.length === 0) return null;
@@ -609,7 +609,7 @@ export function createTmdEditor(
         });
       }
     },
-    setMeasureIssues(issues: TMDMeasureIssue[]) {
+    setMeasureIssues(issues: TmdMeasureIssue[]) {
       view.dispatch({
         effects: setMeasureIssuesEffect.of(issues),
       });

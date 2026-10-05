@@ -6,20 +6,20 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 
-import { TMDWAVRenderer } from "../audio.js";
+import { TmdWAVRenderer } from "../audio.js";
 import {
-  TMDABCGenerator,
-  TMDChordProGenerator,
-  TMDLilyPondGenerator,
-  TMDMIDIGenerator,
-  TMDMusicXMLGenerator,
-  TMDReaperGenerator,
-  TMDVSQGenerator,
-  TMDVSQXGenerator,
+  TmdABCGenerator,
+  TmdChordProGenerator,
+  TmdLilyPondGenerator,
+  TmdMIDIGenerator,
+  TmdMusicXMLGenerator,
+  TmdReaperGenerator,
+  TmdVSQGenerator,
+  TmdVSQXGenerator,
 } from "../exporters/index.js";
-import { TMDSkill } from "../skill.js";
-import { accidentalToSemitone, scaleDegreeLetter, TMDParser } from "../syntax/index.js";
-import { TMDMeasureChecker } from "../validation/index.js";
+import { TmdSkill } from "../skill.js";
+import { accidentalToSemitone, scaleDegreeLetter, TmdParser } from "../syntax/index.js";
+import { TmdMeasureChecker } from "../validation/index.js";
 import { TMD_VERSION } from "../version.js";
 
 const textContent = (text: string) => ({
@@ -31,9 +31,9 @@ const textContent = (text: string) => ({
   ],
 });
 
-export class TMDMCPServer {
+export class TmdMCPServer {
   public static async handleGetSkill() {
-    return textContent(TMDSkill.skillMarkdown);
+    return textContent(TmdSkill.skillMarkdown);
   }
 
   public static async handleParseTmd({ text, filePath }: { text?: string; filePath?: string }) {
@@ -51,7 +51,7 @@ export class TMDMCPServer {
         );
       }
 
-      const sheet = TMDParser.parse(content);
+      const sheet = TmdParser.parse(content);
       if (!sheet) {
         return textContent(
           JSON.stringify({
@@ -119,7 +119,7 @@ export class TMDMCPServer {
       throw new Error("Either 'text' or 'filePath' must be provided");
     }
 
-    const issues = TMDMeasureChecker.check(content);
+    const issues = TmdMeasureChecker.check(content);
     return textContent(
       JSON.stringify(
         {
@@ -166,7 +166,7 @@ export class TMDMCPServer {
       throw new Error("Either 'text' or 'filePath' must be provided");
     }
 
-    const sheet = TMDParser.parse(content);
+    const sheet = TmdParser.parse(content);
     if (!sheet) {
       throw new Error("Invalid TMD score content");
     }
@@ -174,7 +174,7 @@ export class TMDMCPServer {
     const fmt = (format || "midi").toLowerCase();
     switch (fmt) {
       case "midi": {
-        const uint8 = TMDMIDIGenerator.generateMIDI(sheet, TMDMIDIGenerator.defaultTicksPerQuarterNote, {
+        const uint8 = TmdMIDIGenerator.generateMIDI(sheet, TmdMIDIGenerator.defaultTicksPerQuarterNote, {
           targetParagraph: section,
           targetInstrument: instrument,
         });
@@ -185,7 +185,7 @@ export class TMDMCPServer {
         return textContent(Buffer.from(uint8).toString("base64"));
       }
       case "musicxml": {
-        const xml = TMDMusicXMLGenerator.generateMusicXML(sheet);
+        const xml = TmdMusicXMLGenerator.generateMusicXML(sheet);
         if (outputPath) {
           fs.writeFileSync(outputPath, xml, "utf-8");
           return textContent(`MusicXML successfully written to ${outputPath}`);
@@ -193,7 +193,7 @@ export class TMDMCPServer {
         return textContent(xml);
       }
       case "lilypond": {
-        const ly = TMDLilyPondGenerator.generateLilyPond(sheet);
+        const ly = TmdLilyPondGenerator.generateLilyPond(sheet);
         if (outputPath) {
           fs.writeFileSync(outputPath, ly, "utf-8");
           return textContent(`LilyPond source successfully written to ${outputPath}`);
@@ -201,7 +201,7 @@ export class TMDMCPServer {
         return textContent(ly);
       }
       case "abc": {
-        const abc = TMDABCGenerator.generateABC(sheet);
+        const abc = TmdABCGenerator.generateABC(sheet);
         if (outputPath) {
           fs.writeFileSync(outputPath, abc, "utf-8");
           return textContent(`ABC notation successfully written to ${outputPath}`);
@@ -209,7 +209,7 @@ export class TMDMCPServer {
         return textContent(abc);
       }
       case "wav": {
-        const wav = TMDWAVRenderer.renderWAV(sheet, 44100, {
+        const wav = TmdWAVRenderer.renderWAV(sheet, 44100, {
           targetParagraph: section,
           targetInstrument: instrument,
         });
@@ -221,7 +221,7 @@ export class TMDMCPServer {
       }
       case "reaper":
       case "rpp": {
-        const rpp = TMDReaperGenerator.generateRPP(sheet);
+        const rpp = TmdReaperGenerator.generateRPP(sheet);
         if (outputPath) {
           fs.writeFileSync(outputPath, rpp, "utf-8");
           return textContent(`REAPER project successfully written to ${outputPath}`);
@@ -229,7 +229,7 @@ export class TMDMCPServer {
         return textContent(rpp);
       }
       case "vsq": {
-        const uint8 = TMDVSQGenerator.generateVSQ(sheet);
+        const uint8 = TmdVSQGenerator.generateVSQ(sheet);
         if (outputPath) {
           fs.writeFileSync(outputPath, uint8);
           return textContent(`VOCALOID2 (.vsq) successfully written to ${outputPath}`);
@@ -237,7 +237,7 @@ export class TMDMCPServer {
         return textContent(Buffer.from(uint8).toString("base64"));
       }
       case "vsqx": {
-        const xml = TMDVSQXGenerator.generateVSQX(sheet);
+        const xml = TmdVSQXGenerator.generateVSQX(sheet);
         if (outputPath) {
           fs.writeFileSync(outputPath, xml, "utf-8");
           return textContent(`VOCALOID3/4 (.vsqx) successfully written to ${outputPath}`);
@@ -246,7 +246,7 @@ export class TMDMCPServer {
       }
       case "chordpro":
       case "cho": {
-        const cho = TMDChordProGenerator.generateChordPro(sheet);
+        const cho = TmdChordProGenerator.generateChordPro(sheet);
         if (outputPath) {
           fs.writeFileSync(outputPath, cho, "utf-8");
           return textContent(`ChordPro lead sheet successfully written to ${outputPath}`);
@@ -272,7 +272,7 @@ export class TMDMCPServer {
           "Get comprehensive TMD (Timebase Mark Down) language specification, prompt guidelines, and musical notation grammar.",
         inputSchema: z.object({}),
       },
-      async () => TMDMCPServer.handleGetSkill()
+      async () => TmdMCPServer.handleGetSkill()
     );
 
     server.registerTool(
@@ -285,7 +285,7 @@ export class TMDMCPServer {
           filePath: z.string().optional().describe("Path to .tmd file on filesystem"),
         }),
       },
-      async ({ text, filePath }) => TMDMCPServer.handleParseTmd({ text, filePath })
+      async ({ text, filePath }) => TmdMCPServer.handleParseTmd({ text, filePath })
     );
 
     server.registerTool(
@@ -298,7 +298,7 @@ export class TMDMCPServer {
           filePath: z.string().optional().describe("Path to .tmd file on filesystem"),
         }),
       },
-      async ({ text, filePath }) => TMDMCPServer.handleCheckTmd({ text, filePath })
+      async ({ text, filePath }) => TmdMCPServer.handleCheckTmd({ text, filePath })
     );
 
     server.registerTool(
@@ -327,14 +327,14 @@ export class TMDMCPServer {
         }),
       },
       async ({ text, filePath, format, outputPath, section, instrument }) =>
-        TMDMCPServer.handleConvertTmd({ text, filePath, format, outputPath, section, instrument })
+        TmdMCPServer.handleConvertTmd({ text, filePath, format, outputPath, section, instrument })
     );
 
     return server;
   }
 
   public static async run(): Promise<void> {
-    const server = TMDMCPServer.createServer();
+    const server = TmdMCPServer.createServer();
     const transport = new StdioServerTransport();
     await server.connect(transport);
   }
@@ -345,7 +345,7 @@ export interface McpServerConfigEntry {
   args: string[];
 }
 
-export class TMDMCPInstaller {
+export class TmdMCPInstaller {
   public static defaultConfigPaths(): string[] {
     const home = os.homedir();
     const isMac = process.platform === "darwin";
@@ -419,9 +419,9 @@ export class TMDMCPInstaller {
   }
 
   public static installAll(
-    paths: string[] = TMDMCPInstaller.defaultConfigPaths(),
+    paths: string[] = TmdMCPInstaller.defaultConfigPaths(),
     serverEntry?: McpServerConfigEntry
   ): { path: string; installed: boolean; error?: string }[] {
-    return paths.map((p) => TMDMCPInstaller.installToConfigPath(p, serverEntry));
+    return paths.map((p) => TmdMCPInstaller.installToConfigPath(p, serverEntry));
   }
 }

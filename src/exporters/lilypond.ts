@@ -1,23 +1,23 @@
 import { SheetInstrumentHelper } from "../domain/index.js";
-import { MeasureEvent, NotationDuration, PlaybackDirectiveEvent, TMDMacroEvaluator, TMDMeasureRenderer } from "../playback/index.js";
+import { MeasureEvent, NotationDuration, PlaybackDirectiveEvent, TmdMacroEvaluator, TmdMeasureRenderer } from "../playback/index.js";
 import { chordQualityIntervals, ChordSymbol, Entry, Note, PitchMapping, Sheet } from "../syntax/index.js";
 
-export class TMDLilyPondGenerator {
+export class TmdLilyPondGenerator {
   public static generateLilyPond(rawSheet: Sheet): string {
-    const sheet = TMDMacroEvaluator.expandThrowing(rawSheet);
+    const sheet = TmdMacroEvaluator.expandThrowing(rawSheet);
     const composer = sheet.metadata["composer"] || "TMD";
     let ly = `\\version "2.24.0"\n\n`;
     ly += `\\header {\n`;
-    ly += `  title = "${TMDLilyPondGenerator.escapeLilyPond(sheet.name || "Untitled")}"\n`;
-    ly += `  composer = "${TMDLilyPondGenerator.escapeLilyPond(composer)}"\n`;
+    ly += `  title = "${TmdLilyPondGenerator.escapeLilyPond(sheet.name || "Untitled")}"\n`;
+    ly += `  composer = "${TmdLilyPondGenerator.escapeLilyPond(composer)}"\n`;
     ly += `  tagline = "Engraved by Tmd-TS LilyPond Exporter"\n`;
     ly += `}\n\n`;
 
     ly += `\\paper {\n  indent = 1.5\\cm\n  short-indent = 0.5\\cm\n}\n\n`;
     ly += `global = {\n`;
     ly += `  \\time ${sheet.beat.count}/${sheet.beat.noteValue}\n`;
-    ly += `  ${TMDLilyPondGenerator.resolveTempo(sheet.beat, sheet.speed > 0 ? sheet.speed : 120)}\n`;
-    ly += `  \\key ${TMDLilyPondGenerator.lilyPondKey(sheet.declaredKey || sheet.keySignature.toString())}\n`;
+    ly += `  ${TmdLilyPondGenerator.resolveTempo(sheet.beat, sheet.speed > 0 ? sheet.speed : 120)}\n`;
+    ly += `  \\key ${TmdLilyPondGenerator.lilyPondKey(sheet.declaredKey || sheet.keySignature.toString())}\n`;
     ly += `}\n\n`;
 
     const instruments = SheetInstrumentHelper.distinctInstruments(sheet, false);
@@ -26,7 +26,7 @@ export class TMDLilyPondGenerator {
     const usedNames = new Set<string>();
 
     instruments.forEach((inst, idx) => {
-      let name = TMDLilyPondGenerator.sanitizeIdentifier(inst, idx);
+      let name = TmdLilyPondGenerator.sanitizeIdentifier(inst, idx);
       if (usedNames.has(name)) {
         const numberWords = ["Zero", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine"];
         const suffix = idx < 10 ? numberWords[idx] : `N${idx}`;
@@ -38,20 +38,20 @@ export class TMDLilyPondGenerator {
 
     instruments.forEach((inst) => {
       const varName = identifierMap.get(inst) || "Track";
-      const isDrum = TMDLilyPondGenerator.paragraphsContainPercussion(sheet.entries, inst);
+      const isDrum = TmdLilyPondGenerator.paragraphsContainPercussion(sheet.entries, inst);
       ly += `${varName} = ${isDrum ? "\\drummode " : ""}{\n  \\global\n`;
-      ly += TMDLilyPondGenerator.generateTrackMusic(inst, sheet, isDrum);
+      ly += TmdLilyPondGenerator.generateTrackMusic(inst, sheet, isDrum);
       ly += `}\n\n`;
     });
 
     ly += `\\score {\n  <<\n`;
     instruments.forEach((inst) => {
       const varName = identifierMap.get(inst) || "Track";
-      const isDrum = TMDLilyPondGenerator.paragraphsContainPercussion(sheet.entries, inst);
+      const isDrum = TmdLilyPondGenerator.paragraphsContainPercussion(sheet.entries, inst);
       const staffType = isDrum ? "DrumStaff" : "Staff";
-      ly += `    \\new ${staffType} = "${TMDLilyPondGenerator.escapeLilyPond(inst)}" \\with {\n`;
-      ly += `      instrumentName = "${TMDLilyPondGenerator.escapeLilyPond(inst)}"\n`;
-      ly += `      shortInstrumentName = "${TMDLilyPondGenerator.escapeLilyPond(inst.slice(0, 3))}"\n`;
+      ly += `    \\new ${staffType} = "${TmdLilyPondGenerator.escapeLilyPond(inst)}" \\with {\n`;
+      ly += `      instrumentName = "${TmdLilyPondGenerator.escapeLilyPond(inst)}"\n`;
+      ly += `      shortInstrumentName = "${TmdLilyPondGenerator.escapeLilyPond(inst.slice(0, 3))}"\n`;
       ly += `    } {\n      \\${varName}\n    }\n\n`;
     });
     ly += `  >>\n  \\layout { }\n  \\midi { }\n}\n`;
@@ -60,15 +60,15 @@ export class TMDLilyPondGenerator {
   }
 
   private static generateTrackMusic(instrument: string, sheet: Sheet, percussion: boolean): string {
-    const measures = TMDMeasureRenderer.renderMeasures(sheet, instrument);
+    const measures = TmdMeasureRenderer.renderMeasures(sheet, instrument);
     let result = "  ";
 
     for (const measure of measures) {
       for (const directive of measure.directives) {
-        result += TMDLilyPondGenerator.formatDirective(directive);
+        result += TmdLilyPondGenerator.formatDirective(directive);
       }
       for (const event of measure.events) {
-        result += TMDLilyPondGenerator.formatMeasureEvent(event, percussion);
+        result += TmdLilyPondGenerator.formatMeasureEvent(event, percussion);
         result += " ";
       }
       result += "|\n  ";
@@ -109,15 +109,15 @@ export class TMDLilyPondGenerator {
     switch (k.type) {
       case "tempo":
       case "relativeTempo": {
-        const cmd = TMDLilyPondGenerator.resolveTempo(directive.state.timeSignature, directive.state.tempo);
+        const cmd = TmdLilyPondGenerator.resolveTempo(directive.state.timeSignature, directive.state.tempo);
         return `${cmd} `;
       }
       case "timeSignature":
         return `\\time ${k.beat.count}/${k.beat.noteValue} `;
       case "absoluteKey":
-        return `\\key ${TMDLilyPondGenerator.lilyPondKey(k.key)} `;
+        return `\\key ${TmdLilyPondGenerator.lilyPondKey(k.key)} `;
       case "explicitKey":
-        return `\\key ${TMDLilyPondGenerator.lilyPondKey(k.key)} `;
+        return `\\key ${TmdLilyPondGenerator.lilyPondKey(k.key)} `;
       case "dynamics":
         return `\\${k.mark} `;
       case "relativeKey": {
@@ -134,7 +134,7 @@ export class TMDLilyPondGenerator {
     const decomposed = NotationDuration.decompose(event.duration);
     switch (event.content.type) {
       case "note": {
-        const pitch = TMDLilyPondGenerator.noteToLilyPondPitch(event.content.note, event.state.keyOffset);
+        const pitch = TmdLilyPondGenerator.noteToLilyPondPitch(event.content.note, event.state.keyOffset);
         const parts: string[] = [];
         decomposed.forEach((d, idx) => {
           const durStr = `${d.baseDenominator}${d.isDotted ? "." : ""}`;
@@ -145,7 +145,7 @@ export class TMDLilyPondGenerator {
         return parts.join(" ");
       }
       case "chord": {
-        const pitches = TMDLilyPondGenerator.chordToLilyPondPitches(event.content.chord, event.state.keyOffset);
+        const pitches = TmdLilyPondGenerator.chordToLilyPondPitches(event.content.chord, event.state.keyOffset);
         const chordBody = `<${pitches.join(" ")}>`;
         const parts: string[] = [];
         decomposed.forEach((d, idx) => {
@@ -189,7 +189,7 @@ export class TMDLilyPondGenerator {
     else if (note.accidental === "flat") midiPitch -= 1;
     midiPitch += note.octave * 12;
 
-    return TMDLilyPondGenerator.midiPitchToLilyPond(midiPitch);
+    return TmdLilyPondGenerator.midiPitchToLilyPond(midiPitch);
   }
 
   private static chordToLilyPondPitches(chord: ChordSymbol, keyOffset: number): string[] {
@@ -218,7 +218,7 @@ export class TMDLilyPondGenerator {
         pitches.unshift(bassPitch);
       }
     }
-    return pitches.map((p) => TMDLilyPondGenerator.midiPitchToLilyPond(p));
+    return pitches.map((p) => TmdLilyPondGenerator.midiPitchToLilyPond(p));
   }
 
   private static midiPitchToLilyPond(pitch: number): string {

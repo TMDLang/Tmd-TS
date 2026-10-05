@@ -1,16 +1,16 @@
-import type { PitchRangeDifficulty, TMDNotePitchInfo, TMDPitchRangeProfile, TMDTimingProfile, VocalClassification } from "../analysis/inspector.js";
-import { PlaybackDirectiveEvent,TMDPlaybackRenderer } from "../playback/playback.js";
+import type { PitchRangeDifficulty, TmdNotePitchInfo, TmdPitchRangeProfile, TmdTimingProfile, VocalClassification } from "../analysis/inspector.js";
+import { PlaybackDirectiveEvent,TmdPlaybackRenderer } from "../playback/playback.js";
 import { noteToMIDIPitch, Sheet } from "../syntax/types.js";
 
 /** Computes instrument pitch ranges independently from the Inspector facade. */
-export class TMDSongPitchRangeAnalyzer {
+export class TmdSongPitchRangeAnalyzer {
   public static analyze(
     instrument: string,
     sheet: Sheet,
-    timingProfile: TMDTimingProfile,
+    timingProfile: TmdTimingProfile,
     timelineDirectives: PlaybackDirectiveEvent[]
-  ): TMDPitchRangeProfile | null {
-    const timeline = TMDPlaybackRenderer.render(sheet, instrument);
+  ): TmdPitchRangeProfile | null {
+    const timeline = TmdPlaybackRenderer.render(sheet, instrument);
     type NoteHit = { midi: number; name: string; pos: number; sectionName: string; sectionOccurrence: number; measure: number; timeSeconds: number };
     const hits: NoteHit[] = [];
 
@@ -102,7 +102,7 @@ export class TMDSongPitchRangeAnalyzer {
     return suitable;
   }
 
-  private static noteInfo(hit: { midi: number; name: string; sectionName: string; pos: number; sectionOccurrence: number; measure: number; timeSeconds: number }): TMDNotePitchInfo {
+  private static noteInfo(hit: { midi: number; name: string; sectionName: string; pos: number; sectionOccurrence: number; measure: number; timeSeconds: number }): TmdNotePitchInfo {
     return { midiPitch: hit.midi, noteName: hit.name, sectionName: hit.sectionName, timelinePosition: hit.pos, sectionOccurrence: hit.sectionOccurrence, measure: hit.measure, timeSeconds: hit.timeSeconds };
   }
 

@@ -2,13 +2,13 @@ import { describe, expect,it } from 'vitest';
 
 import {
   NotationDuration,
-  TMDABCGenerator,
-  TMDLilyPondGenerator,
-  TMDMeasureChecker,
-  TMDMeasureRenderer,
-  TMDMIDIGenerator,
-  TMDMusicXMLGenerator,
-  TMDParser,
+  TmdABCGenerator,
+  TmdLilyPondGenerator,
+  TmdMeasureChecker,
+  TmdMeasureRenderer,
+  TmdMIDIGenerator,
+  TmdMusicXMLGenerator,
+  TmdParser,
 } from '../src/index.js';
 import { musicXmlExportFixture } from './conformanceFixtures.js';
 
@@ -22,8 +22,8 @@ intro:Piano@|0|{
 }
 -> intro ->#
 `;
-    const sheet = TMDParser.parse(source);
-    const issues = TMDMeasureChecker.checkSheet(sheet);
+    const sheet = TmdParser.parse(source);
+    const issues = TmdMeasureChecker.checkSheet(sheet);
 
     expect(issues.some((issue) => issue.snippet.includes('explicit barlines'))).toBe(true);
   });
@@ -60,10 +60,10 @@ A:Piano@|0|{
 }
 -> A ->#
 `;
-    const sheet = TMDParser.parse(tmd)!;
+    const sheet = TmdParser.parse(tmd)!;
     expect(sheet).not.toBeNull();
 
-    const measures = TMDMeasureRenderer.renderMeasures(sheet, 'Piano');
+    const measures = TmdMeasureRenderer.renderMeasures(sheet, 'Piano');
     expect(measures.length).toBe(3);
 
     for (const m of measures) {
@@ -74,7 +74,7 @@ A:Piano@|0|{
   });
 
   it('uses the state at the measure boundary for summaries and padded rests', () => {
-    const sheet = TMDParser.parse(`
+    const sheet = TmdParser.parse(`
 ::SCORE::
 ** Measure State Boundary **
 != 120
@@ -92,7 +92,7 @@ A:Piano@|0|{
     // the source notation valid for the renderer's canonical model.
     sheet.entries[0].start = 0.25;
 
-    const measure = TMDMeasureRenderer.renderMeasures(sheet, 'Piano')[0];
+    const measure = TmdMeasureRenderer.renderMeasures(sheet, 'Piano')[0];
     expect(measure.tempo).toBe(120);
     expect(measure.events[0].content.type).toBe('rest');
     expect(measure.events[0].state.tempo).toBe(120);
@@ -113,8 +113,8 @@ A:Piano@|0|{
 }
 -> A ->#
 `;
-    const sheet = TMDParser.parse(tmd)!;
-    const measures = TMDMeasureRenderer.renderMeasures(sheet, 'Piano');
+    const sheet = TmdParser.parse(tmd)!;
+    const measures = TmdMeasureRenderer.renderMeasures(sheet, 'Piano');
     expect(measures.length).toBe(2);
 
     // Measure 1: 3 beats rest, 1 beat note with tieStart = true
@@ -130,8 +130,8 @@ A:Piano@|0|{
 
 describe('MusicXML Exporter Invariants', () => {
   it('matches the shared MusicXML exporter fixture', () => {
-    const sheet = TMDParser.parse(musicXmlExportFixture);
-    const xml = TMDMusicXMLGenerator.generateMusicXML(sheet);
+    const sheet = TmdParser.parse(musicXmlExportFixture);
+    const xml = TmdMusicXMLGenerator.generateMusicXML(sheet);
 
     expect(xml).toContain("<part-name>Piano</part-name>");
     expect(xml).not.toContain("<part-name>Theme</part-name>");
@@ -150,8 +150,8 @@ Theme {
     1 2 3 4
 }
 `;
-    const sheet = TMDParser.parse(tmd)!;
-    const xml = TMDMusicXMLGenerator.generateMusicXML(sheet);
+    const sheet = TmdParser.parse(tmd)!;
+    const xml = TmdMusicXMLGenerator.generateMusicXML(sheet);
 
     expect(xml).toContain('<score-partwise');
     expect(xml).not.toContain('<score-part id="P1">');
@@ -173,8 +173,8 @@ A:Piano@|0|{
 }
 -> A ->#
 `;
-    const sheet = TMDParser.parse(tmd)!;
-    const xml = TMDMusicXMLGenerator.generateMusicXML(sheet);
+    const sheet = TmdParser.parse(tmd)!;
+    const xml = TmdMusicXMLGenerator.generateMusicXML(sheet);
 
     expect(xml).toContain('<score-partwise');
     expect(xml).toContain('<measure number="1">');
@@ -207,8 +207,8 @@ A:Drums@|0|{
 }
 -> A ->#
 `;
-    const sheet = TMDParser.parse(tmd)!;
-    const xml = TMDMusicXMLGenerator.generateMusicXML(sheet);
+    const sheet = TmdParser.parse(tmd)!;
+    const xml = TmdMusicXMLGenerator.generateMusicXML(sheet);
 
     expect(xml).toContain('<time-modification>');
     expect(xml).toContain('<actual-notes>3</actual-notes>');
@@ -219,7 +219,7 @@ A:Drums@|0|{
 
 describe('MIDI Exporter Invariants', () => {
   it('does not create a playback track for a rest-only assignment', () => {
-    const sheet = TMDParser.parse(`::SCORE::
+    const sheet = TmdParser.parse(`::SCORE::
 ** Rest Only **
 != 120
 ?= C
@@ -233,7 +233,7 @@ Piano:Piano@|0|{
 -> Piano ->#
 `);
 
-    const midi = TMDMIDIGenerator.generateMIDI(sheet);
+    const midi = TmdMIDIGenerator.generateMIDI(sheet);
     const trackCount = (midi[10] << 8) | midi[11];
     expect(trackCount).toBe(1);
   });
@@ -241,7 +241,7 @@ Piano:Piano@|0|{
 
 describe('Percussion assignment identity', () => {
   it('matches lowercase percussion assignments in LilyPond and ABC exporters', () => {
-    const sheet = TMDParser.parse(`::SCORE::
+    const sheet = TmdParser.parse(`::SCORE::
 ** Lowercase Drums **
 != 120
 ?= C
@@ -255,8 +255,8 @@ A:drums@|0|{
 -> A ->#
 `);
 
-    const ly = TMDLilyPondGenerator.generateLilyPond(sheet);
-    const abc = TMDABCGenerator.generateABC(sheet);
+    const ly = TmdLilyPondGenerator.generateLilyPond(sheet);
+    const abc = TmdABCGenerator.generateABC(sheet);
 
     expect(ly).toContain('\\drummode');
     expect(ly).toContain('\\new DrumStaff');
@@ -280,8 +280,8 @@ A:Piano@|0|{
 }
 -> A ->#
 `;
-    const sheet = TMDParser.parse(tmd)!;
-    const ly = TMDLilyPondGenerator.generateLilyPond(sheet);
+    const sheet = TmdParser.parse(tmd)!;
+    const ly = TmdLilyPondGenerator.generateLilyPond(sheet);
 
     expect(ly).toContain('\\version "2.24.0"');
     const barCount = (ly.match(/\|/g) || []).length;
@@ -314,8 +314,8 @@ A:Piano@|0|{
 }
 -> A ->#
 `;
-    const sheet = TMDParser.parse(tmd)!;
-    const abc = TMDABCGenerator.generateABC(sheet);
+    const sheet = TmdParser.parse(tmd)!;
+    const abc = TmdABCGenerator.generateABC(sheet);
 
     expect(abc).toContain('M:4/4');
     expect(abc).toContain('L:1/16');
@@ -355,8 +355,8 @@ A:Piano@|0|{
 }
 -> A ->#
 `;
-    const sheetG = TMDParser.parse(tmdG)!;
-    const abcG = TMDABCGenerator.generateABC(sheetG);
+    const sheetG = TmdParser.parse(tmdG)!;
+    const abcG = TmdABCGenerator.generateABC(sheetG);
 
     expect(abcG).toContain('K:G');
     // Degree 7 in G major is F# -> under K:G written as f4 (not ^f4)
@@ -381,21 +381,21 @@ Theme {
 
 -> (canon Theme (Violin1 Violin2) 0) ->#
 `;
-    const sheet = TMDParser.parse(macroTmd)!;
+    const sheet = TmdParser.parse(macroTmd)!;
 
     // MusicXML
-    const xml = TMDMusicXMLGenerator.generateMusicXML(sheet);
+    const xml = TmdMusicXMLGenerator.generateMusicXML(sheet);
     expect(xml).toContain('<part-name>Violin1</part-name>');
     expect(xml).toContain('<part-name>Violin2</part-name>');
     expect(xml).toContain('<step>C</step>');
 
     // LilyPond
-    const ly = TMDLilyPondGenerator.generateLilyPond(sheet);
+    const ly = TmdLilyPondGenerator.generateLilyPond(sheet);
     expect(ly).toContain('Violin1');
     expect(ly).toContain('Violin2');
 
     // ABC
-    const abc = TMDABCGenerator.generateABC(sheet);
+    const abc = TmdABCGenerator.generateABC(sheet);
     expect(abc).toContain('name="Violin1"');
     expect(abc).toContain('name="Violin2"');
   });
@@ -422,8 +422,8 @@ A:CHORD@|0|{
 }
 -> A ->#
 `;
-    const sheet = TMDParser.parse(tmd)!;
-    const xml = TMDMusicXMLGenerator.generateMusicXML(sheet);
+    const sheet = TmdParser.parse(tmd)!;
+    const xml = TmdMusicXMLGenerator.generateMusicXML(sheet);
 
     // Clefs
     expect(xml).toContain('<sign>percussion</sign>');
@@ -462,15 +462,15 @@ A:Piano@|0|{
 }
 -> A ->#
 `;
-    const sheet = TMDParser.parse(tmd)!;
+    const sheet = TmdParser.parse(tmd)!;
 
     // MusicXML
-    const xml = TMDMusicXMLGenerator.generateMusicXML(sheet);
+    const xml = TmdMusicXMLGenerator.generateMusicXML(sheet);
     expect(xml).toContain('<fifths>0</fifths>');
     expect(xml).toContain('<fifths>2</fifths>');
 
     // LilyPond
-    const ly = TMDLilyPondGenerator.generateLilyPond(sheet);
+    const ly = TmdLilyPondGenerator.generateLilyPond(sheet);
     expect(ly).toContain('bd4');
     expect(ly).toContain('sn4');
     expect(ly).toContain('hh4');
@@ -480,7 +480,7 @@ A:Piano@|0|{
     expect(ly).toContain('\\key d \\major');
 
     // ABC
-    const abc = TMDABCGenerator.generateABC(sheet);
+    const abc = TmdABCGenerator.generateABC(sheet);
     expect(abc).toContain('K:C');
     expect(abc).toContain('K:D');
   });
@@ -499,7 +499,7 @@ intro:Piano@|0|{
 }
 -> intro ->#
 `;
-    const issues = TMDMeasureChecker.check(code);
+    const issues = TmdMeasureChecker.check(code);
     expect(issues).toHaveLength(0);
   });
 
@@ -517,14 +517,14 @@ A:Piano@|0|{
 }
 -> A ->#
 `;
-    const sheet = TMDParser.parse(extremeTmd)!;
-    const abc = TMDABCGenerator.generateABC(sheet);
+    const sheet = TmdParser.parse(extremeTmd)!;
+    const abc = TmdABCGenerator.generateABC(sheet);
     expect(abc).toContain("C,");
     expect(abc).toContain("c'");
     expect(abc).toContain("^f");
     expect(abc).toContain("_b");
 
-    const ly = TMDLilyPondGenerator.generateLilyPond(sheet);
+    const ly = TmdLilyPondGenerator.generateLilyPond(sheet);
     expect(ly).toContain("c,4");
     expect(ly).toContain("c'''4");
   });
@@ -546,21 +546,21 @@ A:Piano@|0|{
 }
 -> A ->#
 `;
-      const sheet = TMDParser.parse(tmd)!;
+      const sheet = TmdParser.parse(tmd)!;
 
       // MusicXML: 6/8 with quarterBPM 120 -> 120 / 1.5 = 80 bpm with dotted-quarter
-      const xml = TMDMusicXMLGenerator.generateMusicXML(sheet);
+      const xml = TmdMusicXMLGenerator.generateMusicXML(sheet);
       expect(xml).toContain('<beat-unit>quarter</beat-unit>\n            <beat-unit-dot/>\n            <per-minute>80</per-minute>');
       // Directive {!=90} -> 90 / 1.5 = 60 bpm
       expect(xml).toContain('<beat-unit>quarter</beat-unit><beat-unit-dot/><per-minute>60</per-minute>');
 
       // LilyPond: \tempo 4. = 80 and \tempo 4. = 60
-      const ly = TMDLilyPondGenerator.generateLilyPond(sheet);
+      const ly = TmdLilyPondGenerator.generateLilyPond(sheet);
       expect(ly).toContain('\\tempo 4. = 80');
       expect(ly).toContain('\\tempo 4. = 60');
 
       // ABC: Q:3/8=80 and Q:3/8=60
-      const abc = TMDABCGenerator.generateABC(sheet);
+      const abc = TmdABCGenerator.generateABC(sheet);
       expect(abc).toContain('Q:3/8=80');
       expect(abc).toContain('Q:3/8=60');
     });
@@ -579,18 +579,18 @@ A:Piano@|0|{
 }
 -> A ->#
 `;
-      const sheet = TMDParser.parse(tmd)!;
+      const sheet = TmdParser.parse(tmd)!;
 
       // MusicXML: half note beat-unit, 120 / 2 = 60 bpm
-      const xml = TMDMusicXMLGenerator.generateMusicXML(sheet);
+      const xml = TmdMusicXMLGenerator.generateMusicXML(sheet);
       expect(xml).toContain('<beat-unit>half</beat-unit>\n            <per-minute>60</per-minute>');
 
       // LilyPond: \tempo 2 = 60
-      const ly = TMDLilyPondGenerator.generateLilyPond(sheet);
+      const ly = TmdLilyPondGenerator.generateLilyPond(sheet);
       expect(ly).toContain('\\tempo 2 = 60');
 
       // ABC: Q:1/2=60
-      const abc = TMDABCGenerator.generateABC(sheet);
+      const abc = TmdABCGenerator.generateABC(sheet);
       expect(abc).toContain('Q:1/2=60');
     });
   });
@@ -610,8 +610,8 @@ A:Piano@|0|{
 }
 -> A ->#
 `;
-      const sheet = TMDParser.parse(tmd)!;
-      const xml = TMDMusicXMLGenerator.generateMusicXML(sheet);
+      const sheet = TmdParser.parse(tmd)!;
+      const xml = TmdMusicXMLGenerator.generateMusicXML(sheet);
 
       // Must have <chord/> elements for the second note of each dyad
       expect(xml).toContain('<chord/>');
@@ -633,8 +633,8 @@ A:Piano@|0|{
 }
 -> A ->#
 `;
-      const sheet = TMDParser.parse(tmd)!;
-      const abc = TMDABCGenerator.generateABC(sheet);
+      const sheet = TmdParser.parse(tmd)!;
+      const abc = TmdABCGenerator.generateABC(sheet);
 
       // 1+3 in C major is C4 and E4, 1 beat = 4 16ths -> [CE]4 or [C4E4]
       expect(abc).toMatch(/\[[A-Ga-g\^=_0-9]+\]/);

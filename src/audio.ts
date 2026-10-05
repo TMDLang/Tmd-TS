@@ -1,10 +1,10 @@
 import { SheetInstrumentHelper } from "./domain/index.js";
-import { PlaybackDirectiveEvent, PlaybackEvent, TMDMacroEvaluator, TMDPlaybackRenderer } from "./playback/index.js";
+import { PlaybackDirectiveEvent, PlaybackEvent, TmdMacroEvaluator, TmdPlaybackRenderer } from "./playback/index.js";
 import { Accidental, DEFAULT_INSTRUMENT, Note, Sheet } from "./syntax/index.js";
 
-export class TMDAudioError extends Error {}
+export class TmdAudioError extends Error {}
 
-export interface TMDWAVRendererOptions {
+export interface TmdWAVRendererOptions {
   sampleRate?: number;
   targetParagraph?: string;
   targetInstrument?: string;
@@ -12,14 +12,14 @@ export interface TMDWAVRendererOptions {
 }
 
 /** Portable fallback renderer. It produces deterministic stereo PCM WAV without platform audio APIs. */
-export class TMDWAVRenderer {
+export class TmdWAVRenderer {
   static renderWAV(
     rawSheet: Sheet,
-    sampleRateOrOptions: number | TMDWAVRendererOptions = 44100,
-    maybeOptions?: TMDWAVRendererOptions
+    sampleRateOrOptions: number | TmdWAVRendererOptions = 44100,
+    maybeOptions?: TmdWAVRendererOptions
   ): Uint8Array {
     let sampleRate = 44100;
-    let options: TMDWAVRendererOptions | undefined;
+    let options: TmdWAVRendererOptions | undefined;
     if (typeof sampleRateOrOptions === "object" && sampleRateOrOptions !== null) {
       options = sampleRateOrOptions;
       sampleRate = options.sampleRate ?? 44100;
@@ -29,12 +29,12 @@ export class TMDWAVRenderer {
     }
 
     if (options?.soundfont) {
-      throw new TMDAudioError(
+      throw new TmdAudioError(
         "External SoundFont/DLS rendering is not supported by the portable WAV renderer."
       );
     }
 
-    let sheet = TMDMacroEvaluator.expandThrowing(rawSheet);
+    let sheet = TmdMacroEvaluator.expandThrowing(rawSheet);
     if (options?.targetParagraph) {
       const filteredParagraphs = sheet.entries.filter(p => p.name === options.targetParagraph);
       sheet = {
@@ -45,7 +45,7 @@ export class TMDWAVRenderer {
     }
 
     if (!Number.isFinite(sampleRate) || sampleRate < 8000)
-      throw new TMDAudioError("Sample rate must be at least 8000 Hz");
+      throw new TmdAudioError("Sample rate must be at least 8000 Hz");
 
     const events: PlaybackEvent[] = [];
     const directives: PlaybackDirectiveEvent[] = [];
@@ -62,7 +62,7 @@ export class TMDWAVRenderer {
     }
 
     for (const assignment of distinctInstruments) {
-      const timeline = TMDPlaybackRenderer.render(sheet, assignment);
+      const timeline = TmdPlaybackRenderer.render(sheet, assignment);
       events.push(...timeline.events);
       directives.push(...timeline.directives);
     }

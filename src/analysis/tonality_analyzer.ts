@@ -1,24 +1,24 @@
 import type {
-  TMDKeyStability,
-  TMDPitchClassDistribution,
-  TMDScaleFamily,
-  TMDSectionTonalityProfile,
-  TMDTimingProfile,
-  TMDTonalityCandidate,
-  TMDTonalityEvidence,
-  TMDTonalityInference,
-  TMDTonalityMode,
-  TMDTonalityMood,
-  TMDTonalityNarrative,
-  TMDTonalityProfile,
+  TmdKeyStability,
+  TmdPitchClassDistribution,
+  TmdScaleFamily,
+  TmdSectionTonalityProfile,
+  TmdTimingProfile,
+  TmdTonalityCandidate,
+  TmdTonalityEvidence,
+  TmdTonalityInference,
+  TmdTonalityMode,
+  TmdTonalityMood,
+  TmdTonalityNarrative,
+  TmdTonalityProfile,
 } from "../analysis/inspector.js";
 import { SheetInstrumentHelper } from "../domain/instruments.js";
-import { PlaybackEvent, TMDPlaybackRenderer } from "../playback/playback.js";
+import { PlaybackEvent, TmdPlaybackRenderer } from "../playback/playback.js";
 import { chordQualityIntervals, ChordSymbol, noteToMIDIPitch, Sheet } from "../syntax/types.js";
-import type { TMDLocale } from "./localization.js";
-import { TMDLocalizationKey, TMDLocalizer } from "./localization.js";
+import type { TmdLocale } from "./localization.js";
+import { TmdLocalizationKey, TmdLocalizer } from "./localization.js";
 
-export class TMDSongTonalityAnalyzer {
+export class TmdSongTonalityAnalyzer {
 private static readonly KS_MAJOR_PROFILE: number[] = [
     6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88
   ];
@@ -27,14 +27,14 @@ private static readonly KS_MAJOR_PROFILE: number[] = [
   ];
   public static analyze(
     sheet: Sheet,
-    timingProfile: TMDTimingProfile,
-    locale: TMDLocale
-  ): TMDTonalityProfile {
-    const localizer = new TMDLocalizer(locale);
+    timingProfile: TmdTimingProfile,
+    locale: TmdLocale
+  ): TmdTonalityProfile {
+    const localizer = new TmdLocalizer(locale);
     const distinctInsts = SheetInstrumentHelper.distinctInstruments(sheet, false);
     const allEvents: PlaybackEvent[] = [];
     for (const inst of distinctInsts) {
-      const timeline = TMDPlaybackRenderer.render(sheet, inst);
+      const timeline = TmdPlaybackRenderer.render(sheet, inst);
       allEvents.push(...timeline.events);
     }
 
@@ -111,7 +111,7 @@ private static readonly KS_MAJOR_PROFILE: number[] = [
     const globalDist = this.makePitchClassDistribution(globalWeights, globalTonicOffset, globalDisplayMode);
 
     // Sections
-    const sectionProfiles: TMDSectionTonalityProfile[] = [];
+    const sectionProfiles: TmdSectionTonalityProfile[] = [];
     const circleOfFifthsPath: number[] = [];
 
     for (let secIdx = 0; secIdx < timingProfile.sections.length; secIdx++) {
@@ -155,7 +155,7 @@ private static readonly KS_MAJOR_PROFILE: number[] = [
 
     // Human-friendly producer narrative synthesis
     const diatonicRatio = globalDist.diatonicRatio;
-    let mood: TMDTonalityMood;
+    let mood: TmdTonalityMood;
     if (globalInference.mode === "insufficient") {
       mood = "insufficient";
     } else if (globalInference.mode === "minor" && diatonicRatio >= 0.95) {
@@ -173,8 +173,8 @@ private static readonly KS_MAJOR_PROFILE: number[] = [
 
     // Modulation story
     const modTransitions: string[] = [];
-    const modulationTransitions: TMDTonalityNarrative["transitions"] = [];
-    let previousInference: TMDTonalityInference | undefined;
+    const modulationTransitions: TmdTonalityNarrative["transitions"] = [];
+    let previousInference: TmdTonalityInference | undefined;
     let previousTonicOffset = globalTonicOffset;
     let previousFifths = this.circleOfFifthsStep(previousTonicOffset);
 
@@ -197,7 +197,7 @@ private static readonly KS_MAJOR_PROFILE: number[] = [
           fifthsStepDiff: stepDiff,
         });
         modTransitions.push(
-          localizer.text(TMDLocalizationKey.modulationStep, [
+          localizer.text(TmdLocalizationKey.modulationStep, [
             sec.sectionName,
             `${current.tonic} ${this.modeLabel(current.mode, localizer)}`,
             semitoneDiff,
@@ -214,10 +214,10 @@ private static readonly KS_MAJOR_PROFILE: number[] = [
 
     let modulationStory: string;
     if (modTransitions.length === 0) {
-      modulationStory = localizer.text(TMDLocalizationKey.modulationNone);
+      modulationStory = localizer.text(TmdLocalizationKey.modulationNone);
     } else {
       modulationStory =
-        localizer.text(TMDLocalizationKey.modulationStart, [globalInference.tonic ?? "?", this.modeLabel(globalInference.mode, localizer)]) +
+        localizer.text(TmdLocalizationKey.modulationStart, [globalInference.tonic ?? "?", this.modeLabel(globalInference.mode, localizer)]) +
         " ➔ " +
         modTransitions.join(" ➔ ");
     }
@@ -226,15 +226,15 @@ private static readonly KS_MAJOR_PROFILE: number[] = [
     if (modTransitions.length === 0) {
       const moodSummary =
         mood === "cleanMinor"
-          ? localizer.text(TMDLocalizationKey.summaryCleanMinor)
+          ? localizer.text(TmdLocalizationKey.summaryCleanMinor)
           : mood === "contemporaryMinor"
-            ? localizer.text(TMDLocalizationKey.summaryColorMinor)
+            ? localizer.text(TmdLocalizationKey.summaryColorMinor)
             : diatonicRatio >= 0.95
-              ? localizer.text(TMDLocalizationKey.summaryClean)
-              : localizer.text(TMDLocalizationKey.summaryColor);
-      summaryText = localizer.text(TMDLocalizationKey.summaryStable, [globalInference.tonic ?? "?", this.modeLabel(globalInference.mode, localizer), moodSummary]);
+              ? localizer.text(TmdLocalizationKey.summaryClean)
+              : localizer.text(TmdLocalizationKey.summaryColor);
+      summaryText = localizer.text(TmdLocalizationKey.summaryStable, [globalInference.tonic ?? "?", this.modeLabel(globalInference.mode, localizer), moodSummary]);
     } else {
-      summaryText = localizer.text(TMDLocalizationKey.summaryModulating, [
+      summaryText = localizer.text(TmdLocalizationKey.summaryModulating, [
         globalInference.tonic ?? "?",
         this.modeLabel(globalInference.mode, localizer),
         String(modTransitions.length),
@@ -266,37 +266,37 @@ private static readonly KS_MAJOR_PROFILE: number[] = [
     };
   }
 
-  private static moodLocalizationKey(mood: TMDTonalityMood): TMDLocalizationKey {
+  private static moodLocalizationKey(mood: TmdTonalityMood): TmdLocalizationKey {
     switch (mood) {
-    case "cleanMajor": return TMDLocalizationKey.moodCleanMajor;
-    case "contemporaryMajor": return TMDLocalizationKey.moodContemporaryMajor;
-    case "cleanMinor": return TMDLocalizationKey.moodCleanMinor;
-    case "contemporaryMinor": return TMDLocalizationKey.moodContemporaryMinor;
-    case "insufficient": return TMDLocalizationKey.moodInsufficient;
-    case "modal": return TMDLocalizationKey.moodModal;
+    case "cleanMajor": return TmdLocalizationKey.moodCleanMajor;
+    case "contemporaryMajor": return TmdLocalizationKey.moodContemporaryMajor;
+    case "cleanMinor": return TmdLocalizationKey.moodCleanMinor;
+    case "contemporaryMinor": return TmdLocalizationKey.moodContemporaryMinor;
+    case "insufficient": return TmdLocalizationKey.moodInsufficient;
+    case "modal": return TmdLocalizationKey.moodModal;
     }
   }
 
-  private static isStableInference(inference: TMDTonalityInference): inference is TMDTonalityInference & { tonic: string; mode: "major" | "minor" } {
+  private static isStableInference(inference: TmdTonalityInference): inference is TmdTonalityInference & { tonic: string; mode: "major" | "minor" } {
     return inference.tonic !== null && (inference.mode === "major" || inference.mode === "minor")
       && inference.stability !== "ambiguous" && inference.stability !== "insufficient";
   }
 
-  public static modeLabel(mode: TMDTonalityMode, localizer: TMDLocalizer): string {
+  public static modeLabel(mode: TmdTonalityMode, localizer: TmdLocalizer): string {
     switch (mode) {
-    case "major": return localizer.text(TMDLocalizationKey.major);
-    case "minor": return localizer.text(TMDLocalizationKey.minor);
-    case "ambiguous": return localizer.text(TMDLocalizationKey.modeAmbiguous);
-    case "modal": return localizer.text(TMDLocalizationKey.modeModal);
-    case "insufficient": return localizer.text(TMDLocalizationKey.modeInsufficient);
+    case "major": return localizer.text(TmdLocalizationKey.major);
+    case "minor": return localizer.text(TmdLocalizationKey.minor);
+    case "ambiguous": return localizer.text(TmdLocalizationKey.modeAmbiguous);
+    case "modal": return localizer.text(TmdLocalizationKey.modeModal);
+    case "insufficient": return localizer.text(TmdLocalizationKey.modeInsufficient);
     }
   }
 
   public static localizeTonalityNarrative(
-    tonality: TMDTonalityProfile,
-    locale: TMDLocale,
-  ): Pick<TMDTonalityProfile, "summaryText" | "moodDescription" | "modulationStory"> {
-    const localizer = new TMDLocalizer(locale);
+    tonality: TmdTonalityProfile,
+    locale: TmdLocale,
+  ): Pick<TmdTonalityProfile, "summaryText" | "moodDescription" | "modulationStory"> {
+    const localizer = new TmdLocalizer(locale);
     if (!tonality.narrative) {
       return {
         summaryText: tonality.summaryText,
@@ -306,22 +306,22 @@ private static readonly KS_MAJOR_PROFILE: number[] = [
     }
     const { tonic, mood, transitions } = tonality.narrative;
     const moodDescription = localizer.text(this.moodLocalizationKey(mood));
-    const modulationParts = transitions.map((transition) => localizer.text(TMDLocalizationKey.modulationStep, [
+    const modulationParts = transitions.map((transition) => localizer.text(TmdLocalizationKey.modulationStep, [
       transition.sectionName,
       `${transition.tonic} ${this.modeLabel(transition.mode, localizer)}`,
       transition.semitoneDiff >= 0 ? `+${transition.semitoneDiff}` : `${transition.semitoneDiff}`,
       transition.fifthsStepDiff >= 0 ? `+${transition.fifthsStepDiff}` : `${transition.fifthsStepDiff}`,
     ]));
     const modulationStory = transitions.length === 0
-      ? localizer.text(TMDLocalizationKey.modulationNone)
-      : localizer.text(TMDLocalizationKey.modulationStart, [tonic, this.modeLabel(tonality.globalInference.mode, localizer)]) + " ➔ " + modulationParts.join(" ➔ ");
+      ? localizer.text(TmdLocalizationKey.modulationNone)
+      : localizer.text(TmdLocalizationKey.modulationStart, [tonic, this.modeLabel(tonality.globalInference.mode, localizer)]) + " ➔ " + modulationParts.join(" ➔ ");
     const summaryText = transitions.length === 0
-      ? localizer.text(TMDLocalizationKey.summaryStable, [
+      ? localizer.text(TmdLocalizationKey.summaryStable, [
         tonic,
         this.modeLabel(tonality.globalInference.mode, localizer),
-        localizer.text(mood === "cleanMinor" ? TMDLocalizationKey.summaryCleanMinor : mood === "contemporaryMinor" ? TMDLocalizationKey.summaryColorMinor : mood === "cleanMajor" ? TMDLocalizationKey.summaryClean : TMDLocalizationKey.summaryColor),
+        localizer.text(mood === "cleanMinor" ? TmdLocalizationKey.summaryCleanMinor : mood === "contemporaryMinor" ? TmdLocalizationKey.summaryColorMinor : mood === "cleanMajor" ? TmdLocalizationKey.summaryClean : TmdLocalizationKey.summaryColor),
       ])
-      : localizer.text(TMDLocalizationKey.summaryModulating, [tonic, this.modeLabel(tonality.globalInference.mode, localizer), String(transitions.length)]);
+      : localizer.text(TmdLocalizationKey.summaryModulating, [tonic, this.modeLabel(tonality.globalInference.mode, localizer), String(transitions.length)]);
     return { summaryText, moodDescription, modulationStory };
   }
 
@@ -368,7 +368,7 @@ private static readonly KS_MAJOR_PROFILE: number[] = [
     return result;
   }
 
-  private static diatonicPitchClassMask(tonicOffset: number, mode: TMDTonalityMode = "major"): Set<number> {
+  private static diatonicPitchClassMask(tonicOffset: number, mode: TmdTonalityMode = "major"): Set<number> {
     const steps = mode === "minor" ? [0, 2, 3, 5, 7, 8, 10] : mode === "major" ? [0, 2, 4, 5, 7, 9, 11] : [];
     const mask = new Set<number>();
     for (const step of steps) {
@@ -380,8 +380,8 @@ private static readonly KS_MAJOR_PROFILE: number[] = [
   private static makePitchClassDistribution(
     weights: number[],
     tonicOffset: number,
-    mode: TMDTonalityMode = "major"
-  ): TMDPitchClassDistribution {
+    mode: TmdTonalityMode = "major"
+  ): TmdPitchClassDistribution {
     const pitchClassNames = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
     const total = weights.reduce((acc, w) => acc + w, 0.0);
     if (total <= 0.0001) {
@@ -444,7 +444,7 @@ private static readonly KS_MAJOR_PROFILE: number[] = [
     return num / denom;
   }
 
-  private static evaluateTonality(weights: number[], evidence: TMDTonalityEvidence = { noteWeight: 0, chordWeight: 0 }): TMDTonalityInference {
+  private static evaluateTonality(weights: number[], evidence: TmdTonalityEvidence = { noteWeight: 0, chordWeight: 0 }): TmdTonalityInference {
     const pitchClassNames = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
     const total = weights.reduce((acc, w) => acc + w, 0.0);
     if (total <= 0.0001) {
@@ -460,7 +460,7 @@ private static readonly KS_MAJOR_PROFILE: number[] = [
         evidence,
       };
     }
-    const candidates: TMDTonalityCandidate[] = [];
+    const candidates: TmdTonalityCandidate[] = [];
 
     // Evaluate all 12 Major and 12 Minor keys
     for (let tonic = 0; tonic < 12; tonic++) {
@@ -475,7 +475,7 @@ private static readonly KS_MAJOR_PROFILE: number[] = [
       const rMinor = this.pearsonCorrelation(rotWeights, this.KS_MINOR_PROFILE);
       const seventhWeight = weights[(tonic + 11) % 12] / total;
       const sixthWeight = weights[(tonic + 9) % 12] / total;
-      const scaleFamily: TMDScaleFamily = seventhWeight > 0.08 && sixthWeight > 0.08
+      const scaleFamily: TmdScaleFamily = seventhWeight > 0.08 && sixthWeight > 0.08
         ? "melodicMinor" : seventhWeight > 0.08 ? "harmonicMinor" : "naturalMinor";
       candidates.push({ tonic: pitchClassNames[tonic], mode: "minor", scaleFamily, correlation: rMinor });
     }
@@ -486,8 +486,8 @@ private static readonly KS_MAJOR_PROFILE: number[] = [
     const second = candidates[1];
     const margin = best.correlation - second.correlation;
     const confidence = Math.max(0, Math.min(1, ((best.correlation + 1) / 2) * (0.5 + Math.min(1, margin / 0.20) * 0.5)));
-    const stability: TMDKeyStability = confidence >= 0.75 && margin >= 0.08 ? "high" : confidence >= 0.50 && margin >= 0.03 ? "moderate" : "ambiguous";
-    const mode: TMDTonalityMode = stability === "ambiguous" ? "ambiguous" : best.mode;
+    const stability: TmdKeyStability = confidence >= 0.75 && margin >= 0.08 ? "high" : confidence >= 0.50 && margin >= 0.03 ? "moderate" : "ambiguous";
+    const mode: TmdTonalityMode = stability === "ambiguous" ? "ambiguous" : best.mode;
     return {
       tonic: best.tonic,
       mode,

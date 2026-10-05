@@ -1,6 +1,6 @@
 import { LexedToken, Lexer, Token } from "../syntax/parser.js";
 import { Beat } from "../syntax/types.js";
-import type { TMDMeasureIssue } from "./measure_check.js";
+import type { TmdMeasureIssue } from "./measure_check.js";
 
 interface ParagraphSpanInfo {
   paragraphName: string;
@@ -19,7 +19,7 @@ function intValueOfToken(token: Token): number | undefined {
   return undefined;
 }
 
-function formatIssueDescription(issue: Omit<TMDMeasureIssue, "description">): string {
+function formatIssueDescription(issue: Omit<TmdMeasureIssue, "description">): string {
   if (issue.instrument === "Order") {
     if (issue.paragraphName) {
       return `Playback (line ${issue.lineNumber}): Undefined section '${issue.paragraphName}' in playback (${issue.snippet})`;
@@ -42,8 +42,8 @@ function formatIssueDescription(issue: Omit<TMDMeasureIssue, "description">): st
 }
 
 /** Validates malformed TMD source using the shared canonical lexer. */
-export class TMDMeasureLexerFallback {
-  public static check(source: string): TMDMeasureIssue[] {
+export class TmdMeasureLexerFallback {
+  public static check(source: string): TmdMeasureIssue[] {
     const lexer = new Lexer(source);
     const tokensWithRanges = lexer.tokenizeWithRanges();
 
@@ -64,7 +64,7 @@ export class TMDMeasureLexerFallback {
       }
     }
 
-    const issues: TMDMeasureIssue[] = [];
+    const issues: TmdMeasureIssue[] = [];
     const paragraphInfos: ParagraphSpanInfo[] = [];
     const orderSections: { name: string; line: number }[] = [];
     let hasOrder = false;
@@ -565,7 +565,7 @@ export class TMDMeasureLexerFallback {
     }
 
     // Note: in TMD, tracks within the same section may enter and exit freely (staggered entrance,
-    // early exit / solos / breakdowns). TMDPlaybackRenderer pads trailing silence up to durationOf(section),
+    // early exit / solos / breakdowns). TmdPlaybackRenderer pads trailing silence up to durationOf(section),
     // so shorter tracks are considered natural implicit rests rather than errors.
 
     return issues;

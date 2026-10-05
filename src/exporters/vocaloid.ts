@@ -1,10 +1,10 @@
 import { SheetInstrumentHelper } from "../domain/index.js";
-import { PlaybackTimeline, TMDPlaybackRenderer } from "../playback/index.js";
+import { PlaybackTimeline, TmdPlaybackRenderer } from "../playback/index.js";
 import { Sheet } from "../syntax/index.js";
 import {
   MIDIEvent,
-  TMDMIDIEncoder,
-  TMDMIDIGenerator,
+  TmdMIDIEncoder,
+  TmdMIDIGenerator,
 } from './midi.js';
 
 /**
@@ -163,7 +163,7 @@ export class VocaloidPhoneme {
  * A `.vsq` file is a Standard MIDI File (SMF Format 1) containing text meta events (`0xFF 0x01`)
  * that concatenate into a Windows INI text document describing the vocal track and lyric events.
  */
-export class TMDVSQGenerator {
+export class TmdVSQGenerator {
   public static readonly ticksPerQuarter: number = 480;
 
   /**
@@ -179,14 +179,14 @@ export class TMDVSQGenerator {
     const defaultLyric = options.defaultLyric || 'a';
 
     const selectedInstrument = this.resolveTargetInstrument(sheet, targetInstrument);
-    const timeline = TMDPlaybackRenderer.render(sheet, selectedInstrument);
+    const timeline = TmdPlaybackRenderer.render(sheet, selectedInstrument);
 
     // Track 0: Conductor Track (Tempo & Time Signature)
     const tempo = sheet.speed && sheet.speed > 0 ? sheet.speed : 120.0;
     const beat = sheet.beat || { count: 4, noteValue: 4 };
     const trackName = sheet.name && sheet.name.length > 0 ? sheet.name : 'TMD VOCALOID Score';
 
-    const conductorTrackData = TMDMIDIEncoder.encodeTrack([
+    const conductorTrackData = TmdMIDIEncoder.encodeTrack([
       { tick: 0, message: { type: 'trackName', name: trackName } },
       { tick: 0, message: { type: 'tempo', bpm: tempo } },
       { tick: 0, message: { type: 'timeSignature', beat } },
@@ -201,7 +201,7 @@ export class TMDVSQGenerator {
       defaultLyric
     );
 
-    return TMDMIDIEncoder.encodeFile([conductorTrackData, vsqTrackData], this.ticksPerQuarter);
+    return TmdMIDIEncoder.encodeFile([conductorTrackData, vsqTrackData], this.ticksPerQuarter);
   }
 
   private static resolveTargetInstrument(sheet: Sheet, requested?: string): string {
@@ -234,12 +234,12 @@ export class TMDVSQGenerator {
         continue;
       }
       let bestEvent = event;
-      let bestPitch = TMDMIDIGenerator.noteToMIDIPitch(event.content.note, event.state.keyOffset);
+      let bestPitch = TmdMIDIGenerator.noteToMIDIPitch(event.content.note, event.state.keyOffset);
       let j = i + 1;
       while (j < timeline.events.length && Math.abs(timeline.events[j].position - event.position) < 1e-4) {
         const nextEv = timeline.events[j];
         if (nextEv.content.type === 'note') {
-          const p = TMDMIDIGenerator.noteToMIDIPitch(nextEv.content.note, nextEv.state.keyOffset);
+          const p = TmdMIDIGenerator.noteToMIDIPitch(nextEv.content.note, nextEv.state.keyOffset);
           if (p > bestPitch) {
             bestPitch = p;
             bestEvent = nextEv;
@@ -371,7 +371,7 @@ export class TMDVSQGenerator {
       });
     }
 
-    return TMDMIDIEncoder.encodeTrack(midiEvents);
+    return TmdMIDIEncoder.encodeTrack(midiEvents);
   }
 
   private static midiTick(quarterNotes: number): number {
@@ -386,7 +386,7 @@ export class TMDVSQGenerator {
  * `.vsqx` is an XML-based format compatible with VOCALOID3, VOCALOID4, VOCALOID5, VOCALOID6,
  * and Crypton's Piapro Studio.
  */
-export class TMDVSQXGenerator {
+export class TmdVSQXGenerator {
   public static readonly ticksPerQuarter: number = 480;
 
   /**
@@ -402,7 +402,7 @@ export class TMDVSQXGenerator {
     const defaultLyric = options.defaultLyric || 'a';
 
     const selectedInstrument = this.resolveTargetInstrument(sheet, targetInstrument);
-    const timeline = TMDPlaybackRenderer.render(sheet, selectedInstrument);
+    const timeline = TmdPlaybackRenderer.render(sheet, selectedInstrument);
 
     const bpm = sheet.speed && sheet.speed > 0 ? sheet.speed : 120.0;
     const tempoVal = Math.round(bpm * 100); // VSQX tempo is scaled by 100 (e.g. 120 BPM = 12000)
@@ -432,12 +432,12 @@ export class TMDVSQXGenerator {
         continue;
       }
       let bestEvent = event;
-      let bestPitch = TMDMIDIGenerator.noteToMIDIPitch(event.content.note, event.state.keyOffset);
+      let bestPitch = TmdMIDIGenerator.noteToMIDIPitch(event.content.note, event.state.keyOffset);
       let j = i + 1;
       while (j < timeline.events.length && Math.abs(timeline.events[j].position - event.position) < 1e-4) {
         const nextEv = timeline.events[j];
         if (nextEv.content.type === 'note') {
-          const p = TMDMIDIGenerator.noteToMIDIPitch(nextEv.content.note, nextEv.state.keyOffset);
+          const p = TmdMIDIGenerator.noteToMIDIPitch(nextEv.content.note, nextEv.state.keyOffset);
           if (p > bestPitch) {
             bestPitch = p;
             bestEvent = nextEv;

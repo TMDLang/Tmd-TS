@@ -29,7 +29,7 @@ describe('Web UI Exporters & REAPER support (TDD)', () => {
     const fullContent = [mainContent, domContent, exportContent].join('\n');
 
     expect(fullContent).toContain('export-reaper');
-    expect(fullContent).toContain('TMDReaperGenerator');
+    expect(fullContent).toContain('TmdReaperGenerator');
     expect(fullContent).toContain('.generateRPP(');
   });
 
@@ -60,8 +60,8 @@ describe('Web UI Exporters & REAPER support (TDD)', () => {
 
     expect(fullContent).toContain('export-vsq');
     expect(fullContent).toContain('export-vsqx');
-    expect(fullContent).toContain('TMDVSQGenerator');
-    expect(fullContent).toContain('TMDVSQXGenerator');
+    expect(fullContent).toContain('TmdVSQGenerator');
+    expect(fullContent).toContain('TmdVSQXGenerator');
   });
 
   it('defines ChordPro export i18n labels in zh-TW and en locales', () => {
@@ -86,7 +86,7 @@ describe('Web UI Exporters & REAPER support (TDD)', () => {
     const fullContent = [mainContent, domContent, exportContent].join('\n');
 
     expect(fullContent).toContain('export-chordpro');
-    expect(fullContent).toContain('TMDChordProGenerator');
+    expect(fullContent).toContain('TmdChordProGenerator');
     expect(fullContent).toContain('.generateChordPro(');
   });
 

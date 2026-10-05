@@ -1,9 +1,9 @@
-import type { TMDHarmonyProfile } from "../analysis/inspector.js";
+import type { TmdHarmonyProfile } from "../analysis/inspector.js";
 import type { Sheet } from "../syntax/types.js";
 
 /** Extracts harmonic content and playback key changes from a parsed score. */
-export class TMDSongHarmonyAnalyzer {
-  static analyze(sheet: Sheet): TMDHarmonyProfile {
+export class TmdSongHarmonyAnalyzer {
+  static analyze(sheet: Sheet): TmdHarmonyProfile {
     const chords: string[] = [];
     for (const paragraph of sheet.entries) {
       for (const section of paragraph.sections) {

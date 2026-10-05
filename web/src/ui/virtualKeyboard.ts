@@ -1,4 +1,4 @@
-import type { TMDWebEditor } from "../editor.js";
+import type { TmdWebEditor } from "../editor.js";
 import { escapeHtml } from "../html.js";
 import { t } from "../i18n.js";
 import { tmdPlayer } from "../midi-player.js";
@@ -24,7 +24,7 @@ export type VirtualKeyboardMode = "audition" | "insert";
 
 export class VirtualKeyboardController {
   private elements: VirtualKeyboardElements;
-  private editor: TMDWebEditor;
+  private editor: TmdWebEditor;
   private baseOctave: number = 4; // C4 - C6
   private currentKeySig: string = "C";
   private mode: VirtualKeyboardMode = "audition";
@@ -33,7 +33,7 @@ export class VirtualKeyboardController {
 
   constructor(
     elements: VirtualKeyboardElements,
-    editor: TMDWebEditor,
+    editor: TmdWebEditor,
     onStateChange?: () => void
   ) {
     this.elements = elements;

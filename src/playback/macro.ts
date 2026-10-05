@@ -13,7 +13,7 @@ import {
   Unit,
   UnitGroup,
 } from "../syntax/types.js";
-import { TMDPlaybackRenderer } from "./playback.js";
+import { TmdPlaybackRenderer } from "./playback.js";
 
 export interface MacroExpansionResult {
   paragraphs: Entry[];
@@ -184,26 +184,26 @@ function toMajorSections(sections: Section[]): Section[] {
   return cloned;
 }
 
-export class TMDMacroError extends Error {
+export class TmdMacroError extends Error {
   public line?: number;
   public column?: number;
 
   constructor(message: string, line?: number, column?: number) {
     const loc = line !== undefined && column !== undefined ? ` at line ${line}, col ${column}` : "";
     super(`Macro error${loc}: ${message}`);
-    this.name = "TMDMacroError";
+    this.name = "TmdMacroError";
     this.line = line;
     this.column = column;
   }
 }
 
-export class TMDMacroEvaluator {
+export class TmdMacroEvaluator {
   /**
    * Expands any S-expression macro orders (`Order.macro`) in a Sheet into concrete
    * paragraphs and concrete order sequences.
    * If the sheet contains no macro orders, it returns the paragraphs and orders as-is.
    */
-  /** @deprecated Use expandThrowing() and handle TMDMacroError explicitly. */
+  /** @deprecated Use expandThrowing() and handle TmdMacroError explicitly. */
   public static expand(sheet: Sheet): Sheet {
     return this.expandThrowing(sheet);
   }
@@ -228,7 +228,7 @@ export class TMDMacroEvaluator {
     let currentOrderLoc: { line?: number; column?: number } = {};
 
     const macroError = (msg: string) => {
-      return new TMDMacroError(msg, currentOrderLoc.line, currentOrderLoc.column);
+      return new TmdMacroError(msg, currentOrderLoc.line, currentOrderLoc.column);
     };
 
     const integer = (value: SExpr, label: string): number => {
@@ -575,7 +575,7 @@ export class TMDMacroEvaluator {
           const { name: themeName, sections } = getThemeSections(themeTarget);
 
           const durationQuarters = sections.reduce((total, section) => total + section.unitGroups.reduce((sum, group) => sum + group.length * (4 / Math.max(1, section.noteLength)), 0), 0);
-          const durationBars = durationQuarters / TMDPlaybackRenderer.measureDuration(sheet.beat);
+          const durationBars = durationQuarters / TmdPlaybackRenderer.measureDuration(sheet.beat);
           if ((instruments.length - 1) * offsetBars > durationBars) {
             throw macroError("Canon voice enters after the combined prototype ends");
           }

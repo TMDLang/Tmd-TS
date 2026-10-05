@@ -3,11 +3,11 @@ import { EditorState } from "@codemirror/state";
 import { describe, expect,it } from "vitest";
 
 import { createTmdCompletionSource } from "../web/src/editor.js";
-import { TMDWebLSPClient } from "../web/src/lsp/client.js";
+import { TmdWebLSPClient } from "../web/src/lsp/client.js";
 
 describe("TMD Autocomplete Integration", () => {
   it("resolves section name completions when after '->' without space (explicit: false)", async () => {
-    const lspClient = new TMDWebLSPClient();
+    const lspClient = new TmdWebLSPClient();
     const doc = `theme {
   1 2 3 4
 }
@@ -30,7 +30,7 @@ describe("TMD Autocomplete Integration", () => {
   });
 
   it("resolves section name completions when after '-> ' with space (explicit: false)", async () => {
-    const lspClient = new TMDWebLSPClient();
+    const lspClient = new TmdWebLSPClient();
     const doc = `theme {
   1 2 3 4
 }
@@ -53,7 +53,7 @@ describe("TMD Autocomplete Integration", () => {
   });
 
   it("resolves macro completions when after '-> (' (explicit: false)", async () => {
-    const lspClient = new TMDWebLSPClient();
+    const lspClient = new TmdWebLSPClient();
     const doc = `theme {
   1 2 3 4
 }
@@ -76,7 +76,7 @@ describe("TMD Autocomplete Integration", () => {
   });
 
   it("resolves macro completions when after '-> (ca' (explicit: false)", async () => {
-    const lspClient = new TMDWebLSPClient();
+    const lspClient = new TmdWebLSPClient();
     const doc = `theme {
   1 2 3 4
 }
@@ -100,7 +100,7 @@ describe("TMD Autocomplete Integration", () => {
   });
 
   it("resolves section directives after a partial brace prefix", async () => {
-    const lspClient = new TMDWebLSPClient();
+    const lspClient = new TmdWebLSPClient();
     const doc = `theme {
   <4*>
   {p`;

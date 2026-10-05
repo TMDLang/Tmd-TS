@@ -1,5 +1,5 @@
 import { formatParagraph,formatSheet } from "../syntax/format.js";
-import { Lexer, TMDParser } from "../syntax/parser.js";
+import { Lexer, TmdParser } from "../syntax/parser.js";
 import {
   Entry,
   KeySignature,
@@ -10,10 +10,10 @@ import {
   UnitGroup,
 } from "../syntax/types.js";
 
-export class TMDRefactorError extends Error {
+export class TmdRefactorError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = "TMDRefactorError";
+    this.name = "TmdRefactorError";
   }
 }
 
@@ -162,7 +162,7 @@ function formatLine(line: string, indent = 0): string {
   return indentPrefix + formattedContent + commentSuffix;
 }
 
-export class TMDRefactor {
+export class TmdRefactor {
   public static format(source: string): string {
     const resultLines: string[] = [];
     const rawLines = source.split(/\r?\n/);
@@ -266,10 +266,10 @@ export class TMDRefactor {
     const replaced = source.replace(pattern, `$1:${newInstrument}@`);
     if (replaced === source) {
       // Check if score even parses
-      TMDParser.parseThrowing(source);
+      TmdParser.parseThrowing(source);
     }
     // Verify valid TMD score after rename
-    TMDParser.parseThrowing(replaced);
+    TmdParser.parseThrowing(replaced);
     return replaced;
   }
 
@@ -287,15 +287,15 @@ export class TMDRefactor {
     result = result.replace(orderPattern, `$1${newSection}`);
 
     // Verify valid TMD score after rename
-    TMDParser.parseThrowing(result);
+    TmdParser.parseThrowing(result);
     return result;
   }
 
   public static extractInstrument(source: string, instrument: string): string {
-    const sheet = TMDParser.parseThrowing(source);
+    const sheet = TmdParser.parseThrowing(source);
     const matchingParagraphs = sheet.entries.filter((p) => p.assignment === instrument);
     if (matchingParagraphs.length === 0) {
-      throw new TMDRefactorError(`Instrument '${instrument}' not found in score`);
+      throw new TmdRefactorError(`Instrument '${instrument}' not found in score`);
     }
 
     const rawLines = source.split(/\r?\n/);
@@ -339,7 +339,7 @@ export class TMDRefactor {
     }
 
     const formatted = this.format(resultLines.join("\n"));
-    TMDParser.parseThrowing(formatted);
+    TmdParser.parseThrowing(formatted);
     return formatted;
   }
 
@@ -349,16 +349,16 @@ export class TMDRefactor {
     targetInstrument: string,
     options?: { section?: string; octaveShift?: number }
   ): string {
-    const sheet = TMDParser.parseThrowing(source);
+    const sheet = TmdParser.parseThrowing(source);
     let matching = sheet.entries.filter((p) => p.assignment === sourceInstrument);
     if (options?.section) {
       matching = matching.filter((p) => p.name === options.section);
     }
     if (matching.length === 0) {
       if (options?.section) {
-        throw new TMDRefactorError(`Track '${options.section}:${sourceInstrument}' not found in score`);
+        throw new TmdRefactorError(`Track '${options.section}:${sourceInstrument}' not found in score`);
       }
-      throw new TMDRefactorError(`Instrument '${sourceInstrument}' not found in score`);
+      throw new TmdRefactorError(`Instrument '${sourceInstrument}' not found in score`);
     }
 
     const shift = options?.octaveShift || 0;
@@ -415,7 +415,7 @@ export class TMDRefactor {
     }
 
     const formatted = this.format(combined);
-    TMDParser.parseThrowing(formatted);
+    TmdParser.parseThrowing(formatted);
     return formatted;
   }
 
@@ -425,16 +425,16 @@ export class TMDRefactor {
     harmonyInstrument: string,
     options: { section?: string; intervalSteps: number }
   ): string {
-    const sheet = TMDParser.parseThrowing(source);
+    const sheet = TmdParser.parseThrowing(source);
     let matching = sheet.entries.filter((p) => p.assignment === sourceInstrument);
     if (options?.section) {
       matching = matching.filter((p) => p.name === options.section);
     }
     if (matching.length === 0) {
       if (options?.section) {
-        throw new TMDRefactorError(`Track '${options.section}:${sourceInstrument}' not found in score`);
+        throw new TmdRefactorError(`Track '${options.section}:${sourceInstrument}' not found in score`);
       }
-      throw new TMDRefactorError(`Instrument '${sourceInstrument}' not found in score`);
+      throw new TmdRefactorError(`Instrument '${sourceInstrument}' not found in score`);
     }
 
     const steps = options.intervalSteps; // e.g. +2 for 3rd up, -2 for 3rd down
@@ -504,12 +504,12 @@ export class TMDRefactor {
     }
 
     const formatted = this.format(combined);
-    TMDParser.parseThrowing(formatted);
+    TmdParser.parseThrowing(formatted);
     return formatted;
   }
 
   public static inlineOrders(source: string): string {
-    const sheet = TMDParser.parseThrowing(source);
+    const sheet = TmdParser.parseThrowing(source);
     if (sheet.playback.length === 0) {
       return source;
     }
@@ -672,7 +672,7 @@ export class TMDRefactor {
       if (gridMatch) {
         currentNoteLength = parseInt(gridMatch[1], 10);
         if (currentNoteLength % 2 !== 0) {
-          throw new TMDRefactorError(`Cannot halve odd grid <${currentNoteLength}*>`);
+          throw new TmdRefactorError(`Cannot halve odd grid <${currentNoteLength}*>`);
         }
         const newLen = currentNoteLength / 2;
         const indent = rawLine.match(/^\s*/)?.[0] || "";
@@ -713,7 +713,7 @@ export class TMDRefactor {
     // Optimize each paragraph independently so one indivisible track does not block other tracks
     let current = source;
     try {
-      const sheet = TMDParser.parseThrowing(current);
+      const sheet = TmdParser.parseThrowing(current);
       for (const p of sheet.entries) {
         let paraCurrent = current;
         while (true) {
@@ -1109,7 +1109,7 @@ function halveGridInLine(line: string): string {
       const tuplet = parseTupletToken(u1);
       if (tuplet) {
         if (tuplet.dashes.length % 2 !== 0) {
-          throw new TMDRefactorError(
+          throw new TmdRefactorError(
             `Cannot halve tuplet with odd length: '${u1}' in | ${measureTokens.join(" ")} |`
           );
         }
@@ -1121,13 +1121,13 @@ function halveGridInLine(line: string): string {
       }
 
       if (i + 1 >= measureTokens.length) {
-        throw new TMDRefactorError(
+        throw new TmdRefactorError(
           `Cannot halve measure with odd number of units: | ${measureTokens.join(" ")} |`
         );
       }
       const u2 = measureTokens[i + 1];
       if (u2 !== "-") {
-        throw new TMDRefactorError(
+        throw new TmdRefactorError(
           `Cannot halve grid: unit '${u1} ${u2}' does not sustain with a tie '-'`
         );
       }

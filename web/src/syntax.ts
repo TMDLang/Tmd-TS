@@ -1,6 +1,6 @@
 import type { StringStream } from "@codemirror/language";
 
-export interface TMDParserState {
+export interface TmdParserState {
   inComment: boolean;
   inOrder: boolean;
   parenDepth: number;
@@ -12,10 +12,10 @@ export const tmdStreamParser = {
       block: { open: "/*", close: "*/" },
     },
   },
-  startState(): TMDParserState {
+  startState(): TmdParserState {
     return { inComment: false, inOrder: false, parenDepth: 0 };
   },
-  token(stream: StringStream, state: TMDParserState): string | null {
+  token(stream: StringStream, state: TmdParserState): string | null {
     if (state.inComment) {
       if (stream.match(/\*\//)) {
         state.inComment = false;

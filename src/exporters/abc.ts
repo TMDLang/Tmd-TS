@@ -1,5 +1,5 @@
 import { SheetInstrumentHelper } from "../domain/index.js";
-import { MeasureEvent, PlaybackDirectiveEvent, TMDMacroEvaluator, TMDMeasureRenderer } from "../playback/index.js";
+import { MeasureEvent, PlaybackDirectiveEvent, TmdMacroEvaluator, TmdMeasureRenderer } from "../playback/index.js";
 import { Entry, KeySignature, Note, Sheet } from "../syntax/index.js";
 
 interface ABCKeyInfo {
@@ -8,9 +8,9 @@ interface ABCKeyInfo {
   degreeSteps: number[];
 }
 
-export class TMDABCGenerator {
+export class TmdABCGenerator {
   public static generateABC(rawSheet: Sheet): string {
-    const sheet = TMDMacroEvaluator.expandThrowing(rawSheet);
+    const sheet = TmdMacroEvaluator.expandThrowing(rawSheet);
     let abc = "";
 
     abc += "X:1\n";
@@ -19,9 +19,9 @@ export class TMDABCGenerator {
     abc += `M:${sheet.beat.count}/${sheet.beat.noteValue}\n`;
     abc += "L:1/16\n";
     const speed = sheet.speed > 0 ? sheet.speed : 120;
-    const tempoField = TMDABCGenerator.resolveTempo(sheet.beat, speed);
+    const tempoField = TmdABCGenerator.resolveTempo(sheet.beat, speed);
     abc += `${tempoField}\n`;
-    abc += `K:${TMDABCGenerator.abcKey(sheet.declaredKey || sheet.keySignature.toString())}\n\n`;
+    abc += `K:${TmdABCGenerator.abcKey(sheet.declaredKey || sheet.keySignature.toString())}\n\n`;
 
     const instruments = SheetInstrumentHelper.distinctInstruments(sheet, false);
 
@@ -34,10 +34,10 @@ export class TMDABCGenerator {
     instruments.forEach((inst, idx) => {
       const vId = `V${idx + 1}`;
       abc += `[V:${vId}]\n`;
-      if (TMDABCGenerator.paragraphsContainPercussion(sheet.entries, inst)) {
+      if (TmdABCGenerator.paragraphsContainPercussion(sheet.entries, inst)) {
         abc += "%%MIDI channel 10\n";
       }
-      abc += TMDABCGenerator.generateTrackMusic(inst, sheet);
+      abc += TmdABCGenerator.generateTrackMusic(inst, sheet);
       abc += "\n\n";
     });
 
@@ -72,13 +72,13 @@ export class TMDABCGenerator {
   }
 
   private static generateTrackMusic(instrument: string, sheet: Sheet): string {
-    const measures = TMDMeasureRenderer.renderMeasures(sheet, instrument);
+    const measures = TmdMeasureRenderer.renderMeasures(sheet, instrument);
     let result = "";
 
     for (let mIdx = 0; mIdx < measures.length; mIdx++) {
       const measure = measures[mIdx];
       for (const directive of measure.directives) {
-        result += TMDABCGenerator.formatDirective(directive);
+        result += TmdABCGenerator.formatDirective(directive);
       }
 
       // Group simultaneous events sharing the same startOffset
@@ -92,7 +92,7 @@ export class TMDABCGenerator {
       }
 
       for (const group of groups) {
-        result += TMDABCGenerator.formatEventGroup(group);
+        result += TmdABCGenerator.formatEventGroup(group);
         result += " ";
       }
       result += "|";
@@ -111,19 +111,19 @@ export class TMDABCGenerator {
     switch (k.type) {
       case "tempo":
       case "relativeTempo": {
-        const cmd = TMDABCGenerator.resolveTempo(directive.state.timeSignature, directive.state.tempo);
+        const cmd = TmdABCGenerator.resolveTempo(directive.state.timeSignature, directive.state.tempo);
         return `${cmd} `;
       }
       case "timeSignature":
         return `M:${k.beat.count}/${k.beat.noteValue} `;
       case "absoluteKey":
-        return `K:${TMDABCGenerator.abcKey(k.key)} `;
+        return `K:${TmdABCGenerator.abcKey(k.key)} `;
       case "explicitKey":
-        return `K:${TMDABCGenerator.abcKey(k.key)} `;
+        return `K:${TmdABCGenerator.abcKey(k.key)} `;
       case "dynamics":
         return `!${k.mark}! `;
       case "relativeKey": {
-        const key = TMDABCGenerator.keyInfo(directive.state.keyOffset).name;
+        const key = TmdABCGenerator.keyInfo(directive.state.keyOffset).name;
         return `K:${key} `;
       }
       case "fixedPitch":
@@ -133,7 +133,7 @@ export class TMDABCGenerator {
 
   private static formatEventGroup(group: MeasureEvent[]): string {
     if (group.length === 1) {
-      return TMDABCGenerator.formatMeasureEvent(group[0]);
+      return TmdABCGenerator.formatMeasureEvent(group[0]);
     }
 
     // Check if group is composed of multiple simultaneous notes (polyphonic chord/multi-note)
@@ -145,14 +145,14 @@ export class TMDABCGenerator {
       const suffix = multiplier > 1 ? String(multiplier) : "";
       const pitches = noteEvents.map((ev) => {
         const note = (ev.content as { type: "note"; note: any }).note;
-        return TMDABCGenerator.noteToABCPitch(note, ev.state.keyOffset);
+        return TmdABCGenerator.noteToABCPitch(note, ev.state.keyOffset);
       });
       const tie = group.some((ev) => ev.tieStart) ? "-" : "";
       return `[${pitches.join("")}]${suffix}${tie}`;
     }
 
     // Otherwise format sequentially
-    return group.map((ev) => TMDABCGenerator.formatMeasureEvent(ev)).join(" ");
+    return group.map((ev) => TmdABCGenerator.formatMeasureEvent(ev)).join(" ");
   }
 
   private static formatMeasureEvent(event: MeasureEvent): string {
@@ -162,7 +162,7 @@ export class TMDABCGenerator {
     switch (event.content.type) {
       case "note": {
         const tie = event.tieStart ? "-" : "";
-        return `${TMDABCGenerator.noteToABCPitch(event.content.note, event.state.keyOffset)}${suffix}${tie}`;
+        return `${TmdABCGenerator.noteToABCPitch(event.content.note, event.state.keyOffset)}${suffix}${tie}`;
       }
       case "chord":
         return `"${event.content.chord.toString()}"z${suffix}`;
@@ -222,7 +222,7 @@ export class TMDABCGenerator {
   }
 
   private static noteToABCPitch(note: Note, keyOffset: number): string {
-    const info = TMDABCGenerator.keyInfo(keyOffset);
+    const info = TmdABCGenerator.keyInfo(keyOffset);
     const degIdx = Math.max(0, Math.min(6, note.degree - 1));
     const stepIdx = info.degreeSteps[degIdx];
     const keyAcc = info.stepAccidentals[stepIdx];
@@ -280,7 +280,7 @@ export class TMDABCGenerator {
       return `${letter}${accidental}${mode}`;
     }
     const keySig = KeySignature.parse(trimmed);
-    return TMDABCGenerator.keyInfo(keySig.semitoneOffset).name;
+    return TmdABCGenerator.keyInfo(keySig.semitoneOffset).name;
   }
 
   private static paragraphsContainPercussion(paragraphs: Entry[], instrument: string): boolean {

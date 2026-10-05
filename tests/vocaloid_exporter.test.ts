@@ -6,13 +6,13 @@ import { describe, expect,it } from 'vitest';
 
 import { main } from '../src/cli.js';
 import {
-  TMDVSQGenerator,
-  TMDVSQXGenerator,
+  TmdVSQGenerator,
+  TmdVSQXGenerator,
   VocaloidExportOptions,
   VocaloidPhoneme,
 } from '../src/exporters/vocaloid.js';
-import { TMDMCPServer } from '../src/mcp/index.js';
-import { TMDParser } from '../src/syntax/index.js';
+import { TmdMCPServer } from '../src/mcp/index.js';
+import { TmdParser } from '../src/syntax/index.js';
 
 describe('VocaloidPhoneme (Japanese to X-SAMPA)', () => {
   it('resolves basic vowels in Romaji, Hiragana, and Katakana', () => {
@@ -50,7 +50,7 @@ describe('VocaloidPhoneme (Japanese to X-SAMPA)', () => {
   });
 });
 
-describe('TMDVSQGenerator (VOCALOID2 .vsq SMF Format 1)', () => {
+describe('TmdVSQGenerator (VOCALOID2 .vsq SMF Format 1)', () => {
   const tmdSource = `::SCORE::
 ** Miku Song **
 != 120
@@ -63,10 +63,10 @@ Intro:Vocal@|0|{
 `;
 
   it('generates valid SMF Format 1 binary with 2 tracks (conductor + vocal)', () => {
-    const sheet = TMDParser.parse(tmdSource)!;
+    const sheet = TmdParser.parse(tmdSource)!;
     expect(sheet).toBeDefined();
 
-    const vsqData = TMDVSQGenerator.generateVSQ(sheet, { singerName: 'Miku' });
+    const vsqData = TmdVSQGenerator.generateVSQ(sheet, { singerName: 'Miku' });
     expect(vsqData).toBeInstanceOf(Uint8Array);
     expect(vsqData.length).toBeGreaterThan(100);
 
@@ -88,8 +88,8 @@ Intro:Vocal@|0|{
   });
 
   it('embeds INI structure, singer name, preMeasure, and note events', () => {
-    const sheet = TMDParser.parse(tmdSource)!;
-    const vsqData = TMDVSQGenerator.generateVSQ(sheet, {
+    const sheet = TmdParser.parse(tmdSource)!;
+    const vsqData = TmdVSQGenerator.generateVSQ(sheet, {
       singerName: 'Hatsune Miku',
       preMeasure: 4,
     });
@@ -139,14 +139,14 @@ Intro:MikuVoice@|0|{
     3 4 5 6
 }
 `;
-    const sheet = TMDParser.parse(multiTrackTmd)!;
-    const vsqData = TMDVSQGenerator.generateVSQ(sheet);
+    const sheet = TmdParser.parse(multiTrackTmd)!;
+    const vsqData = TmdVSQGenerator.generateVSQ(sheet);
     const binaryStr = new TextDecoder('latin1').decode(vsqData);
     expect(binaryStr).toContain('Name=MikuVoice');
   });
 });
 
-describe('TMDVSQXGenerator (VOCALOID3/4 .vsqx XML)', () => {
+describe('TmdVSQXGenerator (VOCALOID3/4 .vsqx XML)', () => {
   const tmdSource = `::SCORE::
 ** Miku Vocaloid Song **
 != 135
@@ -159,7 +159,7 @@ Verse:Vocal@|0|{
 `;
 
   it('does not select a prototype as the vocal assignment', () => {
-    const sheet = TMDParser.parse(`::SCORE::
+    const sheet = TmdParser.parse(`::SCORE::
 ** Prototype Before Bass **
 != 120
 ?= C
@@ -174,14 +174,14 @@ Verse:Bass@|0|{
 }
 `)!;
 
-    const vsqx = TMDVSQXGenerator.generateVSQX(sheet);
+    const vsqx = TmdVSQXGenerator.generateVSQX(sheet);
 
     expect(vsqx).toContain('<note>');
   });
 
   it('generates valid VOCALOID4 XML document with correct root and schema', () => {
-    const sheet = TMDParser.parse(tmdSource)!;
-    const vsqx = TMDVSQXGenerator.generateVSQX(sheet, { singerName: 'Hatsune Miku' });
+    const sheet = TmdParser.parse(tmdSource)!;
+    const vsqx = TmdVSQXGenerator.generateVSQX(sheet, { singerName: 'Hatsune Miku' });
 
     expect(vsqx).toContain('<?xml version="1.0" encoding="UTF-8" standalone="no"?>');
     expect(vsqx).toContain('<vsq4 xmlns="http://www.yamaha.co.jp/vocaloid/schema/vsq4/"');
@@ -193,8 +193,8 @@ Verse:Bass@|0|{
   });
 
   it('correctly calculates tempo (scaled x100), time signature, and note ticks', () => {
-    const sheet = TMDParser.parse(tmdSource)!;
-    const vsqx = TMDVSQXGenerator.generateVSQX(sheet, {
+    const sheet = TmdParser.parse(tmdSource)!;
+    const vsqx = TmdVSQXGenerator.generateVSQX(sheet, {
       singerName: 'Hatsune Miku',
       preMeasure: 4,
     });
@@ -275,7 +275,7 @@ Intro:Vocal@|0|{
 }
 `;
     // Base64 VSQ
-    const resVsq = await TMDMCPServer.handleConvertTmd({
+    const resVsq = await TmdMCPServer.handleConvertTmd({
       text: score,
       format: 'vsq' as any,
     });
@@ -284,7 +284,7 @@ Intro:Vocal@|0|{
     expect(vsqBuffer.slice(0, 4).toString('ascii')).toBe('MThd');
 
     // XML VSQX
-    const resVsqx = await TMDMCPServer.handleConvertTmd({
+    const resVsqx = await TmdMCPServer.handleConvertTmd({
       text: score,
       format: 'vsqx' as any,
     });

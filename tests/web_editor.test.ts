@@ -212,12 +212,12 @@ describe("Web Studio Editor Configuration (TDD)", () => {
     expect(editorContent).toMatch(/instrument\s*=\s*DEFAULT_INSTRUMENT/);
   });
 
-  it("integrates LSP client into TMDWebEditor for diagnostics, completions, and formatting", () => {
+  it("integrates LSP client into TmdWebEditor for diagnostics, completions, and formatting", () => {
     const editorPath = path.join(__dirname, "../web/src/editor.ts");
     const editorContent = fs.readFileSync(editorPath, "utf-8");
 
-    // Must import and instantiate TMDWebLSPClient
-    expect(editorContent).toContain("TMDWebLSPClient");
+    // Must import and instantiate TmdWebLSPClient
+    expect(editorContent).toContain("TmdWebLSPClient");
     expect(editorContent).toContain("lspClient");
 
     // Must configure CodeMirror linter extension
@@ -228,8 +228,8 @@ describe("Web Studio Editor Configuration (TDD)", () => {
     expect(editorContent).toMatch(/import\s*\{[^}]*autocompletion[^}]*\}\s*from\s*["']@codemirror\/autocomplete["']/);
     expect(editorContent).toContain("autocompletion(");
 
-    // TMDWebEditor interface must expose lspClient and formatDocument
-    expect(editorContent).toContain("lspClient: TMDWebLSPClient");
+    // TmdWebEditor interface must expose lspClient and formatDocument
+    expect(editorContent).toContain("lspClient: TmdWebLSPClient");
     expect(editorContent).toContain("formatDocument(): Promise<void>");
   });
 
@@ -237,7 +237,7 @@ describe("Web Studio Editor Configuration (TDD)", () => {
     const editorPath = path.join(__dirname, "../web/src/editor.ts");
     const editorContent = fs.readFileSync(editorPath, "utf-8");
     const linterBody = editorContent.slice(editorContent.indexOf("const tmdLinter"), editorContent.indexOf("const setMeasureIssuesEffect"));
-    expect(linterBody).not.toContain("new TMDWebLSPClient");
+    expect(linterBody).not.toContain("new TmdWebLSPClient");
     expect(linterBody).toContain("lspClient.diagnose");
   });
 

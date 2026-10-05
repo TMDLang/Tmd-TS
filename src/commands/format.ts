@@ -1,5 +1,5 @@
 import { readUTF8, writeUTF8 } from "../io/text_io.js";
-import { TMDRefactor } from "../refactoring/index.js";
+import { TmdRefactor } from "../refactoring/index.js";
 
 export function handleFormatCommand(argv: string[]): number {
   let inputPath: string | undefined;
@@ -33,7 +33,7 @@ OPTIONS:
     console.error(`Error reading ${inputPath}: ${error.message || String(error)}`);
     return 1;
   }
-  const formatted = TMDRefactor.format(content);
+  const formatted = TmdRefactor.format(content);
   if (inPlace) {
     try { writeUTF8(inputPath, formatted); console.log(`Formatted ${inputPath} in-place.`); return 0; }
     catch (error: any) { console.error(`Error writing ${inputPath}: ${error.message || String(error)}`); return 1; }

@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { TMDSongInspector } from "../src/analysis/inspector.js";
-import { TMDParser } from "../src/syntax/parser.js";
+import { TmdSongInspector } from "../src/analysis/inspector.js";
+import { TmdParser } from "../src/syntax/parser.js";
 
-const inferentialScore = (movableDoBase: string, playback = "", declaredKey = "") => TMDParser.parse(`::SCORE::
+const inferentialScore = (movableDoBase: string, playback = "", declaredKey = "") => TmdParser.parse(`::SCORE::
 ** Inference Contract **
 != 120
 ?= ${movableDoBase}
@@ -28,7 +28,7 @@ ${playback} -> verse ->#
 describe("tonality inference contract", () => {
   it("keeps ?= as playback context and infers A minor from sounding evidence", () => {
     const sheet = inferentialScore("C");
-    const profile = TMDSongInspector.inspect(sheet);
+    const profile = TmdSongInspector.inspect(sheet);
     const tonality = profile.tonality!;
 
     expect(sheet.keySignature.toString()).toBe("C");
@@ -41,14 +41,14 @@ describe("tonality inference contract", () => {
 
   it("preserves an explicit key declaration separately from playback context", () => {
     const sheet = inferentialScore("D", "", "Bm");
-    const tonality = TMDSongInspector.inspect(sheet).tonality!;
+    const tonality = TmdSongInspector.inspect(sheet).tonality!;
 
     expect(tonality.playbackContext.movableDoBase).toBe("D");
     expect(tonality.declaredKey).toBe("Bm");
   });
 
   it("reports insufficient evidence instead of forcing a major key", () => {
-    const sheet = TMDParser.parse(`::SCORE::
+    const sheet = TmdParser.parse(`::SCORE::
 ** Empty Tonality **
 != 120
 ?= C
@@ -61,7 +61,7 @@ verse:Piano@|0|{
 
 -> verse ->#
 `);
-    const tonality = TMDSongInspector.inspect(sheet).tonality!;
+    const tonality = TmdSongInspector.inspect(sheet).tonality!;
 
     expect(tonality.globalInference.mode).toBe("insufficient");
     expect(tonality.globalInference.tonic).toBeNull();
@@ -70,14 +70,14 @@ verse:Piano@|0|{
 
   it("keeps playback transposition separate from inferred modulation", () => {
     const sheet = inferentialScore("C", "-> verse -> {?+2}");
-    const tonality = TMDSongInspector.inspect(sheet).tonality!;
+    const tonality = TmdSongInspector.inspect(sheet).tonality!;
 
     expect(tonality.playbackTranspositionPath).toEqual([0, 2]);
     expect(tonality.inferredModulationPath).toEqual([]);
   });
 
   it("reports a modulation only when independent section inference changes", () => {
-    const sheet = TMDParser.parse(`::SCORE::
+    const sheet = TmdParser.parse(`::SCORE::
 ** Inferred Section Change **
 != 120
 ?= C
@@ -117,7 +117,7 @@ minor:CHORD@|0|{
 
 -> major -> minor ->#
 `);
-    const tonality = TMDSongInspector.inspect(sheet).tonality!;
+    const tonality = TmdSongInspector.inspect(sheet).tonality!;
 
     expect(tonality.sections.map((section) => section.inferredTonality.mode)).toEqual(["major", "minor"]);
     expect(tonality.inferredModulationPath).toHaveLength(1);

@@ -17,9 +17,9 @@ import {
 
 const JZZ: any = JZZModule;
 
-export type TMDMidiSynthType = "gm" | "piano" | "tiny" | "webmidi";
+export type TmdMidiSynthType = "gm" | "piano" | "tiny" | "webmidi";
 
-export interface TMDPlayerCallbacks {
+export interface TmdPlayerCallbacks {
   onStart?: (title: string, durationSec: number) => void;
   onProgress?: (currentSec: number, totalSec: number) => void;
   onPause?: () => void;
@@ -29,7 +29,7 @@ export interface TMDPlayerCallbacks {
   onLoadingStatus?: (statusText: string | null, progress?: SoundfontLoadingProgress | null) => void;
 }
 
-export class TMDMidiPlayer {
+export class TmdMidiPlayer {
   private tinySynth: any = null;
   private loadedInstruments: Map<string, any> = new Map();
   private loadingPromises: Map<string, Promise<any>> = new Map();
@@ -39,11 +39,11 @@ export class TMDMidiPlayer {
   private audioContext: AudioContext | null = null;
   private loadAbortController: AbortController | null = null;
 
-  private currentSynthType: TMDMidiSynthType = "piano";
+  private currentSynthType: TmdMidiSynthType = "piano";
   private currentPlayer: any = null;
   private currentTitle: string = "";
   private currentBytes: Uint8Array | null = null;
-  private callbacks: TMDPlayerCallbacks = {};
+  private callbacks: TmdPlayerCallbacks = {};
   private isPausedState: boolean = false;
   private isEndedState: boolean = false;
   private progressTimer: any = null;
@@ -58,13 +58,13 @@ export class TMDMidiPlayer {
       JZZ({ engine: "none" });
       this.tinySynth = JZZ.synth.Tiny();
     } catch (err) {
-      console.warn("[TMDMidiPlayer] JZZ initialization error:", err);
+      console.warn("[TmdMidiPlayer] JZZ initialization error:", err);
     }
 
     // Load saved synth preference
     try {
       if (typeof localStorage !== "undefined" && localStorage) {
-        const savedSynth = localStorage.getItem("tmd-synth-pref") as TMDMidiSynthType | null;
+        const savedSynth = localStorage.getItem("tmd-synth-pref") as TmdMidiSynthType | null;
         if (savedSynth && ["gm", "piano", "tiny", "webmidi"].includes(savedSynth)) {
           this.currentSynthType = savedSynth;
         }
@@ -86,11 +86,11 @@ export class TMDMidiPlayer {
     return this.audioContext;
   }
 
-  public getSynthType(): TMDMidiSynthType {
+  public getSynthType(): TmdMidiSynthType {
     return this.currentSynthType;
   }
 
-  public async setSynthType(type: TMDMidiSynthType): Promise<void> {
+  public async setSynthType(type: TmdMidiSynthType): Promise<void> {
     if (this.currentSynthType === type) return;
     this.currentSynthType = type;
     try {
@@ -175,7 +175,7 @@ export class TMDMidiPlayer {
         this.callbacks.onProgress(this.getPosition(), this.getDuration());
       }
     } catch (err) {
-      console.warn("[TMDMidiPlayer] Seek failed:", err);
+      console.warn("[TmdMidiPlayer] Seek failed:", err);
     }
   }
 
@@ -267,7 +267,7 @@ export class TMDMidiPlayer {
         return inst;
       } catch (err: any) {
         if (err?.name !== "AbortError") {
-          console.warn(`[TMDMidiPlayer] Failed to load soundfont instrument '${name}':`, err);
+          console.warn(`[TmdMidiPlayer] Failed to load soundfont instrument '${name}':`, err);
         }
         return null;
       } finally {
@@ -281,7 +281,7 @@ export class TMDMidiPlayer {
 
   private async loadSoundfontInstruments(
     instrumentNames: string[],
-    callbacks?: TMDPlayerCallbacks,
+    callbacks?: TmdPlayerCallbacks,
     signal?: AbortSignal
   ): Promise<boolean> {
     const toLoad = instrumentNames.filter((name) => !this.loadedInstruments.has(name));
@@ -396,7 +396,7 @@ export class TMDMidiPlayer {
           this.activeNotes.set(key, node);
         }
       } catch (err) {
-        console.warn("[TMDMidiPlayer] Soundfont play error:", err);
+        console.warn("[TmdMidiPlayer] Soundfont play error:", err);
       }
     } else if (status === 0x80 || (status === 0x90 && velocity === 0)) {
       // Note Off
@@ -416,7 +416,7 @@ export class TMDMidiPlayer {
     }
   }
 
-  public async play(bytes: Uint8Array, title: string, callbacks?: TMDPlayerCallbacks) {
+  public async play(bytes: Uint8Array, title: string, callbacks?: TmdPlayerCallbacks) {
     this.stop(false);
     this.callbacks = callbacks || {};
     this.currentTitle = title;
@@ -481,7 +481,7 @@ export class TMDMidiPlayer {
             connectedToHardware = true;
           }
         } catch (midiErr) {
-          console.warn("[TMDMidiPlayer] Web MIDI open failed, fallback to Tiny Synth:", midiErr);
+          console.warn("[TmdMidiPlayer] Web MIDI open failed, fallback to Tiny Synth:", midiErr);
         }
         if (!connectedToHardware) {
           player.connect(this.tinySynth);
@@ -516,7 +516,7 @@ export class TMDMidiPlayer {
         this.callbacks.onProgress(0, durationMs / 1000);
       }
     } catch (err) {
-      console.error("[TMDMidiPlayer] Failed to play MIDI:", err);
+      console.error("[TmdMidiPlayer] Failed to play MIDI:", err);
       this.stop();
     }
   }
@@ -532,7 +532,7 @@ export class TMDMidiPlayer {
           this.callbacks.onPause();
         }
       } catch (err) {
-        console.warn("[TMDMidiPlayer] Pause failed:", err);
+        console.warn("[TmdMidiPlayer] Pause failed:", err);
       }
     }
   }
@@ -554,7 +554,7 @@ export class TMDMidiPlayer {
         }
         return;
       } catch (err) {
-        console.warn("[TMDMidiPlayer] Replay with existing player failed, falling back to play():", err);
+        console.warn("[TmdMidiPlayer] Replay with existing player failed, falling back to play():", err);
       }
     }
     if (this.currentBytes) {
@@ -580,7 +580,7 @@ export class TMDMidiPlayer {
           this.callbacks.onResume();
         }
       } catch (err) {
-        console.warn("[TMDMidiPlayer] Resume failed:", err);
+        console.warn("[TmdMidiPlayer] Resume failed:", err);
       }
     }
   }
@@ -655,7 +655,7 @@ export class TMDMidiPlayer {
         }
       }
     } catch (err) {
-      console.warn("[TMDMidiPlayer] Soundfont audition note failed:", err);
+      console.warn("[TmdMidiPlayer] Soundfont audition note failed:", err);
     }
 
     // 2. If SoundFont is not ready yet, provide instant zero-latency Web Audio oscillator synthesis
@@ -683,7 +683,7 @@ export class TMDMidiPlayer {
         osc.start(now);
         this.auditionOscMap.set(midiPitch, { osc, gain });
       } catch (err) {
-        console.warn("[TMDMidiPlayer] Oscillator audition failed:", err);
+        console.warn("[TmdMidiPlayer] Oscillator audition failed:", err);
       }
     }
   }
@@ -725,4 +725,4 @@ export class TMDMidiPlayer {
   }
 }
 
-export const tmdPlayer = new TMDMidiPlayer();
+export const tmdPlayer = new TmdMidiPlayer();

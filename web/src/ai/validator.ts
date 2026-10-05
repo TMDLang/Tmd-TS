@@ -1,4 +1,4 @@
-import { Sheet, TMDParseError, TMDParser } from "../../../src/syntax/index.js";
+import { Sheet, TmdParseError, TmdParser } from "../../../src/syntax/index.js";
 
 export interface ValidationSuccess {
   valid: true;
@@ -37,7 +37,7 @@ export function validateTmdCode(tmd: string): ValidationResult {
   const lines = tmd.split("\n");
 
   try {
-    const sheet = TMDParser.parseThrowing(tmd);
+    const sheet = TmdParser.parseThrowing(tmd);
     if (!sheet) {
       return {
         valid: false,
@@ -59,7 +59,7 @@ export function validateTmdCode(tmd: string): ValidationResult {
     let expectedTokens: string[] = [];
     const message = err.message || "Syntax error parsing TMD score";
 
-    if (err instanceof TMDParseError || err.range?.start) {
+    if (err instanceof TmdParseError || err.range?.start) {
       line = err.range?.start?.line ?? 1;
       column = err.range?.start?.column ?? 1;
       expectedTokens = err.expectedTokens ?? [];
@@ -86,7 +86,7 @@ export function validateTmdCode(tmd: string): ValidationResult {
   }
 }
 
-import { TMDMeasureChecker, TMDMeasureIssue } from "../../../src/validation/measure_check.js";
+import { TmdMeasureChecker, TmdMeasureIssue } from "../../../src/validation/measure_check.js";
 
 export interface ComprehensiveValidationResult {
   syntaxValid: boolean;
@@ -96,7 +96,7 @@ export interface ComprehensiveValidationResult {
     column: number;
     snippet: string;
   };
-  measureIssues: TMDMeasureIssue[];
+  measureIssues: TmdMeasureIssue[];
   allValid: boolean;
 }
 
@@ -116,7 +116,7 @@ export function validateTmdCodeWithIssues(tmd: string): ComprehensiveValidationR
     };
   }
 
-  const measureIssues = TMDMeasureChecker.check(tmd);
+  const measureIssues = TmdMeasureChecker.check(tmd);
   return {
     syntaxValid: true,
     measureIssues,

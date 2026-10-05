@@ -1,8 +1,8 @@
 /** BCP-47-like locale identifier used by core reports and visualizers. */
-export type TMDLocale = string;
+export type TmdLocale = string;
 
 /** Stable localization keys shared with the TmdSwift implementation. */
-export enum TMDLocalizationKey {
+export enum TmdLocalizationKey {
   reportTitle = "report.title",
   duration = "report.duration",
   measuresTotal = "report.measuresTotal",
@@ -204,23 +204,23 @@ const STRINGS: Record<string, Record<string, string>> = {
   },
 };
 
-export class TMDLocalizer {
-  public readonly locale: TMDLocale;
-  public readonly fallbackLocale: TMDLocale;
+export class TmdLocalizer {
+  public readonly locale: TmdLocale;
+  public readonly fallbackLocale: TmdLocale;
 
-  constructor(locale: TMDLocale = "zh-Hant", fallbackLocale: TMDLocale = "en") {
+  constructor(locale: TmdLocale = "zh-Hant", fallbackLocale: TmdLocale = "en") {
     this.locale = locale;
     this.fallbackLocale = fallbackLocale;
   }
 
-  public text(key: TMDLocalizationKey | string, args: string[] = []): string {
+  public text(key: TmdLocalizationKey | string, args: string[] = []): string {
     const localized = this.lookup(String(key), this.locale);
     const fallback = this.lookup(String(key), this.fallbackLocale);
     const template = localized !== String(key) ? localized : fallback;
     return args.reduce((result, value, index) => result.replace(new RegExp(`\\{${index}\\}`, "g"), value), template);
   }
 
-  private lookup(key: string, locale: TMDLocale): string {
+  private lookup(key: string, locale: TmdLocale): string {
     const normalized = locale.toLowerCase().startsWith("zh") ? "zh-Hant" : locale.toLowerCase().startsWith("en") ? "en" : locale;
     return STRINGS[normalized]?.[key] || key;
   }

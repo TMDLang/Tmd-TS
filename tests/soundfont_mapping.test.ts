@@ -1,6 +1,6 @@
 import { describe, expect,it } from "vitest";
 
-import { MIDIEvent,TMDMIDIEncoder } from "../src/exporters/midi_encoder.js";
+import { MIDIEvent,TmdMIDIEncoder } from "../src/exporters/midi_encoder.js";
 import {
   formatSoundfontLoadingStatus,
   getDrumSoundfontName,
@@ -66,7 +66,7 @@ describe("Soundfont Instrument Mapping & MIDI Scanning (TDD)", () => {
         { tick: 0, message: { type: "noteOn", channel: 0, note: 60, velocity: 80 } },
         { tick: 480, message: { type: "noteOff", channel: 0, note: 60 } },
       ];
-      const fileBytes = TMDMIDIEncoder.encodeFile([TMDMIDIEncoder.encodeTrack(trkEvents)], 480);
+      const fileBytes = TmdMIDIEncoder.encodeFile([TmdMIDIEncoder.encodeTrack(trkEvents)], 480);
 
       const { programs, hasDrums, instrumentNames } = scanMidiProgramsAndDrums(fileBytes);
       expect(programs).toEqual([0]);
@@ -97,11 +97,11 @@ describe("Soundfont Instrument Mapping & MIDI Scanning (TDD)", () => {
         { tick: 480, message: { type: "noteOff", channel: 9, note: 36 } },
       ];
 
-      const fileBytes = TMDMIDIEncoder.encodeFile(
+      const fileBytes = TmdMIDIEncoder.encodeFile(
         [
-          TMDMIDIEncoder.encodeTrack(trk1),
-          TMDMIDIEncoder.encodeTrack(trk2),
-          TMDMIDIEncoder.encodeTrack(trk3),
+          TmdMIDIEncoder.encodeTrack(trk1),
+          TmdMIDIEncoder.encodeTrack(trk2),
+          TmdMIDIEncoder.encodeTrack(trk3),
         ],
         480
       );
@@ -136,9 +136,9 @@ describe("Soundfont Instrument Mapping & MIDI Scanning (TDD)", () => {
     });
   });
 
-  describe("TMDMIDIGenerator multi-track channel allocation", () => {
+  describe("TmdMIDIGenerator multi-track channel allocation", () => {
     it("shares channels among tracks with the same GM program without overflowing channels", async () => {
-      const { TMDParser, TMDMIDIGenerator } = await import("../src/index.js");
+      const { TmdParser, TmdMIDIGenerator } = await import("../src/index.js");
       const tmd = `::SCORE::
 ** Multi-Track Channel Invariant **
 != 120
@@ -153,8 +153,8 @@ p6:Drum@|0|{ <4*> 1 2 3 4 }
 p7:Drum-Kick@|0|{ <4*> 1 2 3 4 }
 p8:Clarinet@|0|{ <4*> 1 2 3 4 }
 `;
-      const sheet = TMDParser.parse(tmd);
-      const midiBytes = TMDMIDIGenerator.generateMIDI(sheet);
+      const sheet = TmdParser.parse(tmd);
+      const midiBytes = TmdMIDIGenerator.generateMIDI(sheet);
       const { programs, hasDrums, instrumentNames } = scanMidiProgramsAndDrums(midiBytes);
 
       // Guitar (25), Bass (33), Clarinet (71)

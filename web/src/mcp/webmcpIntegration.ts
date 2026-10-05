@@ -1,15 +1,15 @@
 import {
-  TMDABCGenerator,
-  TMDChordProGenerator,
-  TMDLilyPondGenerator,
-  TMDMIDIGenerator,
-  TMDMusicXMLGenerator,
-  TMDReaperGenerator,
+  TmdABCGenerator,
+  TmdChordProGenerator,
+  TmdLilyPondGenerator,
+  TmdMIDIGenerator,
+  TmdMusicXMLGenerator,
+  TmdReaperGenerator,
 } from "../../../src/exporters/index.js";
-import { TMDSkill } from "../../../src/skill.js";
-import { TMDParser } from "../../../src/syntax/parser.js";
+import { TmdSkill } from "../../../src/skill.js";
+import { TmdParser } from "../../../src/syntax/parser.js";
 import { accidentalToSemitone,scaleDegreeLetter, Sheet } from "../../../src/syntax/types.js";
-import { TMDMeasureChecker } from "../../../src/validation/measure_check.js";
+import { TmdMeasureChecker } from "../../../src/validation/measure_check.js";
 
 export interface TmdWebMcpContext {
   getCurrentScore: () => string;
@@ -48,7 +48,7 @@ export const buildTmdWebMcpTools = (ctx: TmdWebMcpContext): WebMcpTool[] => [
       type: "object",
       properties: {},
     },
-    handler: async () => textContent(TMDSkill.skillMarkdown),
+    handler: async () => textContent(TmdSkill.skillMarkdown),
   },
   {
     name: "parseTmd",
@@ -66,7 +66,7 @@ export const buildTmdWebMcpTools = (ctx: TmdWebMcpContext): WebMcpTool[] => [
     },
     handler: async ({ text }) => {
       try {
-        const sheet = TMDParser.parse(text);
+        const sheet = TmdParser.parse(text);
         if (!sheet) {
           return textContent(
             JSON.stringify({
@@ -136,7 +136,7 @@ export const buildTmdWebMcpTools = (ctx: TmdWebMcpContext): WebMcpTool[] => [
     },
     handler: async ({ text }) => {
       try {
-        const issues = TMDMeasureChecker.check(text);
+        const issues = TmdMeasureChecker.check(text);
         return textContent(
           JSON.stringify(
             {
@@ -188,7 +188,7 @@ export const buildTmdWebMcpTools = (ctx: TmdWebMcpContext): WebMcpTool[] => [
       required: ["text", "format"],
     },
     handler: async ({ text, format }) => {
-      const sheet = TMDParser.parse(text);
+      const sheet = TmdParser.parse(text);
       if (!sheet) {
         throw new Error("Invalid TMD score text");
       }
@@ -196,7 +196,7 @@ export const buildTmdWebMcpTools = (ctx: TmdWebMcpContext): WebMcpTool[] => [
       const fmt = (format || "musicxml").toLowerCase();
       switch (fmt) {
         case "midi": {
-          const uint8 = TMDMIDIGenerator.generateMIDI(sheet);
+          const uint8 = TmdMIDIGenerator.generateMIDI(sheet);
           let binary = "";
           const len = uint8.byteLength;
           for (let i = 0; i < len; i++) {
@@ -207,20 +207,20 @@ export const buildTmdWebMcpTools = (ctx: TmdWebMcpContext): WebMcpTool[] => [
         }
         case "reaper":
         case "rpp": {
-          return textContent(TMDReaperGenerator.generateRPP(sheet));
+          return textContent(TmdReaperGenerator.generateRPP(sheet));
         }
         case "musicxml": {
-          return textContent(TMDMusicXMLGenerator.generateMusicXML(sheet));
+          return textContent(TmdMusicXMLGenerator.generateMusicXML(sheet));
         }
         case "lilypond": {
-          return textContent(TMDLilyPondGenerator.generateLilyPond(sheet));
+          return textContent(TmdLilyPondGenerator.generateLilyPond(sheet));
         }
         case "abc": {
-          return textContent(TMDABCGenerator.generateABC(sheet));
+          return textContent(TmdABCGenerator.generateABC(sheet));
         }
         case "chordpro":
         case "cho": {
-          return textContent(TMDChordProGenerator.generateChordPro(sheet));
+          return textContent(TmdChordProGenerator.generateChordPro(sheet));
         }
         default:
           throw new Error(`Unsupported format: ${format}`);

@@ -1,31 +1,31 @@
 import { LexedToken,Lexer, SourcePosition } from "../syntax/parser.js";
 
-export interface TMDOutlineRange {
+export interface TmdOutlineRange {
   startLine: number;
   startColumn: number;
   endLine: number;
   endColumn: number;
 }
 
-export interface TMDOutlineNode {
+export interface TmdOutlineNode {
   name: string;
   detail?: string;
   kind: "file" | "class" | "namespace" | "field" | "method" | "event" | "string" | "number";
-  range: TMDOutlineRange;
-  selectionRange: TMDOutlineRange;
-  children?: TMDOutlineNode[];
+  range: TmdOutlineRange;
+  selectionRange: TmdOutlineRange;
+  children?: TmdOutlineNode[];
 }
 
 interface TrackOccurrence {
   sectionName: string;
   assignment: string;
-  range: TMDOutlineRange;
-  selectionRange: TMDOutlineRange;
+  range: TmdOutlineRange;
+  selectionRange: TmdOutlineRange;
   detail?: string;
 }
 
-export class TMDOutlineGenerator {
-  public static generate(source: string): TMDOutlineNode[] {
+export class TmdOutlineGenerator {
+  public static generate(source: string): TmdOutlineNode[] {
     const lexer = new Lexer(source);
     const tokens = lexer.tokenizeWithRanges();
     if (tokens.length === 0) return [];
@@ -45,7 +45,7 @@ export class TMDOutlineGenerator {
 
     interface OrderItem {
       name: string;
-      range: TMDOutlineRange;
+      range: TmdOutlineRange;
       detail?: string;
     }
     const orderItems: OrderItem[] = [];
@@ -179,7 +179,7 @@ export class TMDOutlineGenerator {
             line: paraEndTok.range.start.line,
             column: paraEndTok.range.start.column + paraEndTok.range.length,
           };
-          const range: TMDOutlineRange = {
+          const range: TmdOutlineRange = {
             startLine: pStart.line,
             startColumn: pStart.column,
             endLine: pEnd.line,
@@ -192,7 +192,7 @@ export class TMDOutlineGenerator {
             line: instTok?.range.start.line ?? pStart.line,
             column: (instTok?.range.start.column ?? pStart.column) + (instTok?.range.length ?? paraStartTok.range.length),
           };
-          const selectionRange: TMDOutlineRange = {
+          const selectionRange: TmdOutlineRange = {
             startLine: selStart.line,
             startColumn: selStart.column,
             endLine: selEnd.line,
@@ -226,7 +226,7 @@ export class TMDOutlineGenerator {
           if (next.token.type === "arrowEnd") {
             orderSnippet.push("#");
             const arrowEndTok = advance()!;
-            const oRange: TMDOutlineRange = {
+            const oRange: TmdOutlineRange = {
               startLine: arrowEndTok.range.start.line,
               startColumn: arrowEndTok.range.start.column,
               endLine: arrowEndTok.range.start.line,
@@ -265,7 +265,7 @@ export class TMDOutlineGenerator {
             const detailStr = macroTokens.map(t => t.text).join(" ");
             orderSnippet.push(`(${opName})`);
 
-            const oRange: TMDOutlineRange = {
+            const oRange: TmdOutlineRange = {
               startLine: parenStartTok.range.start.line,
               startColumn: parenStartTok.range.start.column,
               endLine: macroEndTok.range.start.line,
@@ -286,7 +286,7 @@ export class TMDOutlineGenerator {
           } else if (next.token.type === "identifier") {
             const orderSec = next.text;
             const secTok = advance()!;
-            const oRange: TMDOutlineRange = {
+            const oRange: TmdOutlineRange = {
               startLine: secTok.range.start.line,
               startColumn: secTok.range.start.column,
               endLine: secTok.range.start.line,
@@ -329,7 +329,7 @@ export class TMDOutlineGenerator {
         }
         orderSnippet.push("->#");
         const arrowEndTok = advance()!;
-        const oRange: TMDOutlineRange = {
+        const oRange: TmdOutlineRange = {
           startLine: arrowEndTok.range.start.line,
           startColumn: arrowEndTok.range.start.column,
           endLine: arrowEndTok.range.start.line,
@@ -347,7 +347,7 @@ export class TMDOutlineGenerator {
       advance();
     }
 
-    const result: TMDOutlineNode[] = [];
+    const result: TmdOutlineNode[] = [];
 
     // 1. Score Node
     const songName = scoreName.length > 0 ? scoreName : "Untitled";
@@ -365,7 +365,7 @@ export class TMDOutlineGenerator {
 
     const scoreStart = scoreHeaderStart ?? { offset: 0, line: 1, column: 1 };
     const scoreEnd = scoreHeaderEnd ?? { offset: 0, line: 1, column: 1 };
-    const scoreRange: TMDOutlineRange = {
+    const scoreRange: TmdOutlineRange = {
       startLine: scoreStart.line,
       startColumn: scoreStart.column,
       endLine: scoreEnd.line,
@@ -391,7 +391,7 @@ export class TMDOutlineGenerator {
       tracksBySection.get(track.sectionName)!.push(track);
     }
 
-    const sectionNodes: TMDOutlineNode[] = [];
+    const sectionNodes: TmdOutlineNode[] = [];
     for (const secName of sectionOrder) {
       const tracks = tracksBySection.get(secName);
       if (!tracks || tracks.length === 0) continue;
@@ -400,14 +400,14 @@ export class TMDOutlineGenerator {
       const minCol = tracks[0].range.startColumn;
       const maxLine = Math.max(...tracks.map((t) => t.range.endLine));
       const maxCol = tracks[tracks.length - 1].range.endColumn;
-      const secRange: TMDOutlineRange = {
+      const secRange: TmdOutlineRange = {
         startLine: minLine,
         startColumn: minCol,
         endLine: maxLine,
         endColumn: maxCol,
       };
 
-      const trackNodes: TMDOutlineNode[] = tracks.map((track) => ({
+      const trackNodes: TmdOutlineNode[] = tracks.map((track) => ({
         name: track.assignment,
         detail: track.detail,
         kind: "field",
@@ -426,7 +426,7 @@ export class TMDOutlineGenerator {
     }
 
     if (sectionNodes.length > 0) {
-      const sRange: TMDOutlineRange = {
+      const sRange: TmdOutlineRange = {
         startLine: sectionNodes[0].range.startLine,
         startColumn: sectionNodes[0].range.startColumn,
         endLine: sectionNodes[sectionNodes.length - 1].range.endLine,
@@ -446,14 +446,14 @@ export class TMDOutlineGenerator {
     if (orderItems.length > 0 || orderSnippet.length > 0) {
       const oStart = orderStartPos ?? { offset: 0, line: 1, column: 1 };
       const oEnd = orderEndPos ?? oStart;
-      const oRange: TMDOutlineRange = {
+      const oRange: TmdOutlineRange = {
         startLine: oStart.line,
         startColumn: oStart.column,
         endLine: oEnd.line,
         endColumn: oEnd.column,
       };
 
-      const itemNodes: TMDOutlineNode[] = orderItems.map((item) => ({
+      const itemNodes: TmdOutlineNode[] = orderItems.map((item) => ({
         name: item.name,
         detail: item.detail,
         kind: "method",

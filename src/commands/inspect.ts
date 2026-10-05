@@ -1,7 +1,7 @@
-import { TMDSongInspector } from "../analysis/index.js";
+import { TmdSongInspector } from "../analysis/index.js";
 import { readUTF8 } from "../io/text_io.js";
-import { TMDTonalityVisualizer } from "../presentation/index.js";
-import { TMDParser } from "../syntax/index.js";
+import { TmdTonalityVisualizer } from "../presentation/index.js";
+import { TmdParser } from "../syntax/index.js";
 
 export function handleInspectCommand(argv: string[]): number {
   let inputPath: string | undefined;
@@ -45,7 +45,7 @@ OPTIONS:
     return 1;
   }
   let sheet;
-  try { sheet = TMDParser.parse(content); }
+  try { sheet = TmdParser.parse(content); }
   catch (error: any) {
     console.error(`Parse error in ${inputPath}: ${error.message || String(error)}`);
     return 1;
@@ -55,10 +55,10 @@ OPTIONS:
     return 1;
   }
   const normalizedLocale = locale.toLowerCase().startsWith("zh") ? "zh-Hant" : "en";
-  const profile = TMDSongInspector.inspect(sheet, undefined, normalizedLocale);
+  const profile = TmdSongInspector.inspect(sheet, undefined, normalizedLocale);
   if (json) console.log(JSON.stringify(profile, null, 2));
-  else if (svg) console.log(TMDTonalityVisualizer.generateSVG(profile, normalizedLocale));
-  else if (html) console.log(TMDTonalityVisualizer.generateHTML(profile, normalizedLocale));
-  else console.log(TMDSongInspector.generateReport(profile, normalizedLocale));
+  else if (svg) console.log(TmdTonalityVisualizer.generateSVG(profile, normalizedLocale));
+  else if (html) console.log(TmdTonalityVisualizer.generateHTML(profile, normalizedLocale));
+  else console.log(TmdSongInspector.generateReport(profile, normalizedLocale));
   return 0;
 }

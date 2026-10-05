@@ -1,5 +1,5 @@
-import { TMDCanonGenerator } from "../../../src/domain/canon_gen.js";
-import type { TMDWebEditor } from "../editor.js";
+import { TmdCanonGenerator } from "../../../src/domain/canon_gen.js";
+import type { TmdWebEditor } from "../editor.js";
 import { fetchGistTmd } from "../gist.js";
 import { escapeHtml } from "../html.js";
 import { t } from "../i18n.js";
@@ -82,14 +82,14 @@ export function parseImportedScoreFile(
   };
 }
 
-export class TMDLibraryDrawerController {
+export class TmdLibraryDrawerController {
   private currentScoreId: string | null = null;
   private isTemplateScore: boolean = false;
   private activeTemplateId: string | null = null;
 
   constructor(
     private elements: LibraryDrawerElements,
-    private getEditor: () => TMDWebEditor,
+    private getEditor: () => TmdWebEditor,
     private onScoreLoaded: (text: string) => void,
     private onSavePanelsState: () => void,
     private onShowToast?: (message: string, type?: "success" | "error") => void
@@ -291,7 +291,7 @@ export class TMDLibraryDrawerController {
         const numVariations = parseInt(inputCanonVariations?.value || "3", 10) || 3;
         const useMacro = (selectCanonOutput?.value || "macro") === "macro";
 
-        const generator = new TMDCanonGenerator({
+        const generator = new TmdCanonGenerator({
           title,
           key,
           tempo,

@@ -17,7 +17,7 @@ export interface MIDIEvent {
   message: MIDIMessage;
 }
 
-export class TMDMIDIEncoder {
+export class TmdMIDIEncoder {
   public static encodeFile(tracks: Uint8Array[], ticksPerQuarter: number): Uint8Array {
     const headerChunks: number[] = [
       0x4d, 0x54, 0x68, 0x64, // 'MThd'

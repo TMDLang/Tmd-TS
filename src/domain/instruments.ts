@@ -1,4 +1,4 @@
-import { TMDMacroEvaluator } from '../playback/macro.js';
+import { TmdMacroEvaluator } from '../playback/macro.js';
 import { Sheet } from '../syntax/types.js';
 
 /**
@@ -12,7 +12,7 @@ export class SheetInstrumentHelper {
    * Automatically expands S-Expression macros so dynamically generated instruments are discovered.
    */
   public static distinctInstruments(rawSheet: Sheet, fallbackToDefault = true): string[] {
-    const sheet = TMDMacroEvaluator.expandThrowing(rawSheet);
+    const sheet = TmdMacroEvaluator.expandThrowing(rawSheet);
     const distinct = Array.from(
       new Set(
         sheet.entries

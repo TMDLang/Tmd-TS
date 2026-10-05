@@ -4,11 +4,11 @@ import * as path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { TMDWAVRenderer } from "../src/audio.js";
+import { TmdWAVRenderer } from "../src/audio.js";
 import { main, printHelp } from "../src/cli.js";
-import { TMDMIDIGenerator } from "../src/exporters/midi.js";
-import { TMDMCPServer } from "../src/mcp/index.js";
-import { TMDParser } from "../src/syntax/parser.js";
+import { TmdMIDIGenerator } from "../src/exporters/midi.js";
+import { TmdMCPServer } from "../src/mcp/index.js";
+import { TmdParser } from "../src/syntax/parser.js";
 
 describe("CLI & Renderer --section and --instrument alignment (TDD)", () => {
   let tmpDir: string;
@@ -143,13 +143,13 @@ verse:Piano@|0|{
     expect(introSeconds).toBeLessThan(fullSeconds);
   });
 
-  it("TMDWAVRenderer supports targetParagraph and targetInstrument options directly", () => {
-    const sheet = TMDParser.parse(multiSectionTmd);
+  it("TmdWAVRenderer supports targetParagraph and targetInstrument options directly", () => {
+    const sheet = TmdParser.parse(multiSectionTmd);
 
-    const fullWav = TMDWAVRenderer.renderWAV(sheet, 8000);
+    const fullWav = TmdWAVRenderer.renderWAV(sheet, 8000);
     const fullSeconds = new DataView(fullWav.buffer).getUint32(40, true) / 4 / 8000;
 
-    const filteredWav = TMDWAVRenderer.renderWAV(sheet, 8000, {
+    const filteredWav = TmdWAVRenderer.renderWAV(sheet, 8000, {
       targetParagraph: "intro",
       targetInstrument: "Piano",
     });
@@ -179,10 +179,10 @@ verse:Piano@|0|{
 
 -> (play Theme Piano) -> verse ->#
 `;
-    const sheet = TMDParser.parse(macroTmd);
+    const sheet = TmdParser.parse(macroTmd);
 
     // When exporting MIDI for verse in a score with macros, macro expansion in sheet must not break
-    const midi = TMDMIDIGenerator.generateMIDI(sheet, undefined, {
+    const midi = TmdMIDIGenerator.generateMIDI(sheet, undefined, {
       targetParagraph: "verse",
     });
     expect(midi).toBeDefined();
@@ -191,7 +191,7 @@ verse:Piano@|0|{
     expect(tracks).toBe(2); // conductor + Piano
 
     // When rendering WAV for verse, it should render 1 measure
-    const wav = TMDWAVRenderer.renderWAV(sheet, 8000, {
+    const wav = TmdWAVRenderer.renderWAV(sheet, 8000, {
       targetParagraph: "verse",
     });
     expect(wav).toBeDefined();
@@ -201,7 +201,7 @@ verse:Piano@|0|{
 
   it("MCP tmd_convert supports section and instrument filtering for MIDI and WAV", async () => {
     // 1. MIDI with section & instrument
-    const midiRes = await TMDMCPServer.handleConvertTmd({
+    const midiRes = await TmdMCPServer.handleConvertTmd({
       text: multiSectionTmd,
       format: "midi",
       section: "intro",
@@ -213,7 +213,7 @@ verse:Piano@|0|{
     expect(tracks).toBe(2); // 1 conductor + Piano
 
     // 2. WAV with section & instrument
-    const wavRes = await TMDMCPServer.handleConvertTmd({
+    const wavRes = await TmdMCPServer.handleConvertTmd({
       text: multiSectionTmd,
       format: "wav",
       section: "intro",

@@ -1,5 +1,5 @@
 /**
- * TMDCanonGenerator (Algorithmic Counterpoint Canon Engine)
+ * TmdCanonGenerator (Algorithmic Counterpoint Canon Engine)
  * 
  * Algorithmic Counterpoint Architecture & Design Principles:
  * --------------------------------------------------------------------------------
@@ -68,7 +68,7 @@ export interface CanonGeneratorOptions {
   arpeggioProbability?: number;
 }
 
-export class TMDCanonGenerator {
+export class TmdCanonGenerator {
   public static readonly MAX_VOICES = 16;
   public static readonly MAX_VARIATIONS = 4096;
   public static readonly MAX_OFFSET_BARS = 64;
@@ -203,9 +203,9 @@ export class TMDCanonGenerator {
   private arpeggioProbability: number;
 
   constructor(options: CanonGeneratorOptions = {}) {
-    this.validateDimension("numVoices", options.numVoices ?? 3, 1, TMDCanonGenerator.MAX_VOICES);
-    this.validateDimension("numVariations", options.numVariations ?? 3, 1, TMDCanonGenerator.MAX_VARIATIONS);
-    this.validateDimension("offsetBars", options.offsetBars ?? 2, 0, TMDCanonGenerator.MAX_OFFSET_BARS);
+    this.validateDimension("numVoices", options.numVoices ?? 3, 1, TmdCanonGenerator.MAX_VOICES);
+    this.validateDimension("numVariations", options.numVariations ?? 3, 1, TmdCanonGenerator.MAX_VARIATIONS);
+    this.validateDimension("offsetBars", options.offsetBars ?? 2, 0, TmdCanonGenerator.MAX_OFFSET_BARS);
 
     this.title = options.title ?? "Canon";
     this.tempo = options.tempo ?? 64;
@@ -228,12 +228,12 @@ export class TMDCanonGenerator {
     this.isMinor = this.key.includes("m");
     if (this.mode === "tonal") {
       this.scale = this.isMinor
-        ? TMDCanonGenerator.DIATONIC_MINOR_SCALE
-        : TMDCanonGenerator.DIATONIC_MAJOR_SCALE;
+        ? TmdCanonGenerator.DIATONIC_MINOR_SCALE
+        : TmdCanonGenerator.DIATONIC_MAJOR_SCALE;
     } else {
       this.scale = this.isMinor
-        ? TMDCanonGenerator.MINOR_PENTATONIC_SCALE
-        : TMDCanonGenerator.MAJOR_PENTATONIC_SCALE;
+        ? TmdCanonGenerator.MINOR_PENTATONIC_SCALE
+        : TmdCanonGenerator.MAJOR_PENTATONIC_SCALE;
     }
 
     this.voiceInstruments = Array.from({ length: this.numVoices }, (_, i) => `Violin${i + 1}`);
@@ -306,8 +306,8 @@ export class TMDCanonGenerator {
   public selectOrGenBass(): string[] {
     const category = this.isMinor ? "minor" : "major";
     const patterns = this.mode === "tonal"
-      ? TMDCanonGenerator.TONAL_BASS_PATTERNS[category]
-      : TMDCanonGenerator.PENTATONIC_BASS_PATTERNS[category];
+      ? TmdCanonGenerator.TONAL_BASS_PATTERNS[category]
+      : TmdCanonGenerator.PENTATONIC_BASS_PATTERNS[category];
     return [...this.randomChoice(patterns)];
   }
 
@@ -341,12 +341,12 @@ export class TMDCanonGenerator {
     let mapping: Record<string, string[]>;
     if (this.mode === "tonal") {
       mapping = this.isMinor
-        ? TMDCanonGenerator.TONAL_CHORD_TONES_MINOR
-        : TMDCanonGenerator.TONAL_CHORD_TONES_MAJOR;
+        ? TmdCanonGenerator.TONAL_CHORD_TONES_MINOR
+        : TmdCanonGenerator.TONAL_CHORD_TONES_MAJOR;
     } else {
       mapping = this.isMinor
-        ? TMDCanonGenerator.PENTATONIC_CHORD_TONES_MINOR
-        : TMDCanonGenerator.PENTATONIC_CHORD_TONES_MAJOR;
+        ? TmdCanonGenerator.PENTATONIC_CHORD_TONES_MINOR
+        : TmdCanonGenerator.PENTATONIC_CHORD_TONES_MAJOR;
     }
 
     if (mapping[bassDegree]) {

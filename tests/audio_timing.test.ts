@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { TMDWAVRenderer } from "../src/audio.js";
-import { TMDParser } from "../src/syntax/parser.js";
+import { TmdWAVRenderer } from "../src/audio.js";
+import { TmdParser } from "../src/syntax/parser.js";
 
 function wavDurationSeconds(wav: Uint8Array, sampleRate: number): number {
   const dataBytes = new DataView(wav.buffer).getUint32(40, true);
@@ -13,9 +13,9 @@ function wavEnergy(wav: Uint8Array): number {
   return pcm.reduce((sum, value) => sum + Math.abs(value), 0);
 }
 
-describe("TMDWAVRenderer timing and percussion", () => {
+describe("TmdWAVRenderer timing and percussion", () => {
   it("converts beat positions through tempo changes instead of using one global tempo", () => {
-    const sheet = TMDParser.parse(`::SCORE::
+    const sheet = TmdParser.parse(`::SCORE::
 ** Tempo map **
 != 60
 ?= C
@@ -31,12 +31,12 @@ A:Piano@|0|{
 -> A ->#
 `);
 
-    const wav = TMDWAVRenderer.renderWAV(sheet, 8000);
+    const wav = TmdWAVRenderer.renderWAV(sheet, 8000);
     expect(wavDurationSeconds(wav, 8000)).toBeCloseTo(8.5, 1);
   });
 
   it("renders percussion events into audible PCM", () => {
-    const sheet = TMDParser.parse(`::SCORE::
+    const sheet = TmdParser.parse(`::SCORE::
 ** Drums **
 != 120
 ?= C
@@ -50,7 +50,7 @@ X S B C
 -> A ->#
 `);
 
-    const wav = TMDWAVRenderer.renderWAV(sheet, 8000);
+    const wav = TmdWAVRenderer.renderWAV(sheet, 8000);
     expect(wavEnergy(wav)).toBeGreaterThan(0);
   });
 });

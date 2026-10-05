@@ -4,9 +4,9 @@ import * as path from 'node:path';
 import { describe, expect,it } from 'vitest';
 
 import {
-  TMDMeasureChecker,
-  TMDParser,
-  TMDPlaybackRenderer,
+  TmdMeasureChecker,
+  TmdParser,
+  TmdPlaybackRenderer,
 } from '../src/index.js';
 
 describe('Canon in D score verification', () => {
@@ -15,19 +15,19 @@ describe('Canon in D score verification', () => {
     const content = fs.readFileSync(filePath, 'utf-8');
 
     // 1. Zero measure errors across all 50 bars of variations
-    const issues = TMDMeasureChecker.check(content);
+    const issues = TmdMeasureChecker.check(content);
     expect(issues).toEqual([]);
 
     // 2. Parser succeeds
-    const sheet = TMDParser.parse(content);
+    const sheet = TmdParser.parse(content);
     expect(sheet).not.toBeNull();
     expect(sheet.name).toBe('Canon in D ( Complete Macro Edition )');
 
     // 3. Playback timeline rendering
-    const cello = TMDPlaybackRenderer.render(sheet, 'Cello');
-    const v1 = TMDPlaybackRenderer.render(sheet, 'Violin1');
-    const v2 = TMDPlaybackRenderer.render(sheet, 'Violin2');
-    const v3 = TMDPlaybackRenderer.render(sheet, 'Violin3');
+    const cello = TmdPlaybackRenderer.render(sheet, 'Cello');
+    const v1 = TmdPlaybackRenderer.render(sheet, 'Violin1');
+    const v2 = TmdPlaybackRenderer.render(sheet, 'Violin2');
+    const v3 = TmdPlaybackRenderer.render(sheet, 'Violin3');
 
     // Full 50 measures of canon + 2 measures intro + 2 measures per voice delay + 1 measure outro
     expect(v1.duration).toBe(240); // 60 measures total

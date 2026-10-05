@@ -8,16 +8,16 @@ import { handleOutlineCommand } from "../src/commands/outline.js";
 import { handleRefactorCommand } from "../src/commands/refactor.js";
 import {
   Lexer,
-  TMDMeasureChecker,
-  TMDMeasureIssue,
-  TMDParser,
-  TMDRefactor,
+  TmdMeasureChecker,
+  TmdMeasureIssue,
+  TmdParser,
+  TmdRefactor,
 } from "../src/index.js";
 import { diagnosticMeasureFixture } from "./conformanceFixtures.js";
 
-describe("TMDRefactor (TDD)", () => {
+describe("TmdRefactor (TDD)", () => {
   it("matches the shared structured measure diagnostic fixture", () => {
-    const issue = TMDMeasureChecker.check(diagnosticMeasureFixture)[0];
+    const issue = TmdMeasureChecker.check(diagnosticMeasureFixture)[0];
 
     expect(issue).toMatchObject({
       paragraphName: "Intro",
@@ -49,7 +49,7 @@ intro:Piano@|0|{
 -> intro   ->#
 `;
 
-    const formatted = TMDRefactor.format(input);
+    const formatted = TmdRefactor.format(input);
     expect(formatted).toContain("/* Header Comment */");
     expect(formatted).toContain("/* bar comment */");
     expect(formatted).toContain("intro:Piano@|0|{");
@@ -60,8 +60,8 @@ intro:Piano@|0|{
     expect(formatted).toContain("}");
     expect(formatted).toContain("-> intro ->#");
 
-    const origSheet = TMDParser.parse(input);
-    const newSheet = TMDParser.parse(formatted);
+    const origSheet = TmdParser.parse(input);
+    const newSheet = TmdParser.parse(formatted);
     expect(origSheet.name).toBe(newSheet.name);
     expect(origSheet.entries.length).toBe(newSheet.entries.length);
     expect(origSheet.playback.length).toBe(newSheet.playback.length);
@@ -90,7 +90,7 @@ intro:Piano@|0|{
 -> intro ->#
 `;
 
-    const formatted = TMDRefactor.format(input);
+    const formatted = TmdRefactor.format(input);
     // At root level, comments should not have leading indentation on any line
     expect(formatted).toContain("/*\n * Header multi-line comment\n * line 2\n */");
 
@@ -124,13 +124,13 @@ outro:Piano@|0|{
 -> intro -> verse -> outro ->#
 `;
 
-    const result = TMDRefactor.renameInstrument(input, "Piano", "GrandPiano");
+    const result = TmdRefactor.renameInstrument(input, "Piano", "GrandPiano");
     expect(result).toContain("intro:GrandPiano@|0|{");
     expect(result).toContain("outro:GrandPiano@|0|{");
     expect(result).toContain("verse:Guitar@|0|{");
     expect(result).not.toContain(":Piano@");
 
-    const sheet = TMDParser.parse(result);
+    const sheet = TmdParser.parse(result);
     expect(sheet.entries[0].assignment).toBe("GrandPiano");
     expect(sheet.entries[1].assignment).toBe("Guitar");
     expect(sheet.entries[2].assignment).toBe("GrandPiano");
@@ -161,7 +161,7 @@ verse:Bass@|0|{
 -> intro -> verse -> {?+2} -> verse ->#
 `;
 
-    const result = TMDRefactor.renameSection(input, "verse", "A");
+    const result = TmdRefactor.renameSection(input, "verse", "A");
     expect(result).toContain("intro:Piano@|0|{");
     expect(result).toContain("A:Piano@|0|{");
     expect(result).toContain("A:Bass@|0|{");
@@ -169,7 +169,7 @@ verse:Bass@|0|{
     expect(result).not.toContain("verse:Bass@");
     expect(result).toContain("-> intro -> A -> {?+2} -> A ->#");
 
-    const sheet = TMDParser.parse(result);
+    const sheet = TmdParser.parse(result);
     expect(sheet.entries[1].name).toBe("A");
     expect(sheet.entries[2].name).toBe("A");
     expect(sheet.playback).toEqual([
@@ -211,7 +211,7 @@ XsTt
 -> intro -> verse ->#
 `;
 
-    const extracted = TMDRefactor.extractInstrument(input, "Piano");
+    const extracted = TmdRefactor.extractInstrument(input, "Piano");
     expect(extracted).toContain("** Full Band Song **");
     expect(extracted).toContain("!= 130");
     expect(extracted).toContain("?= G");
@@ -222,7 +222,7 @@ XsTt
     expect(extracted).not.toContain(":Drums@");
     expect(extracted).toContain("-> intro -> verse ->#");
 
-    const sheet = TMDParser.parse(extracted);
+    const sheet = TmdParser.parse(extracted);
     expect(sheet.name).toBe("Full Band Song");
     expect(sheet.entries.length).toBe(2);
     expect(sheet.entries.every((p) => p.assignment === "Piano")).toBe(true);
@@ -248,13 +248,13 @@ verse:Piano@|0|{
 -> verse ->#
 `;
 
-    const doubled = TMDRefactor.doubleGrid(input);
+    const doubled = TmdRefactor.doubleGrid(input);
     expect(doubled).toContain("<8*>");
     expect(doubled).toContain("| 1 - 2 - 3 - 4 - |");
     expect(doubled).toContain("| [C] - - - 0 - D - |");
 
     // Must be valid TMD and pass measure checks
-    const issues = TMDMeasureChecker.check(doubled);
+    const issues = TmdMeasureChecker.check(doubled);
     expect(issues).toHaveLength(0);
   });
 
@@ -273,16 +273,16 @@ Intro:vocal@|0|{
 -> Intro ->#
 `;
 
-    const doubled = TMDRefactor.doubleGrid(input);
+    const doubled = TmdRefactor.doubleGrid(input);
     expect(doubled).toContain("<8*>");
     expect(doubled).toContain("(3 1)%(--)");
-    const doubledIssues = TMDMeasureChecker.check(doubled);
+    const doubledIssues = TmdMeasureChecker.check(doubled);
     expect(doubledIssues).toHaveLength(0);
 
-    const halved = TMDRefactor.halveGrid(doubled);
+    const halved = TmdRefactor.halveGrid(doubled);
     expect(halved).toContain("<4*>");
     expect(halved).toContain("(3 1)%(-)");
-    const halvedIssues = TMDMeasureChecker.check(halved);
+    const halvedIssues = TmdMeasureChecker.check(halved);
     expect(halvedIssues).toHaveLength(0);
   });
 
@@ -301,11 +301,11 @@ verse:Piano@|0|{
 -> verse ->#
 `;
 
-    const doubled = TMDRefactor.doubleGrid(input);
+    const doubled = TmdRefactor.doubleGrid(input);
 
     expect(doubled).toContain("| 5 - 1 - (1 - - 2)%(----) |");
     expect(doubled).toContain("| 5 - 0 - 1 - 1 - |");
-    expect(TMDMeasureChecker.check(doubled)).toHaveLength(0);
+    expect(TmdMeasureChecker.check(doubled)).toHaveLength(0);
   });
 
   it("halves grid resolution (<8*> -> <4*>) when divisible", () => {
@@ -324,12 +324,12 @@ verse:Piano@|0|{
 -> verse ->#
 `;
 
-    const halved = TMDRefactor.halveGrid(input);
+    const halved = TmdRefactor.halveGrid(input);
     expect(halved).toContain("<4*>");
     expect(halved).toContain("| 1 2 3 4 |");
     expect(halved).toContain("| [C] - 0 D |");
 
-    const issues = TMDMeasureChecker.check(halved);
+    const issues = TmdMeasureChecker.check(halved);
     expect(issues).toHaveLength(0);
   });
 
@@ -348,7 +348,7 @@ verse:Piano@|0|{
 -> verse ->#
 `;
 
-    expect(() => TMDRefactor.halveGrid(input)).toThrow();
+    expect(() => TmdRefactor.halveGrid(input)).toThrow();
   });
 
   it("optimizes grid resolution repeatedly until minimal noteLength is reached", () => {
@@ -369,14 +369,14 @@ b1:Bass@|0| {
 -> b1 ->#
 `;
 
-    const optimized = TMDRefactor.optimizeGrid(input);
+    const optimized = TmdRefactor.optimizeGrid(input);
     expect(optimized).toContain("<1*>");
     expect(optimized).toContain("| 4__ | 5__ | 3__ | 6__ |");
     expect(optimized).toContain("| 2__ | 5__ | 1_ | 5__ |");
     expect(optimized).toContain("| 4__ | 5__ | 3__ | 6__ |");
     expect(optimized).toContain("| 2__ | 5__ | 6__ | - |");
 
-    const issues = TMDMeasureChecker.check(optimized);
+    const issues = TmdMeasureChecker.check(optimized);
     expect(issues).toHaveLength(0);
   });
 
@@ -401,13 +401,13 @@ verse:Lead@|0|{
 `;
 
     // Only optimize Bass in verse
-    const optBass = TMDRefactor.optimizeGrid(input, { instrument: "Bass" });
+    const optBass = TmdRefactor.optimizeGrid(input, { instrument: "Bass" });
     expect(optBass).toContain("<1*>");
     expect(optBass).toContain("| 1_ | 5__ |");
     // Lead should stay <4*>
     expect(optBass).toContain("<4*>");
     expect(optBass).toContain("| 1 2 3 4 | 5 6 7 1^ |");
-    expect(TMDMeasureChecker.check(optBass)).toHaveLength(0);
+    expect(TmdMeasureChecker.check(optBass)).toHaveLength(0);
   });
 
   it("optimizes entire score across multiple paragraphs with different compressibility", () => {
@@ -430,14 +430,14 @@ verse:Lead@|0|{
 -> verse ->#
 `;
 
-    const optGlobal = TMDRefactor.optimizeGrid(input);
+    const optGlobal = TmdRefactor.optimizeGrid(input);
     expect(optGlobal).toContain("verse:Bass@|0|{");
     expect(optGlobal).toContain("<1*>");
     expect(optGlobal).toContain("| 1_ | 5__ |");
     expect(optGlobal).toContain("verse:Lead@|0|{");
     expect(optGlobal).toContain("<4*>");
     expect(optGlobal).toContain("| 1 2 3 4 | 5 6 7 1^ |");
-    expect(TMDMeasureChecker.check(optGlobal)).toHaveLength(0);
+    expect(TmdMeasureChecker.check(optGlobal)).toHaveLength(0);
   });
 
   it("duplicates a track with new instrument name and optional octave shift", () => {
@@ -456,12 +456,12 @@ verse:Lead@|0|{
 `;
 
     // Duplicate Lead -> Synth with octave shift -1
-    const duped = TMDRefactor.duplicateTrack(input, "Lead", "Synth", { octaveShift: -1 });
+    const duped = TmdRefactor.duplicateTrack(input, "Lead", "Synth", { octaveShift: -1 });
     expect(duped).toContain("verse:Lead@|0|{");
     expect(duped).toContain("verse:Synth@|0|{");
     expect(duped).toContain("1_ 2_ 3_ 5_");
 
-    const issues = TMDMeasureChecker.check(duped);
+    const issues = TmdMeasureChecker.check(duped);
     expect(issues).toHaveLength(0);
   });
 
@@ -486,13 +486,13 @@ chorus:Lead@|0|{
 `;
 
     // Duplicate Lead -> Synth only in chorus
-    const duped = TMDRefactor.duplicateTrack(input, "Lead", "Synth", { section: "chorus", octaveShift: 1 });
+    const duped = TmdRefactor.duplicateTrack(input, "Lead", "Synth", { section: "chorus", octaveShift: 1 });
     expect(duped).toContain("chorus:Synth@|0|{");
     expect(duped).toContain("5^ 6^ 7^ 1^^");
     // verse should NOT have Synth
     expect(duped).not.toContain("verse:Synth@");
 
-    const issues = TMDMeasureChecker.check(duped);
+    const issues = TmdMeasureChecker.check(duped);
     expect(issues).toHaveLength(0);
   });
 
@@ -512,7 +512,7 @@ verse:Lead@|0|{
 -> verse -># /* order comment */
 `;
 
-    const duped = TMDRefactor.duplicateTrack(input, "Lead", "Synth", { octaveShift: 1 });
+    const duped = TmdRefactor.duplicateTrack(input, "Lead", "Synth", { octaveShift: 1 });
     expect(duped).toContain("/* Header comment */");
     expect(duped).toContain("/* bar comment */");
     expect(duped).toContain("/* order comment */");
@@ -520,7 +520,7 @@ verse:Lead@|0|{
     expect(duped).toContain("verse:Synth@|0|{");
     expect(duped).toContain("1^ 2^ 3^ 4^");
 
-    const issues = TMDMeasureChecker.check(duped);
+    const issues = TmdMeasureChecker.check(duped);
     expect(issues).toHaveLength(0);
   });
 
@@ -540,7 +540,7 @@ verse:Vocal@|0|{
 -> verse -># /* order comment */
 `;
 
-    const harmonized = TMDRefactor.generateHarmony(input, "Vocal", "Backing", { intervalSteps: 2 });
+    const harmonized = TmdRefactor.generateHarmony(input, "Vocal", "Backing", { intervalSteps: 2 });
     expect(harmonized).toContain("/* Header comment */");
     expect(harmonized).toContain("/* bar comment */");
     expect(harmonized).toContain("/* order comment */");
@@ -549,7 +549,7 @@ verse:Vocal@|0|{
     expect(harmonized).toContain("3 4 5 3");
     expect(harmonized).toContain("| 3 4 5 3 |");
 
-    const issues = TMDMeasureChecker.check(harmonized);
+    const issues = TmdMeasureChecker.check(harmonized);
     expect(issues).toHaveLength(0);
   });
 
@@ -569,14 +569,14 @@ verse:Vocal@|0|{
 `;
 
     // Add parallel third up (+3rd = interval: 2 diatonic steps up: 1 -> 3, 2 -> 4, 3 -> 5)
-    const harmonized = TMDRefactor.generateHarmony(input, "Vocal", "Harmony", { intervalSteps: 2 });
+    const harmonized = TmdRefactor.generateHarmony(input, "Vocal", "Harmony", { intervalSteps: 2 });
     expect(harmonized).toContain("verse:Vocal@|0|{");
     expect(harmonized).toContain("verse:Harmony@|0|{");
     expect(harmonized).toContain("3 4 5 3");
     // Chords / ties are preserved
     expect(harmonized).toContain("[C] - - -");
 
-    const issues = TMDMeasureChecker.check(harmonized);
+    const issues = TmdMeasureChecker.check(harmonized);
     expect(issues).toHaveLength(0);
   });
 
@@ -601,12 +601,12 @@ chorus:Vocal@|0|{
 `;
 
     // Generate harmony only in verse
-    const harmonized = TMDRefactor.generateHarmony(input, "Vocal", "Harmony", { section: "verse", intervalSteps: 2 });
+    const harmonized = TmdRefactor.generateHarmony(input, "Vocal", "Harmony", { section: "verse", intervalSteps: 2 });
     expect(harmonized).toContain("verse:Harmony@|0|{");
     expect(harmonized).toContain("3 4 5 3");
     expect(harmonized).not.toContain("chorus:Harmony@");
 
-    const issues = TMDMeasureChecker.check(harmonized);
+    const issues = TmdMeasureChecker.check(harmonized);
     expect(issues).toHaveLength(0);
   });
 
@@ -637,35 +637,35 @@ verse:Piano@|0|{
 `;
 
     // 1. renameInstrument
-    const renamedInst = TMDRefactor.renameInstrument(input, "Piano", "GrandPiano");
+    const renamedInst = TmdRefactor.renameInstrument(input, "Piano", "GrandPiano");
     expect(renamedInst).toContain("/* Header Comment */");
     expect(renamedInst).toContain("/* piano comment */");
     expect(renamedInst).toContain("/* bass comment */");
     expect(renamedInst).toContain("/* order comment */");
 
     // 2. renameSection
-    const renamedSec = TMDRefactor.renameSection(input, "intro", "IntroA");
+    const renamedSec = TmdRefactor.renameSection(input, "intro", "IntroA");
     expect(renamedSec).toContain("/* Header Comment */");
     expect(renamedSec).toContain("/* piano comment */");
     expect(renamedSec).toContain("/* bass comment */");
     expect(renamedSec).toContain("/* order comment */");
 
     // 3. doubleGrid
-    const doubled = TMDRefactor.doubleGrid(input);
+    const doubled = TmdRefactor.doubleGrid(input);
     expect(doubled).toContain("/* Header Comment */");
     expect(doubled).toContain("/* piano comment */");
     expect(doubled).toContain("/* bass comment */");
     expect(doubled).toContain("/* order comment */");
 
     // 4. halveGrid
-    const halved = TMDRefactor.halveGrid(doubled);
+    const halved = TmdRefactor.halveGrid(doubled);
     expect(halved).toContain("/* Header Comment */");
     expect(halved).toContain("/* piano comment */");
     expect(halved).toContain("/* bass comment */");
     expect(halved).toContain("/* order comment */");
 
     // 5. extractInstrument
-    const extracted = TMDRefactor.extractInstrument(input, "Piano");
+    const extracted = TmdRefactor.extractInstrument(input, "Piano");
     expect(extracted).toContain("/* Header Comment */");
     expect(extracted).toContain("/* piano comment */");
     expect(extracted).toContain("/* verse piano */");
@@ -694,14 +694,14 @@ verse:Piano@|0|{
 -> intro -> verse -> intro ->#
 `;
 
-    const inlined = TMDRefactor.inlineOrders(input);
+    const inlined = TmdRefactor.inlineOrders(input);
     expect(inlined).toContain("linear:Piano@|0|{");
     expect(inlined).toContain("-> linear ->#");
     // 3 sections merged in linear playback sequence
     expect(inlined).toContain("| 1 2 3 4 |");
     expect(inlined).toContain("| 5 6 7 1^ |");
 
-    const sheet = TMDParser.parse(inlined);
+    const sheet = TmdParser.parse(inlined);
     expect(sheet.entries).toHaveLength(1);
     expect(sheet.entries[0].sections).toHaveLength(3);
     expect(sheet.entries[0].sections.reduce((total, section) => total + section.unitGroups.length, 0)).toBe(12); // 4 + 4 + 4
@@ -724,8 +724,8 @@ intro:Piano@|0|{
 -> intro ->#
 `;
 
-    const inlined = TMDRefactor.inlineOrders(input.replace("5 6 7 1^", "{!= 90} 5 6 7 1^"));
-    const sheet = TMDParser.parse(inlined);
+    const inlined = TmdRefactor.inlineOrders(input.replace("5 6 7 1^", "{!= 90} 5 6 7 1^"));
+    const sheet = TmdParser.parse(inlined);
     const sections = sheet.entries[0].sections;
 
     expect(sections.map((section) => section.noteLength)).toEqual([4, 8]);
@@ -735,12 +735,12 @@ intro:Piano@|0|{
     });
   });
 
-  describe("TMDRefactor.transpose (TDD)", () => {
+  describe("TmdRefactor.transpose (TDD)", () => {
     it("transposes notes and chords up by semitones (e.g. +2 half steps)", () => {
       const input = `| 1 2 3 4 | [C] - [Am] - |`;
       // In Key C: 1 (C) -> 2 (D), 2 (D) -> 3 (E), 3 (E) -> 4' (F#), 4 (F) -> 5 (G)
       // Chords: [C] -> [D], [Am] -> [Bm]
-      const transposed = TMDRefactor.transpose(input, { semitones: 2, keySignature: "C" });
+      const transposed = TmdRefactor.transpose(input, { semitones: 2, keySignature: "C" });
       expect(transposed).toContain("| 2 3 4' 5 |");
       expect(transposed).toContain("[D] - [Bm] -");
     });
@@ -752,7 +752,7 @@ intro:Piano@|0|{
       // 5 (G) - 1 semitone -> 4' (F#)
       // 1^ (C5) - 1 semitone -> 7 (B4)
       // [C] -> [B], [G7] -> [F#7]
-      const transposed = TMDRefactor.transpose(input, { semitones: -1, keySignature: "C" });
+      const transposed = TmdRefactor.transpose(input, { semitones: -1, keySignature: "C" });
       expect(transposed).toContain("| 7_ 2' 4' 7 |");
       expect(transposed).toContain("[B] - [F#7] -");
     });
@@ -761,7 +761,7 @@ intro:Piano@|0|{
       const input = `| 1 2 3 4 | 5 6 7 1^ | [1] - [4] [5] |`;
       // Shift degree numbers directly: 1->2, 2->3, ..., 7->1^
       // Numbered chords: [1]->[2], [4]->[5], [5]->[6]
-      const transposed = TMDRefactor.transpose(input, { diatonicSteps: 1 });
+      const transposed = TmdRefactor.transpose(input, { diatonicSteps: 1 });
       expect(transposed).toContain("| 2 3 4 5 | 6 7 1^ 2^ |");
       expect(transposed).toContain("[2] - [5] [6]");
     });
@@ -772,7 +772,7 @@ intro:Piano@|0|{
         "pipe", "note", "tie", "tie", "note", "tie", "tie", "pipe", "eof",
       ]);
 
-      const transposed = TMDRefactor.transpose(input, { semitones: 2, keySignature: "C" });
+      const transposed = TmdRefactor.transpose(input, { semitones: 2, keySignature: "C" });
       expect(transposed).toBe("| 2-- 3^-- |");
     });
 
@@ -792,14 +792,14 @@ verse:Lead@|0|{
 
 -> verse ->#
 `;
-      const transposed = TMDRefactor.transpose(input, { semitones: 2, updateKeySignature: true });
+      const transposed = TmdRefactor.transpose(input, { semitones: 2, updateKeySignature: true });
       expect(transposed).toContain("?= D");
       expect(transposed).toContain("/* My intro comment */");
       expect(transposed).toContain("/* bar comment */");
       expect(transposed).toContain("verse:Lead@|0|{");
       expect(transposed).toContain("-> verse ->#");
 
-      const issues = TMDMeasureChecker.check(transposed);
+      const issues = TmdMeasureChecker.check(transposed);
       expect(issues).toHaveLength(0);
     });
 
@@ -828,7 +828,7 @@ chorus:Lead@|0|{
 -> verse -> chorus ->#
 `;
       // Transpose only verse Lead up an octave (+12 semitones)
-      const transposed = TMDRefactor.transpose(input, {
+      const transposed = TmdRefactor.transpose(input, {
         semitones: 12,
         section: "verse",
         instrument: "Lead",
@@ -841,7 +841,7 @@ chorus:Lead@|0|{
   });
 });
 
-describe("TMDMeasureChecker (TDD)", () => {
+describe("TmdMeasureChecker (TDD)", () => {
   it("reports time-signature directives placed mid-measure", () => {
     const input = `::SCORE::
 ** Mid-Measure Time Signature **
@@ -857,7 +857,7 @@ verse:Piano@|0|{
 -> verse ->#
 `;
 
-    const issues = TMDMeasureChecker.check(input);
+    const issues = TmdMeasureChecker.check(input);
     expect(issues.some((issue) => issue.snippet.includes("Time signature directive"))).toBe(true);
   });
 
@@ -876,7 +876,7 @@ verse:Piano@|0|{
 -> verse ->#
 `;
 
-    expect(TMDMeasureChecker.check(input)).toHaveLength(0);
+    expect(TmdMeasureChecker.check(input)).toHaveLength(0);
   });
 
   it("allows tempo and dynamics directives within a measure", () => {
@@ -894,7 +894,7 @@ verse:Piano@|0|{
 -> verse ->#
 `;
 
-    expect(TMDMeasureChecker.check(input)).toHaveLength(0);
+    expect(TmdMeasureChecker.check(input)).toHaveLength(0);
   });
 
   it("reports no errors for valid measures", () => {
@@ -914,7 +914,7 @@ verse:Piano@|0|{
 -> verse ->#
 `;
 
-    const issues = TMDMeasureChecker.check(input);
+    const issues = TmdMeasureChecker.check(input);
     expect(issues).toHaveLength(0);
   });
 
@@ -940,7 +940,7 @@ intro:Drum@|0| {
 -> v2 ->#
 `;
 
-    const issues = TMDMeasureChecker.check(input);
+    const issues = TmdMeasureChecker.check(input);
     expect(issues).toHaveLength(0);
   });
 
@@ -961,7 +961,7 @@ verse:Piano@|0|{
 -> verse ->#
 `;
 
-    const issues = TMDMeasureChecker.check(input);
+    const issues = TmdMeasureChecker.check(input);
     expect(issues).toHaveLength(2);
 
     expect(issues[0].actualUnits).toBe(3);
@@ -992,7 +992,7 @@ verse:Piano@|-1|{
 -> verse ->#
 `;
 
-    const issues = TMDMeasureChecker.check(input);
+    const issues = TmdMeasureChecker.check(input);
     expect(issues).toHaveLength(0);
   });
 
@@ -1012,7 +1012,7 @@ verse:Piano@|0|{
 -> verse ->#
 `;
 
-    const issues = TMDMeasureChecker.check(input);
+    const issues = TmdMeasureChecker.check(input);
     expect(issues).toHaveLength(1);
     expect(issues[0].expectedUnits).toBe(16);
     expect(issues[0].actualUnits).toBe(4);
@@ -1050,7 +1050,7 @@ verse:Chorus@|+2|{
 
     // Bass exits early (2 measures out of 4), Chorus enters at +2 and exits at 3.
     // In TMD, these are valid staggered entrances / early exits without reporting error.
-    const issues = TMDMeasureChecker.check(input);
+    const issues = TmdMeasureChecker.check(input);
     expect(issues).toHaveLength(0);
   });
 
@@ -1078,7 +1078,7 @@ verse:Chorus@|+2|{
 -> verse ->#
 `;
 
-    const issues = TMDMeasureChecker.check(input);
+    const issues = TmdMeasureChecker.check(input);
     expect(issues).toHaveLength(0);
   });
 
@@ -1109,7 +1109,7 @@ verse:Piano@|0|{
 -> verse ->#
 `;
 
-    const issues = TMDMeasureChecker.check(input);
+    const issues = TmdMeasureChecker.check(input);
     expect(issues).toHaveLength(0);
   });
 
@@ -1128,7 +1128,7 @@ verse:Piano@|0|{
 -> verse -> chorus ->#
 `;
 
-    const issues = TMDMeasureChecker.check(input);
+    const issues = TmdMeasureChecker.check(input);
     expect(issues).toHaveLength(1);
     const issue = issues[0];
     expect(issue.paragraphName).toBe("chorus");
@@ -1151,7 +1151,7 @@ verse:Piano@|0|{
 -> verse -> {?+3} -> ending ->#
 `;
 
-    const issues = TMDMeasureChecker.check(input);
+    const issues = TmdMeasureChecker.check(input);
     expect(issues).toHaveLength(1);
     const issue = issues[0];
     expect(issue.paragraphName).toBe("ending");
@@ -1171,7 +1171,7 @@ verse:Piano@|0|{
 }
 `;
 
-    const issues = TMDMeasureChecker.check(input);
+    const issues = TmdMeasureChecker.check(input);
     expect(issues).toHaveLength(1);
     const issue = issues[0];
     expect(issue.instrument).toBe("Order");
@@ -1193,7 +1193,7 @@ verse:Piano@|0|{
 -> verse
 `;
 
-    const issues = TMDMeasureChecker.check(input);
+    const issues = TmdMeasureChecker.check(input);
     expect(issues).toHaveLength(1);
     const issue = issues[0];
     expect(issue.instrument).toBe("Order");
@@ -1219,7 +1219,7 @@ Grand_Terminal_Arrival:Piano@|0|{
 -> #
 `;
 
-    const issues = TMDMeasureChecker.check(input);
+    const issues = TmdMeasureChecker.check(input);
     const orderIssues = issues.filter((i) => i.instrument === "Order");
     const unclosedParagraph = issues.find((i) => i.snippet.includes("Unclosed entry"));
 
@@ -1420,7 +1420,7 @@ v1:Piano@|0|{
     expect(v1Tok!.range.start.line).toBe(2);
     expect(v1Tok!.token.line).toBe(2);
 
-    const issues = TMDMeasureChecker.check(code);
+    const issues = TmdMeasureChecker.check(code);
     expect(issues).toHaveLength(0);
   });
 
@@ -1447,7 +1447,7 @@ intro:CHORD@|0|{
     // intro:CHORD has 8 measures of <2*> (16 half notes = 32 quarter notes = 8 measures)
     // plus 2 measures of <4*> (8 quarter notes = 2 measures)
     // total 10 measures. Should have 0 issues.
-    const issues = TMDMeasureChecker.check(code);
+    const issues = TmdMeasureChecker.check(code);
     expect(issues).toHaveLength(0);
   });
 
@@ -1460,7 +1460,7 @@ intro:Piano@|0|{
 }
 -> intro ->#
 `;
-    const issues = TMDMeasureChecker.check(code);
+    const issues = TmdMeasureChecker.check(code);
     expect(issues.some((issue) => issue.snippet.includes("explicit barlines") && issue.description.includes("explicit barlines"))).toBe(true);
   });
 
@@ -1511,7 +1511,7 @@ intro:Guitar@{
 
 -> intro ->#
 `;
-    const issues = TMDMeasureChecker.check(code);
+    const issues = TmdMeasureChecker.check(code);
     expect(issues).toHaveLength(0);
   });
 
@@ -1529,7 +1529,7 @@ intro:Piano@|0|{
 
 -> intro ->#
 `;
-    const issues = TMDMeasureChecker.check(code);
+    const issues = TmdMeasureChecker.check(code);
     expect(issues).toHaveLength(0);
   });
 });

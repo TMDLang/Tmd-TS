@@ -1,5 +1,5 @@
 import { readUTF8 } from "../io/text_io.js";
-import { TMDMeasureChecker } from "../validation/measure_check.js";
+import { TmdMeasureChecker } from "../validation/measure_check.js";
 
 export function handleCheckCommand(argv: string[]): number {
   let inputPath: string | undefined;
@@ -33,7 +33,7 @@ Check measure consistency and report incorrect beat counts between bar lines '|'
     return 1;
   }
 
-  const issues = TMDMeasureChecker.check(content);
+  const issues = TmdMeasureChecker.check(content);
   if (issues.length === 0) {
     console.log(`✅ All measures in ${inputPath} conform to expected time signatures.`);
     return 0;

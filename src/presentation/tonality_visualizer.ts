@@ -1,21 +1,21 @@
-import { TMDSongInspector,TMDSongProfile, TMDTonalityProfile } from "../analysis/inspector.js";
-import type { TMDLocale } from "../analysis/localization.js";
-import { TMDLocalizationKey, TMDLocalizer } from "../analysis/localization.js";
+import { TmdSongInspector,TmdSongProfile, TmdTonalityProfile } from "../analysis/inspector.js";
+import type { TmdLocale } from "../analysis/localization.js";
+import { TmdLocalizationKey, TmdLocalizer } from "../analysis/localization.js";
 
 /**
  * SVG and HTML interactive dashboard visualizer for TMD tonality profiles.
  * Ported faithfully from TmdSwift (TonalityVisualizer.swift).
  */
-export class TMDTonalityVisualizer {
+export class TmdTonalityVisualizer {
   /**
    * Generates a standalone, beautifully styled SVG dashboard containing:
    * 1. Circle of Fifths dial with active nodes and curved trajectory paths.
    * 2. Section Keyscape Timeline ribbon.
    * 3. 12-Tone Pitch Class Distribution radar chart.
    */
-  public static generateSVG(profile: TMDSongProfile, locale?: TMDLocale): string {
+  public static generateSVG(profile: TmdSongProfile, locale?: TmdLocale): string {
     const activeLocale = locale || profile.locale || "zh-Hant";
-    const localizer = new TMDLocalizer(activeLocale);
+    const localizer = new TmdLocalizer(activeLocale);
     if (!profile.tonality) {
       return '<svg xmlns="http://www.w3.org/2000/svg" width="800" height="200"><text x="20" y="40" fill="#888">No tonality data available</text></svg>';
     }
@@ -45,7 +45,7 @@ export class TMDTonalityVisualizer {
 
   <!-- Title Bar -->
   <text x="32" y="44" fill="#f8fafc" font-size="20" font-weight="bold">🎼 TMD Tonality Visualizer: ${this.xmlEscape(profile.title)}</text>
-  <text x="32" y="68" fill="#94a3b8" font-size="13">${this.xmlEscape(localizer.text(TMDLocalizationKey.visualizerInferredTonality))}: ${this.xmlEscape(`${tonality.globalInference.tonic ?? "?"} ${this.modeLabel(tonality.globalInference.mode, localizer)}`)} | ${this.xmlEscape(localizer.text(TMDLocalizationKey.visualizerConfidence))}: ${(tonality.globalInference.confidence * 100).toFixed(0)}% | ${this.xmlEscape(localizer.text(TMDLocalizationKey.visualizerDiatonicEvidence))}: ${(tonality.globalPitchClasses.diatonicRatio * 100.0).toFixed(1)}%</text>
+  <text x="32" y="68" fill="#94a3b8" font-size="13">${this.xmlEscape(localizer.text(TmdLocalizationKey.visualizerInferredTonality))}: ${this.xmlEscape(`${tonality.globalInference.tonic ?? "?"} ${this.modeLabel(tonality.globalInference.mode, localizer)}`)} | ${this.xmlEscape(localizer.text(TmdLocalizationKey.visualizerConfidence))}: ${(tonality.globalInference.confidence * 100).toFixed(0)}% | ${this.xmlEscape(localizer.text(TmdLocalizationKey.visualizerDiatonicEvidence))}: ${(tonality.globalPitchClasses.diatonicRatio * 100.0).toFixed(1)}%</text>
 `;
 
     // 1. Circle of Fifths (Left, Center (220, 260), Radius 130)
@@ -65,9 +65,9 @@ export class TMDTonalityVisualizer {
    * Generates a complete, responsive HTML report containing the embedded SVG dashboard,
    * inspection summary metrics, and section-by-section tonality breakdown.
    */
-  public static generateHTML(profile: TMDSongProfile, locale?: TMDLocale): string {
+  public static generateHTML(profile: TmdSongProfile, locale?: TmdLocale): string {
     const activeLocale = locale || profile.locale || "zh-Hant";
-    const localizer = new TMDLocalizer(activeLocale);
+    const localizer = new TmdLocalizer(activeLocale);
     const svg = this.generateSVG(profile, activeLocale);
     const textReport = profile.tonality ? (await_textReport(profile, activeLocale)) : "";
 
@@ -76,7 +76,7 @@ export class TMDTonalityVisualizer {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>${this.xmlEscape(localizer.text(TMDLocalizationKey.htmlTitle))} - ${this.xmlEscape(profile.title)}</title>
+  <title>${this.xmlEscape(localizer.text(TmdLocalizationKey.htmlTitle))} - ${this.xmlEscape(profile.title)}</title>
   <style>
     :root {
       --bg: #090d16;
@@ -137,8 +137,8 @@ export class TMDTonalityVisualizer {
 <body>
   <div class="container">
     <header>
-      <h1>${this.xmlEscape(localizer.text(TMDLocalizationKey.htmlTitle))}</h1>
-      <div class="subtitle">${this.xmlEscape(localizer.text(TMDLocalizationKey.htmlSong))}: <strong>${this.xmlEscape(profile.title)}</strong> | ${this.xmlEscape(localizer.text(TMDLocalizationKey.htmlTempo))}: ${profile.initialTempo} BPM | ${this.xmlEscape(localizer.text(TMDLocalizationKey.htmlKey))}: ${profile.initialKey} ${this.xmlEscape(localizer.text(TMDLocalizationKey.major))}</div>
+      <h1>${this.xmlEscape(localizer.text(TmdLocalizationKey.htmlTitle))}</h1>
+      <div class="subtitle">${this.xmlEscape(localizer.text(TmdLocalizationKey.htmlSong))}: <strong>${this.xmlEscape(profile.title)}</strong> | ${this.xmlEscape(localizer.text(TmdLocalizationKey.htmlTempo))}: ${profile.initialTempo} BPM | ${this.xmlEscape(localizer.text(TmdLocalizationKey.htmlKey))}: ${profile.initialKey} ${this.xmlEscape(localizer.text(TmdLocalizationKey.major))}</div>
     </header>
 
     <div class="card">
@@ -148,7 +148,7 @@ export class TMDTonalityVisualizer {
     </div>
 
     <div class="card" style="padding: 20px;">
-      <h2 style="font-size: 18px; margin-top:0; color:var(--accent);">${this.xmlEscape(localizer.text(TMDLocalizationKey.htmlDetailedReport))}</h2>
+      <h2 style="font-size: 18px; margin-top:0; color:var(--accent);">${this.xmlEscape(localizer.text(TmdLocalizationKey.htmlDetailedReport))}</h2>
       <pre>${this.xmlEscape(textReport)}</pre>
     </div>
   </div>
@@ -159,8 +159,8 @@ export class TMDTonalityVisualizer {
   // MARK: - Private SVG Sub-Renderers
 
   private static renderCircleOfFifthsSVG(
-    tonality: TMDTonalityProfile,
-    localizer: TMDLocalizer,
+    tonality: TmdTonalityProfile,
+    localizer: TmdLocalizer,
     cx: number,
     cy: number,
     r: number
@@ -183,7 +183,7 @@ export class TMDTonalityVisualizer {
     const activeSteps = new Set<number>(tonality.sections.map((s) => s.fifthsPosition));
 
     let s = "\n  <!-- Circle of Fifths -->\n";
-    s += `  <text x="${cx}" y="${cy - r - 30}" fill="#e2e8f0" font-size="14" font-weight="600" text-anchor="middle">${this.xmlEscape(localizer.text(TMDLocalizationKey.circleOfFifthsTitle))}</text>\n`;
+    s += `  <text x="${cx}" y="${cy - r - 30}" fill="#e2e8f0" font-size="14" font-weight="600" text-anchor="middle">${this.xmlEscape(localizer.text(TmdLocalizationKey.circleOfFifthsTitle))}</text>\n`;
     s += `  <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#334155" stroke-width="2" stroke-dasharray="4,4"/>\n`;
 
     const coordsByStep: Record<number, { x: number; y: number }> = {};
@@ -230,8 +230,8 @@ export class TMDTonalityVisualizer {
   }
 
   private static renderRadarChartSVG(
-    tonality: TMDTonalityProfile,
-    localizer: TMDLocalizer,
+    tonality: TmdTonalityProfile,
+    localizer: TmdLocalizer,
     cx: number,
     cy: number,
     r: number
@@ -241,7 +241,7 @@ export class TMDTonalityVisualizer {
     const maxWeight = Math.max(0.001, ...weights);
 
     let s = "\n  <!-- Pitch Class Radar Chart -->\n";
-    s += `  <text x="${cx}" y="${cy - r - 30}" fill="#e2e8f0" font-size="14" font-weight="600" text-anchor="middle">${this.xmlEscape(localizer.text(TMDLocalizationKey.pitchClassDistributionTitle))}</text>\n`;
+    s += `  <text x="${cx}" y="${cy - r - 30}" fill="#e2e8f0" font-size="14" font-weight="600" text-anchor="middle">${this.xmlEscape(localizer.text(TmdLocalizationKey.pitchClassDistributionTitle))}</text>\n`;
 
     // Concentric web circles
     for (const step of [0.25, 0.5, 0.75, 1.0]) {
@@ -278,8 +278,8 @@ export class TMDTonalityVisualizer {
   }
 
   private static renderTimelineRibbonSVG(
-    profile: TMDSongProfile,
-    localizer: TMDLocalizer,
+    profile: TmdSongProfile,
+    localizer: TmdLocalizer,
     x: number,
     y: number,
     width: number,
@@ -289,7 +289,7 @@ export class TMDTonalityVisualizer {
     const totalDuration = Math.max(0.001, profile.timing.totalDurationSeconds);
 
     let s = "\n  <!-- Section Keyscape Timeline Ribbon -->\n";
-    s += `  <text x="${x}" y="${y - 12}" fill="#e2e8f0" font-size="14" font-weight="600">${this.xmlEscape(localizer.text(TMDLocalizationKey.timelineTitle))}</text>\n`;
+    s += `  <text x="${x}" y="${y - 12}" fill="#e2e8f0" font-size="14" font-weight="600">${this.xmlEscape(localizer.text(TmdLocalizationKey.timelineTitle))}</text>\n`;
     s += `  <rect x="${x}" y="${y}" width="${width}" height="${height}" fill="#1e293b" rx="8"/>\n`;
 
     const keyColors = [
@@ -322,7 +322,7 @@ export class TMDTonalityVisualizer {
           const section = profile.tonality.sections[idx];
           keyLabel = section.inferredTonality.tonic
             ? `${section.inferredTonality.tonic} ${this.modeLabel(section.inferredTonality.mode, localizer)}`
-            : localizer.text(TMDLocalizationKey.visualizerAmbiguous);
+            : localizer.text(TmdLocalizationKey.visualizerAmbiguous);
         }
         s += `  <text x="${textX.toFixed(1)}" y="${(y + height / 2 + 5).toFixed(1)}" fill="#ffffff" font-size="11" font-weight="bold" text-anchor="middle">${this.xmlEscape(sec.name)} [${keyLabel}]</text>\n`;
       }
@@ -341,18 +341,18 @@ export class TMDTonalityVisualizer {
       .replace(/'/g, "&apos;");
   }
 
-  private static modeLabel(mode: TMDTonalityProfile["globalInference"]["mode"], localizer: TMDLocalizer): string {
+  private static modeLabel(mode: TmdTonalityProfile["globalInference"]["mode"], localizer: TmdLocalizer): string {
     switch (mode) {
-    case "major": return localizer.text(TMDLocalizationKey.major);
-    case "minor": return localizer.text(TMDLocalizationKey.minor);
-    case "ambiguous": return localizer.text(TMDLocalizationKey.modeAmbiguous);
-    case "modal": return localizer.text(TMDLocalizationKey.modeModal);
-    case "insufficient": return localizer.text(TMDLocalizationKey.modeInsufficient);
+    case "major": return localizer.text(TmdLocalizationKey.major);
+    case "minor": return localizer.text(TmdLocalizationKey.minor);
+    case "ambiguous": return localizer.text(TmdLocalizationKey.modeAmbiguous);
+    case "modal": return localizer.text(TmdLocalizationKey.modeModal);
+    case "insufficient": return localizer.text(TmdLocalizationKey.modeInsufficient);
     }
   }
 }
 
-function await_textReport(profile: TMDSongProfile, locale: TMDLocale): string {
-  // Direct helper calling TMDSongInspector.generateReport
-  return TMDSongInspector.generateReport(profile, locale);
+function await_textReport(profile: TmdSongProfile, locale: TmdLocale): string {
+  // Direct helper calling TmdSongInspector.generateReport
+  return TmdSongInspector.generateReport(profile, locale);
 }

@@ -1,10 +1,10 @@
-import { TMDMIDIGenerator } from "../../../src/exporters/midi.js";
+import { TmdMIDIGenerator } from "../../../src/exporters/midi.js";
 import { formatOrder } from "../../../src/syntax/format.js";
-import { TMDParser } from "../../../src/syntax/parser.js";
+import { TmdParser } from "../../../src/syntax/parser.js";
 import { Sheet } from "../../../src/syntax/types.js";
-import type { TMDWebEditor } from "../editor.js";
+import type { TmdWebEditor } from "../editor.js";
 import { t } from "../i18n.js";
-import { TMDMidiSynthType,tmdPlayer } from "../midi-player.js";
+import { TmdMidiSynthType,tmdPlayer } from "../midi-player.js";
 import { makeDraggable } from "./draggable.js";
 
 export interface PlayerBarElements {
@@ -24,12 +24,12 @@ export function formatPlaybackTime(seconds: number): string {
   return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
 }
 
-export class TMDPlayerController {
+export class TmdPlayerController {
   private isSeeking = false;
 
   constructor(
     private elements: PlayerBarElements,
-    private getEditor: () => TMDWebEditor
+    private getEditor: () => TmdWebEditor
   ) {}
 
   public init(): void {
@@ -89,7 +89,7 @@ export class TMDPlayerController {
 
     synthSelect.value = tmdPlayer.getSynthType();
     synthSelect.addEventListener("change", async () => {
-      const selected = synthSelect.value as TMDMidiSynthType;
+      const selected = synthSelect.value as TmdMidiSynthType;
       await tmdPlayer.setSynthType(selected);
     });
   }
@@ -99,7 +99,7 @@ export class TMDPlayerController {
     const text = customText !== undefined ? customText : editor.getContent();
     let sheet: Sheet | null = null;
     try {
-      sheet = TMDParser.parse(text);
+      sheet = TmdParser.parse(text);
     } catch (err: any) {
       alert(`${t("alertCannotPlaySyntax")}\n${err.message}`);
       return;
@@ -113,7 +113,7 @@ export class TMDPlayerController {
     const title = sheet.name || "score.mid";
     let midiBytes: Uint8Array;
     try {
-      midiBytes = TMDMIDIGenerator.generateMIDI(sheet);
+      midiBytes = TmdMIDIGenerator.generateMIDI(sheet);
     } catch (err: any) {
       alert(`${t("alertMidiFailed")}: ${err.message}`);
       return;
@@ -127,7 +127,7 @@ export class TMDPlayerController {
     const text = editor.getContent();
     let sheet: Sheet | null = null;
     try {
-      sheet = TMDParser.parse(text);
+      sheet = TmdParser.parse(text);
     } catch (err: any) {
       alert(`${t("alertCannotPlaySyntax")}\n${err.message}`);
       return;
@@ -144,7 +144,7 @@ export class TMDPlayerController {
 
     let midiBytes: Uint8Array;
     try {
-      midiBytes = TMDMIDIGenerator.generateMIDI(sheet, undefined, {
+      midiBytes = TmdMIDIGenerator.generateMIDI(sheet, undefined, {
         targetParagraph: sectionName,
         targetInstrument: instrumentName,
       });
@@ -161,7 +161,7 @@ export class TMDPlayerController {
     const text = editor.getContent();
     let sheet: Sheet | null = null;
     try {
-      sheet = TMDParser.parse(text);
+      sheet = TmdParser.parse(text);
     } catch (err: any) {
       alert(`${t("alertCannotPlaySyntax")}\n${err.message}`);
       return;
@@ -178,7 +178,7 @@ export class TMDPlayerController {
 
     let midiBytes: Uint8Array;
     try {
-      midiBytes = TMDMIDIGenerator.generateMIDI(sheet, undefined, {
+      midiBytes = TmdMIDIGenerator.generateMIDI(sheet, undefined, {
         startOrderIndex: orderIndex,
       });
     } catch (err: any) {

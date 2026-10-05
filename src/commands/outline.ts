@@ -1,5 +1,5 @@
 import { readUTF8 } from "../io/text_io.js";
-import { TMDOutlineGenerator, TMDOutlineNode } from "../presentation/index.js";
+import { TmdOutlineGenerator, TmdOutlineNode } from "../presentation/index.js";
 
 export function handleOutlineCommand(argv: string[]): number {
   let inputPath: string | undefined;
@@ -42,11 +42,11 @@ OPTIONS:
     return 1;
   }
 
-  const nodes = TMDOutlineGenerator.generate(content);
+  const nodes = TmdOutlineGenerator.generate(content);
   if (json) {
     console.log(JSON.stringify(nodes, null, 2));
   } else {
-    function printNode(node: TMDOutlineNode, indent: number) {
+    function printNode(node: TmdOutlineNode, indent: number) {
       const pad = "  ".repeat(indent);
       let line = `${pad}- [${node.kind}] ${node.name}`;
       if (node.detail) line += ` (${node.detail})`;

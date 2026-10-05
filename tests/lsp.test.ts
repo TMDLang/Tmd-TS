@@ -1,17 +1,17 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
-  TMDJSONRPCCodec,
-  TMDLSPCompletionEngine,
-  TMDLSPDiagnosticEngine,
-  TMDLSPPosition,
-  TMDLSPServer,
+  TmdJSONRPCCodec,
+  TmdLSPCompletionEngine,
+  TmdLSPDiagnosticEngine,
+  TmdLSPPosition,
+  TmdLSPServer,
 } from "../src/lsp/index.js";
 
 describe("TMD LSP Protocol & Completion Tests (TDD)", () => {
   it("parses JSON-RPC messages with Content-Length header", () => {
     const raw = 'Content-Length: 46\r\n\r\n{"jsonrpc":"2.0","id":1,"method":"initialize"}';
-    const frames = TMDJSONRPCCodec.decode(raw);
+    const frames = TmdJSONRPCCodec.decode(raw);
     expect(frames).toHaveLength(1);
     expect(frames[0].id).toBe(1);
     expect(frames[0].method).toBe("initialize");
@@ -19,7 +19,7 @@ describe("TMD LSP Protocol & Completion Tests (TDD)", () => {
 
   it("encodes JSON-RPC response with Content-Length header", () => {
     const response = { id: 1, result: { capabilities: {} } };
-    const encoded = TMDJSONRPCCodec.encode(response);
+    const encoded = TmdJSONRPCCodec.encode(response);
     expect(encoded.startsWith("Content-Length: ")).toBe(true);
     expect(encoded).toContain("\r\n\r\n");
     expect(encoded).toContain('"jsonrpc":"2.0"');
@@ -30,11 +30,11 @@ describe("TMD LSP Protocol & Completion Tests (TDD)", () => {
     const header = `Content-Length: ${msg.length}\r\n\r\n`;
 
     let buffer = Buffer.from(header.slice(0, 10));
-    let frames = TMDJSONRPCCodec.decodeBuffer(buffer);
+    let frames = TmdJSONRPCCodec.decodeBuffer(buffer);
     expect(frames.frames).toHaveLength(0);
 
     buffer = Buffer.concat([frames.remaining, Buffer.from(header.slice(10) + msg)]);
-    frames = TMDJSONRPCCodec.decodeBuffer(buffer);
+    frames = TmdJSONRPCCodec.decodeBuffer(buffer);
     expect(frames.frames).toHaveLength(1);
     expect(frames.frames[0].id).toBe(2);
     expect(frames.frames[0].method).toBe("shutdown");
@@ -67,9 +67,9 @@ Theme {
     // Position at last line, after "-> "
     const lines = source.split("\n");
     const lastLineIndex = lines.length - 1;
-    const items = TMDLSPCompletionEngine.complete(
+    const items = TmdLSPCompletionEngine.complete(
       source,
-      new TMDLSPPosition(lastLineIndex, lines[lastLineIndex].length)
+      new TmdLSPPosition(lastLineIndex, lines[lastLineIndex].length)
     );
     const labels = items.map((i) => i.label);
     expect(labels).toContain("intro");
@@ -79,9 +79,9 @@ Theme {
 
   it("describes instrument-name completions as assignments", () => {
     const source = "verse:Pi";
-    const items = TMDLSPCompletionEngine.complete(
+    const items = TmdLSPCompletionEngine.complete(
       source,
-      new TMDLSPPosition(0, source.length)
+      new TmdLSPPosition(0, source.length)
     );
     expect(items.find((item) => item.label === "Piano")?.detail).toBe("General MIDI Assignment: Piano");
   });
@@ -94,9 +94,9 @@ Theme { 1 1 5 5
 -> `;
     const lines = draftSource.split("\n");
     const lastLineIndex = lines.length - 1;
-    const items = TMDLSPCompletionEngine.complete(
+    const items = TmdLSPCompletionEngine.complete(
       draftSource,
-      new TMDLSPPosition(lastLineIndex, lines[lastLineIndex].length)
+      new TmdLSPPosition(lastLineIndex, lines[lastLineIndex].length)
     );
     const labels = items.map((i) => i.label);
     expect(labels).toContain("intro");
@@ -119,9 +119,9 @@ Theme {
 -> (`;
     const lines = source.split("\n");
     const lastLineIndex = lines.length - 1;
-    const items = TMDLSPCompletionEngine.complete(
+    const items = TmdLSPCompletionEngine.complete(
       source,
-      new TMDLSPPosition(lastLineIndex, lines[lastLineIndex].length)
+      new TmdLSPPosition(lastLineIndex, lines[lastLineIndex].length)
     );
     const labels = items.map((i) => i.label);
     expect(labels).toContain("canon");
@@ -138,16 +138,16 @@ Theme {
     expect(canonItem?.insertText?.startsWith("canon")).toBe(true);
 
     // Also supports ->( without space
-    const itemsNoSpace = TMDLSPCompletionEngine.complete(
+    const itemsNoSpace = TmdLSPCompletionEngine.complete(
       source.replace("-> (", "->("),
-      new TMDLSPPosition(lastLineIndex, 3)
+      new TmdLSPPosition(lastLineIndex, 3)
     );
     expect(itemsNoSpace.map((i) => i.label)).toContain("canon");
 
     // Also supports partial macro prefix -> (ca
-    const itemsPartial = TMDLSPCompletionEngine.complete(
+    const itemsPartial = TmdLSPCompletionEngine.complete(
       source.replace("-> (", "-> (ca"),
-      new TMDLSPPosition(lastLineIndex, 6)
+      new TmdLSPPosition(lastLineIndex, 6)
     );
     expect(itemsPartial.map((i) => i.label)).toContain("canon");
   });
@@ -162,9 +162,9 @@ Theme {
 verse:`;
     const lines = source.split("\n");
     const lastLineIndex = lines.length - 1;
-    const items = TMDLSPCompletionEngine.complete(
+    const items = TmdLSPCompletionEngine.complete(
       source,
-      new TMDLSPPosition(lastLineIndex, lines[lastLineIndex].length)
+      new TmdLSPPosition(lastLineIndex, lines[lastLineIndex].length)
     );
     const labels = items.map((i) => i.label);
     expect(labels).toContain("Piano");
@@ -176,26 +176,26 @@ verse:`;
 
   it("provides completions even when partial prefix is typed (e.g. verse:Pi or [D or {!)", () => {
     const source1 = "verse:Pi";
-    const items1 = TMDLSPCompletionEngine.complete(source1, new TMDLSPPosition(0, 8));
+    const items1 = TmdLSPCompletionEngine.complete(source1, new TmdLSPPosition(0, 8));
     expect(items1.map((i) => i.label)).toContain("Piano");
 
     const source2 = "[D";
-    const items2 = TMDLSPCompletionEngine.complete(source2, new TMDLSPPosition(0, 2));
+    const items2 = TmdLSPCompletionEngine.complete(source2, new TmdLSPPosition(0, 2));
     expect(items2.map((i) => i.label)).toContain("Dm");
 
     const source3 = "{!";
-    const items3 = TMDLSPCompletionEngine.complete(source3, new TMDLSPPosition(0, 2));
+    const items3 = TmdLSPCompletionEngine.complete(source3, new TmdLSPPosition(0, 2));
     expect(items3.map((i) => i.label)).toContain("!= 120");
 
     const source4 = "-> v";
     const fullSource4 = `intro:Piano { 1 }\nverse:Piano { 2 }\n-> v`;
-    const items4 = TMDLSPCompletionEngine.complete(fullSource4, new TMDLSPPosition(2, 4));
+    const items4 = TmdLSPCompletionEngine.complete(fullSource4, new TmdLSPPosition(2, 4));
     expect(items4.map((i) => i.label)).toContain("verse");
   });
 
   it("offers explicit tonality and dynamics directives inside a section", () => {
     const source = `::SCORE::\n** Completion **\n!= 120\n?= C\n<4/4>\n\nA:Piano@|0|{\n  <4*>\n  {\n`;
-    const items = TMDLSPCompletionEngine.complete(source, new TMDLSPPosition(6, source.split("\n")[6].length));
+    const items = TmdLSPCompletionEngine.complete(source, new TmdLSPPosition(6, source.split("\n")[6].length));
     const labels = items.map((item) => item.label);
 
     expect(labels).toContain("key= Bm");
@@ -207,7 +207,7 @@ verse:`;
   it("offers every section directive and filters by the typed directive prefix", () => {
     const fullSource = "A:Piano@|0|{\n  <4*>\n  {";
     const fullLine = fullSource.split("\n").length - 1;
-    const all = TMDLSPCompletionEngine.complete(fullSource, new TMDLSPPosition(fullLine, 3));
+    const all = TmdLSPCompletionEngine.complete(fullSource, new TmdLSPPosition(fullLine, 3));
     const allLabels = all.map((item) => item.label);
 
     expect(allLabels).toEqual(expect.arrayContaining([
@@ -219,13 +219,13 @@ verse:`;
 
     const partial = "A:Piano@|0|{\n  <4*>\n  {key";
     const partialLine = partial.split("\n").length - 1;
-    const keyItems = TMDLSPCompletionEngine.complete(partial, new TMDLSPPosition(partialLine, 6));
+    const keyItems = TmdLSPCompletionEngine.complete(partial, new TmdLSPPosition(partialLine, 6));
     expect(keyItems.map((item) => item.label)).toEqual(["key= Bm"]);
   });
 
   it("offers the canonical fixed-pitch entry attribute", () => {
     const source = "A:Timpani[";
-    const items = TMDLSPCompletionEngine.complete(source, new TMDLSPPosition(0, source.length));
+    const items = TmdLSPCompletionEngine.complete(source, new TmdLSPPosition(0, source.length));
     expect(items.map((item) => item.label)).toContain("pitchMode=fixed");
   });
 
@@ -241,9 +241,9 @@ verse:Piano@|0|{
     [`;
     const lines = source.split("\n");
     const lastLineIndex = lines.length - 1;
-    const items = TMDLSPCompletionEngine.complete(
+    const items = TmdLSPCompletionEngine.complete(
       source,
-      new TMDLSPPosition(lastLineIndex, lines[lastLineIndex].length)
+      new TmdLSPPosition(lastLineIndex, lines[lastLineIndex].length)
     );
     const labels = items.map((i) => i.label);
     expect(labels).toContain("C");
@@ -265,7 +265,7 @@ verse:Piano@|0|{
     <4*>
     [`;
     const lines = source.split("\n");
-    const items = TMDLSPCompletionEngine.complete(source, new TMDLSPPosition(lines.length - 1, lines.at(-1)!.length));
+    const items = TmdLSPCompletionEngine.complete(source, new TmdLSPPosition(lines.length - 1, lines.at(-1)!.length));
     const labels = items.map((item) => item.label);
 
     for (const label of ["1", "2m", "3m", "4", "5", "6m", "7dim", "1maj7", "2m7", "4maj7", "57", "6m7", "5sus4", "5/4", "4/5", "1/3", "5/7", "1/5"]) {
@@ -287,7 +287,7 @@ verse:Piano@|0|{
     <4*>
     [`;
     const lines = source.split("\n");
-    const items = TMDLSPCompletionEngine.complete(source, new TMDLSPPosition(lines.length - 1, lines.at(-1)!.length));
+    const items = TmdLSPCompletionEngine.complete(source, new TmdLSPPosition(lines.length - 1, lines.at(-1)!.length));
     const labels = items.map((item) => item.label);
 
     expect(labels).toContain("3");
@@ -308,7 +308,7 @@ verse:Piano@|0|{
   it("avoids duplicate closing bracket when ']' already exists immediately after cursor", () => {
     const source = "verse:Piano@|0|{\n    <4*>\n    []\n}";
     // Position cursor right between '[' and ']' on line 2, character 5
-    const items = TMDLSPCompletionEngine.complete(source, new TMDLSPPosition(2, 5));
+    const items = TmdLSPCompletionEngine.complete(source, new TmdLSPPosition(2, 5));
     const item3 = items.find((i) => i.label === "3");
     expect(item3).toBeDefined();
     expect(item3?.insertText).toBe("3"); // No trailing ']' because nextChar is already ']'
@@ -324,7 +324,7 @@ verse:Piano@|0|{
     <4*>
     [`;
     const lines = source.split("\n");
-    const items = TMDLSPCompletionEngine.complete(source, new TMDLSPPosition(lines.length - 1, lines.at(-1)!.length));
+    const items = TmdLSPCompletionEngine.complete(source, new TmdLSPPosition(lines.length - 1, lines.at(-1)!.length));
     const labels = items.map((item) => item.label);
 
     expect(labels).toContain("Am");
@@ -350,7 +350,7 @@ verse:Piano@|0|{
 
 -> verse ->#
 `;
-    const diags = TMDLSPDiagnosticEngine.diagnose(invalidSource);
+    const diags = TmdLSPDiagnosticEngine.diagnose(invalidSource);
     expect(diags.length).toBeGreaterThan(0);
     expect(diags[0].message).toMatch(/3 units|expected 4/i);
     expect(diags[0].severity).toBe(1); // Error
@@ -358,7 +358,7 @@ verse:Piano@|0|{
 
   it("server handles initialize, document change, completion, formatting, and documentSymbol", () => {
     const outputMessages: string[] = [];
-    const server = new TMDLSPServer((out) => {
+    const server = new TmdLSPServer((out) => {
       outputMessages.push(out);
     });
 

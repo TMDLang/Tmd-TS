@@ -1,8 +1,8 @@
-import { TMDSongInspector, TMDSongProfile } from "../../../src/analysis/inspector.js";
+import { TmdSongInspector, TmdSongProfile } from "../../../src/analysis/inspector.js";
 import { SheetInstrumentHelper } from "../../../src/domain/instruments.js";
-import { TMDOutlineGenerator } from "../../../src/presentation/outline.js";
-import { TMDTonalityVisualizer } from "../../../src/presentation/tonality_visualizer.js";
-import { TMDParser } from "../../../src/syntax/parser.js";
+import { TmdOutlineGenerator } from "../../../src/presentation/outline.js";
+import { TmdTonalityVisualizer } from "../../../src/presentation/tonality_visualizer.js";
+import { TmdParser } from "../../../src/syntax/parser.js";
 import { accidentalToSemitone, DEFAULT_INSTRUMENT,scaleDegreeLetter, Sheet } from "../../../src/syntax/types.js";
 import { escapeHtml } from "../html.js";
 import { getCurrentLocale,t } from "../i18n.js";
@@ -107,7 +107,7 @@ export function renderInspectorView(
   // Song Inspector Analysis
   try {
     let currentInst = elements.selectedPitchInstrument;
-    const profile = TMDSongInspector.inspect(currentSheet, currentInst);
+    const profile = TmdSongInspector.inspect(currentSheet, currentInst);
 
     // Track list for pitch analysis from expanded instrument ranges
     const distinctInsts = profile.instrumentRanges.map((r) => r.assignment);
@@ -251,7 +251,7 @@ export function renderInspectorView(
   }
 
   // Tracks & Orders / Outline Hierarchy
-  const outlineNodes = TMDOutlineGenerator.generate(text);
+  const outlineNodes = TmdOutlineGenerator.generate(text);
   const ordersNode = outlineNodes.find((n) => n.name === "Orders");
 
   // Orders
@@ -438,11 +438,11 @@ export function setupInspectorPanelEvents(
     try {
       const content = typeof editor.getContent === "function" ? editor.getContent() : "";
       if (!content) return;
-      const sheet = TMDParser.parse(content);
+      const sheet = TmdParser.parse(content);
       if (!sheet) return;
       const locale = getCurrentLocale() === "zh-TW" ? "zh-Hant" : "en";
-      const profile = TMDSongInspector.inspect(sheet, undefined, locale);
-      const svg = TMDTonalityVisualizer.generateSVG(profile, locale);
+      const profile = TmdSongInspector.inspect(sheet, undefined, locale);
+      const svg = TmdTonalityVisualizer.generateSVG(profile, locale);
       const blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -461,11 +461,11 @@ export function setupInspectorPanelEvents(
     try {
       const content = typeof editor.getContent === "function" ? editor.getContent() : "";
       if (!content) return;
-      const sheet = TMDParser.parse(content);
+      const sheet = TmdParser.parse(content);
       if (!sheet) return;
       const locale = getCurrentLocale() === "zh-TW" ? "zh-Hant" : "en";
-      const profile = TMDSongInspector.inspect(sheet, undefined, locale);
-      const html = TMDTonalityVisualizer.generateHTML(profile, locale);
+      const profile = TmdSongInspector.inspect(sheet, undefined, locale);
+      const html = TmdTonalityVisualizer.generateHTML(profile, locale);
       const newWin = window.open("", "_blank");
       if (newWin) {
         newWin.document.write(html);
@@ -515,7 +515,7 @@ export function setupInspectorPanelEvents(
     // 2. Fallback: inspect document content or outline
     if (typeof editor.getContent === "function") {
       const content: string = editor.getContent();
-      const outlineNodes = TMDOutlineGenerator.generate(content);
+      const outlineNodes = TmdOutlineGenerator.generate(content);
       const ordersNode = outlineNodes.find((n) => n.name === "Orders");
       if (ordersNode) {
         if (typeof editor.scrollToRange === "function") {
@@ -578,7 +578,7 @@ export function setupInspectorPanelEvents(
 
   const jumpToSection = (sectionName: string) => {
     if (!sectionName || typeof editor.getContent !== "function") return;
-    const outlineNodes = TMDOutlineGenerator.generate(editor.getContent());
+    const outlineNodes = TmdOutlineGenerator.generate(editor.getContent());
     const sectionsNode = outlineNodes.find((node) => node.name === "Sections");
     const sectionNode = sectionsNode?.children?.find((node) => node.name === sectionName);
     if (!sectionNode) return;

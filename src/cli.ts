@@ -3,8 +3,8 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 
-import { TMDSongInspector } from "./analysis/index.js";
-import { TMDWAVRenderer } from "./audio.js";
+import { TmdSongInspector } from "./analysis/index.js";
+import { TmdWAVRenderer } from "./audio.js";
 import { handleCheckCommand } from "./commands/check.js";
 import { handleFormatCommand } from "./commands/format.js";
 import { handleInspectCommand } from "./commands/inspect.js";
@@ -13,25 +13,25 @@ import { runLSPServer } from "./commands/lsp.js";
 import { handleOutlineCommand } from "./commands/outline.js";
 import { handleRefactorCommand } from "./commands/refactor.js";
 import {
-  TMDABCGenerator,
-  TMDChordProGenerator,
-  TMDLilyPondGenerator,
-  TMDMIDIGenerator,
-  TMDMusicXMLGenerator,
-  TMDReaperGenerator,
-  TMDUSTGenerator,
-  TMDVSQGenerator,
-  TMDVSQXGenerator,
+  TmdABCGenerator,
+  TmdChordProGenerator,
+  TmdLilyPondGenerator,
+  TmdMIDIGenerator,
+  TmdMusicXMLGenerator,
+  TmdReaperGenerator,
+  TmdUSTGenerator,
+  TmdVSQGenerator,
+  TmdVSQXGenerator,
 } from "./exporters/index.js";
 import { readUTF8, writeUTF8 } from "./io/text_io.js";
-import { TMDJSONRPCCodec,TMDLSPServer } from "./lsp/index.js";
-import { TMDMCPInstaller,TMDMCPServer } from "./mcp/index.js";
-import { TMDOutlineGenerator, TMDOutlineNode, TMDTonalityVisualizer } from "./presentation/index.js";
-import { TMDRefactor } from "./refactoring/index.js";
-import { TMDSkill } from "./skill.js";
+import { TmdJSONRPCCodec,TmdLSPServer } from "./lsp/index.js";
+import { TmdMCPInstaller,TmdMCPServer } from "./mcp/index.js";
+import { TmdOutlineGenerator, TmdOutlineNode, TmdTonalityVisualizer } from "./presentation/index.js";
+import { TmdRefactor } from "./refactoring/index.js";
+import { TmdSkill } from "./skill.js";
 import { formatSummary } from "./syntax/index.js";
-import { TMDParser } from "./syntax/index.js";
-import { TMDMeasureChecker } from "./validation/index.js";
+import { TmdParser } from "./syntax/index.js";
+import { TmdMeasureChecker } from "./validation/index.js";
 import { TMD_VERSION } from "./version.js";
 
 export function printHelp(): void {
@@ -224,14 +224,14 @@ export function main(argv = process.argv.slice(2)): number {
     return runLSPServer();
   }
   if (runMcp) {
-    TMDMCPServer.run().catch((err) => {
+    TmdMCPServer.run().catch((err) => {
       console.error("Fatal error running TMD MCP Server:", err);
       process.exit(1);
     });
     return 0;
   }
   if (installMcp) {
-    const results = TMDMCPInstaller.installAll();
+    const results = TmdMCPInstaller.installAll();
     results.forEach((result) =>
       console.log(
         `${result.installed ? "Installed" : "Failed"} TMD MCP config: ${result.path}${
@@ -242,7 +242,7 @@ export function main(argv = process.argv.slice(2)): number {
     if (!input) return results.every((result) => result.installed) ? 0 : 1;
   }
   if (installSkills) {
-    const results = TMDSkill.installSkills();
+    const results = TmdSkill.installSkills();
     results.forEach((result) =>
       console.log(
         `${result.installed ? "Installed" : "Failed"} TMD skill: ${result.path}${
@@ -267,7 +267,7 @@ export function main(argv = process.argv.slice(2)): number {
   }
   let sheet;
   try {
-    sheet = TMDParser.parse(fileContent);
+    sheet = TmdParser.parse(fileContent);
   } catch (error) {
     console.error(
       `Error: Could not parse TMD file at ${input}: ${
@@ -279,7 +279,7 @@ export function main(argv = process.argv.slice(2)): number {
 
   const isExporting = Object.values(outputs).some((v) => v !== undefined) || play;
   if (isExporting && !force) {
-    const issues = TMDMeasureChecker.check(fileContent);
+    const issues = TmdMeasureChecker.check(fileContent);
     if (issues.length > 0) {
       console.error(
         `❌ Export aborted: Found ${issues.length} measure discrepancy issue${
@@ -306,8 +306,8 @@ export function main(argv = process.argv.slice(2)): number {
     )}\n----------------------------------------`
   );
   if (inspectSong) {
-    const profile = TMDSongInspector.inspect(sheet);
-    console.log(TMDSongInspector.generateReport(profile));
+    const profile = TmdSongInspector.inspect(sheet);
+    console.log(TmdSongInspector.generateReport(profile));
     return 0;
   }
   if (parseOnly) return 0;
@@ -319,29 +319,29 @@ export function main(argv = process.argv.slice(2)): number {
     if (outputs.midi)
       fs.writeFileSync(
         outputs.midi,
-        TMDMIDIGenerator.generateMIDI(sheet, TMDMIDIGenerator.defaultTicksPerQuarterNote, {
+        TmdMIDIGenerator.generateMIDI(sheet, TmdMIDIGenerator.defaultTicksPerQuarterNote, {
           targetParagraph: section,
           targetInstrument: instrument,
         })
       );
     if (outputs.musicxml)
-      writeUTF8(outputs.musicxml, TMDMusicXMLGenerator.generateMusicXML(sheet));
+      writeUTF8(outputs.musicxml, TmdMusicXMLGenerator.generateMusicXML(sheet));
     if (outputs.lilypond)
-      writeUTF8(outputs.lilypond, TMDLilyPondGenerator.generateLilyPond(sheet));
-    if (outputs.abc) writeUTF8(outputs.abc, TMDABCGenerator.generateABC(sheet));
+      writeUTF8(outputs.lilypond, TmdLilyPondGenerator.generateLilyPond(sheet));
+    if (outputs.abc) writeUTF8(outputs.abc, TmdABCGenerator.generateABC(sheet));
     if (outputs.reaper)
-      writeUTF8(outputs.reaper, TMDReaperGenerator.generateRPP(sheet));
+      writeUTF8(outputs.reaper, TmdReaperGenerator.generateRPP(sheet));
     if (outputs.chordpro)
-      writeUTF8(outputs.chordpro, TMDChordProGenerator.generateChordPro(sheet));
+      writeUTF8(outputs.chordpro, TmdChordProGenerator.generateChordPro(sheet));
     if (outputs.vsq)
-      fs.writeFileSync(outputs.vsq, TMDVSQGenerator.generateVSQ(sheet, { singerName: singer }));
+      fs.writeFileSync(outputs.vsq, TmdVSQGenerator.generateVSQ(sheet, { singerName: singer }));
     if (outputs.vsqx)
-      fs.writeFileSync(outputs.vsqx, TMDVSQXGenerator.generateVSQX(sheet, { singerName: singer }));
+      fs.writeFileSync(outputs.vsqx, TmdVSQXGenerator.generateVSQX(sheet, { singerName: singer }));
     if (outputs.ust)
-      writeUTF8(outputs.ust, TMDUSTGenerator.generateUST(sheet));
+      writeUTF8(outputs.ust, TmdUSTGenerator.generateUST(sheet));
     if (outputs.pdf) {
       const temp = path.join(os.tmpdir(), `tmd-${Date.now()}.ly`);
-      writeUTF8(temp, TMDLilyPondGenerator.generateLilyPond(sheet));
+      writeUTF8(temp, TmdLilyPondGenerator.generateLilyPond(sheet));
       execFileSync("lilypond", ["--pdf", "-o", outputs.pdf.replace(/\.pdf$/, ""), temp], {
         stdio: "inherit",
       });
@@ -351,7 +351,7 @@ export function main(argv = process.argv.slice(2)): number {
       const temp = outputs.wav || path.join(os.tmpdir(), `tmd-${Date.now()}.wav`);
       fs.writeFileSync(
         temp,
-        TMDWAVRenderer.renderWAV(sheet, 44100, {
+        TmdWAVRenderer.renderWAV(sheet, 44100, {
           targetParagraph: section,
           targetInstrument: instrument,
           soundfont,

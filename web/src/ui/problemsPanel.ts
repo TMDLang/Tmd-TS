@@ -1,6 +1,6 @@
-import { TMDParser } from "../../../src/syntax/parser.js";
-import { TMDMeasureChecker, TMDMeasureIssue } from "../../../src/validation/measure_check.js";
-import type { TMDWebEditor } from "../editor.js";
+import { TmdParser } from "../../../src/syntax/parser.js";
+import { TmdMeasureChecker, TmdMeasureIssue } from "../../../src/validation/measure_check.js";
+import type { TmdWebEditor } from "../editor.js";
 import { escapeHtml } from "../html.js";
 import { t } from "../i18n.js";
 
@@ -19,16 +19,16 @@ export interface ProblemFixTarget {
     column?: number;
     snippet?: string;
   };
-  issues?: TMDMeasureIssue[];
+  issues?: TmdMeasureIssue[];
 }
 
-let currentIssues: TMDMeasureIssue[] = [];
+let currentIssues: TmdMeasureIssue[] = [];
 let currentSyntaxError: { message: string; line: number; snippet?: string } | null = null;
 
 export function updateProblemsPanel(
   text: string,
   elements: ProblemsPanelElements
-): TMDMeasureIssue[] {
+): TmdMeasureIssue[] {
   const { problemsPanel, btnFixProblemsAi, problemsCountBadge, problemsList } = elements;
   if (!problemsPanel || !problemsList || !problemsCountBadge) return [];
 
@@ -36,7 +36,7 @@ export function updateProblemsPanel(
 
   // First check if syntax parse fails
   try {
-    TMDParser.parse(text);
+    TmdParser.parse(text);
     currentSyntaxError = null;
   } catch (err: any) {
     const line = err.range?.start?.line ?? 1;
@@ -84,8 +84,8 @@ export function updateProblemsPanel(
     return [];
   }
 
-  // If syntax is valid, run TMDMeasureChecker
-  const issues: TMDMeasureIssue[] = TMDMeasureChecker.check(text);
+  // If syntax is valid, run TmdMeasureChecker
+  const issues: TmdMeasureIssue[] = TmdMeasureChecker.check(text);
   currentIssues = issues;
 
   if (issues.length === 0) {
@@ -120,7 +120,7 @@ export function updateProblemsPanel(
 
 export function setupProblemsPanelEvents(
   elements: ProblemsPanelElements,
-  editor: TMDWebEditor,
+  editor: TmdWebEditor,
   onStateChange: () => void,
   onFixWithAi?: (target: ProblemFixTarget) => void
 ): void {

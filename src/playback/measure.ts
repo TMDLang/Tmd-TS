@@ -1,4 +1,4 @@
-import { PlaybackContent, PlaybackDirectiveEvent, PlaybackEvent, PlaybackState, TMDPlaybackRenderer } from '../playback/playback.js';
+import { PlaybackContent, PlaybackDirectiveEvent, PlaybackEvent, PlaybackState, TmdPlaybackRenderer } from '../playback/playback.js';
 import { Beat, DEFAULT_TEMPO_BPM, Sheet } from '../syntax/types.js';
 
 export interface NotationDurationAtom {
@@ -76,9 +76,9 @@ interface Interval {
   beat: Beat;
 }
 
-export class TMDMeasureRenderer {
+export class TmdMeasureRenderer {
   public static renderMeasures(sheet: Sheet, instrument: string): Measure[] {
-    const timeline = TMDPlaybackRenderer.render(sheet, instrument);
+    const timeline = TmdPlaybackRenderer.render(sheet, instrument);
     const defaultBeat: Beat =
       sheet.beat && sheet.beat.count > 0 && sheet.beat.noteValue > 0 ? sheet.beat : { count: 4, noteValue: 4 };
     const initialMeasureDuration = (defaultBeat.count * 4.0) / defaultBeat.noteValue;

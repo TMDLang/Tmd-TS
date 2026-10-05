@@ -15,14 +15,14 @@ import {
   SheetInstrumentHelper,
   TextEncodingDetector,
   TMD_VERSION,
-  TMDABCGenerator,
-  TMDLilyPondGenerator,
-  TMDMIDIGenerator,
-  TMDMusicXMLGenerator,
-  TMDParser,
-  TMDPlaybackRenderer,
-  TMDSkill,
-  TMDWAVRenderer,
+  TmdABCGenerator,
+  TmdLilyPondGenerator,
+  TmdMIDIGenerator,
+  TmdMusicXMLGenerator,
+  TmdParser,
+  TmdPlaybackRenderer,
+  TmdSkill,
+  TmdWAVRenderer,
 } from '../src/index.js';
 import { Lexer } from '../src/syntax/parser.js';
 
@@ -65,9 +65,9 @@ chorus:Guitar@|0|{
 -> verse -> chorus ->#
 `;
 
-describe('TMDParser and Format', () => {
+describe('TmdParser and Format', () => {
   it('parses header correctly', () => {
-    const sheet = TMDParser.parse(sampleTMD);
+    const sheet = TmdParser.parse(sampleTMD);
     expect(sheet.name).toBe('Sample Song');
     expect(sheet.speed).toBe(120);
     expect(sheet.keySignature.toString()).toBe('C');
@@ -85,18 +85,18 @@ describe('TMDParser and Format', () => {
   });
 
   it('formats sheet back to string without loss of structure', () => {
-    const sheet = TMDParser.parse(sampleTMD);
+    const sheet = TmdParser.parse(sampleTMD);
     const formatted = formatSheet(sheet);
     expect(formatted).toContain('::SCORE::');
     expect(formatted).toContain('** Sample Song **');
     expect(formatted).toContain('-> verse -> chorus ->#');
-    const reParsed = TMDParser.parse(formatted);
+    const reParsed = TmdParser.parse(formatted);
     expect(reParsed.name).toBe(sheet.name);
     expect(reParsed.entries.length).toBe(sheet.entries.length);
   });
 
   it('generates summary', () => {
-    const sheet = TMDParser.parse(sampleTMD);
+    const sheet = TmdParser.parse(sampleTMD);
     const summary = formatSummary(sheet);
     expect(summary).toContain('Name:         Sample Song');
     expect(summary).toContain('KeySignature: C');
@@ -104,17 +104,17 @@ describe('TMDParser and Format', () => {
   });
 
   it('includes an explicit declared key separately from the key signature', () => {
-    const sheet = TMDParser.parse(sampleTMD.replace('?= C', '?= D\nkey= Bm'));
+    const sheet = TmdParser.parse(sampleTMD.replace('?= C', '?= D\nkey= Bm'));
     const summary = formatSummary(sheet);
     expect(summary).toContain('DeclaredKey:  Bm');
     expect(summary).toContain('KeySignature: D');
   });
 });
 
-describe('TMDPlaybackRenderer', () => {
+describe('TmdPlaybackRenderer', () => {
   it('renders playback events with timeline offsets', () => {
-    const sheet = TMDParser.parse(sampleTMD);
-    const timeline = TMDPlaybackRenderer.render(sheet, 'Piano');
+    const sheet = TmdParser.parse(sampleTMD);
+    const timeline = TmdPlaybackRenderer.render(sheet, 'Piano');
     expect(timeline.events.length).toBeGreaterThan(0);
     expect(timeline.duration).toBeGreaterThan(0);
   });
@@ -122,8 +122,8 @@ describe('TMDPlaybackRenderer', () => {
 
 describe('Exporters', () => {
   it('generates valid ABC notation', () => {
-    const sheet = TMDParser.parse(sampleTMD);
-    const abc = TMDABCGenerator.generateABC(sheet);
+    const sheet = TmdParser.parse(sampleTMD);
+    const abc = TmdABCGenerator.generateABC(sheet);
     expect(abc).toContain('X:1');
     expect(abc).toContain('T:Sample Song');
     expect(abc).toContain('M:4/4');
@@ -132,16 +132,16 @@ describe('Exporters', () => {
   });
 
   it('generates valid LilyPond score', () => {
-    const sheet = TMDParser.parse(sampleTMD);
-    const ly = TMDLilyPondGenerator.generateLilyPond(sheet);
+    const sheet = TmdParser.parse(sampleTMD);
+    const ly = TmdLilyPondGenerator.generateLilyPond(sheet);
     expect(ly).toContain('\\version "2.24.0"');
     expect(ly).toContain('title = "Sample Song"');
     expect(ly).toContain('\\time 4/4');
   });
 
   it('generates valid MusicXML', () => {
-    const sheet = TMDParser.parse(sampleTMD);
-    const xml = TMDMusicXMLGenerator.generateMusicXML(sheet);
+    const sheet = TmdParser.parse(sampleTMD);
+    const xml = TmdMusicXMLGenerator.generateMusicXML(sheet);
     expect(xml).toContain('<?xml version="1.0" encoding="UTF-8"?>');
     expect(xml).toContain('<score-partwise version="4.0">');
     expect(xml).toContain('<work-title>Sample Song</work-title>');
@@ -149,8 +149,8 @@ describe('Exporters', () => {
   });
 
   it('generates valid Standard MIDI binary data', () => {
-    const sheet = TMDParser.parse(sampleTMD);
-    const midiBytes = TMDMIDIGenerator.generateMIDI(sheet);
+    const sheet = TmdParser.parse(sampleTMD);
+    const midiBytes = TmdMIDIGenerator.generateMIDI(sheet);
     expect(midiBytes.length).toBeGreaterThan(0);
     // MIDI magic header 'MThd'
     expect(midiBytes[0]).toBe(0x4d);
@@ -178,22 +178,22 @@ describe('Input utilities and platform features', () => {
 
   it('parses data and files, and reports token ranges', () => {
     const input = '::SCORE::\n** File **\n->#';
-    expect(TMDParser.parseData(new TextEncoder().encode(input)).name).toBe('File');
+    expect(TmdParser.parseData(new TextEncoder().encode(input)).name).toBe('File');
     const dir = mkdtempSync(join(tmpdir(), 'tmd-ts-'));
     const file = join(dir, 'score.tmd');
     writeFileSync(file, input);
-    expect(TMDParser.parseFile(file).name).toBe('File');
+    expect(TmdParser.parseFile(file).name).toBe('File');
     expect(new Lexer(input).tokenizeWithRanges()[0].range.start.line).toBe(1);
     rmSync(dir, { recursive: true, force: true });
   });
 
   it('renders a valid WAV and installs the skill to a custom directory', () => {
-    const sheet = TMDParser.parse(sampleTMD);
-    const wav = TMDWAVRenderer.renderWAV(sheet, 8000);
+    const sheet = TmdParser.parse(sampleTMD);
+    const wav = TmdWAVRenderer.renderWAV(sheet, 8000);
     expect(String.fromCharCode(...wav.slice(0, 4))).toBe('RIFF');
     expect(String.fromCharCode(...wav.slice(8, 12))).toBe('WAVE');
     const dir = mkdtempSync(join(tmpdir(), 'tmd-skill-'));
-    expect(TMDSkill.installSkills([dir])[0].installed).toBe(true);
+    expect(TmdSkill.installSkills([dir])[0].installed).toBe(true);
     expect(readFileSync(join(dir, 'SKILL.md'), 'utf8')).toContain('# TMD');
     rmSync(dir, { recursive: true, force: true });
   });
@@ -202,7 +202,7 @@ describe('Input utilities and platform features', () => {
 describe('TMD language edge cases', () => {
   it('parses directives, tuplets, percussion, program text, and arrangement modifiers', () => {
     const source = `::SCORE::\n** Edge **\n!= 100\n?= F'\n<6/8>\n~ "詞：測試"\npart:Drum@|-1|{\n<8*>\n{!=140} XxTS (1' 2, 3^)%(--) {!+10} {?+2} [Dm7-5] -\n}\nscript:Program@1{\n"""echo hi\n"""\n}\n-> part -> {?+2} -> {?=G} ->#`;
-    const sheet = TMDParser.parse(source);
+    const sheet = TmdParser.parse(source);
     expect(sheet.keySignature.toString()).toBe("F'");
     expect(sheet.beat).toEqual({ count: 6, noteValue: 8 });
     expect(sheet.metadata.lyrics).toBe('詞：測試');
@@ -214,13 +214,13 @@ describe('TMD language edge cases', () => {
   });
 
   it('rejects malformed input with a useful error', () => {
-    expect(() => TMDParser.parse('not a score')).toThrow(/Unexpected token at 1:1: `not` \(expected ::SCORE::\)/);
-    expect(() => TMDParser.parse('::SCORE::\npart')).toThrow(/Unexpected token at 2:1: `part` \(expected :\)/);
+    expect(() => TmdParser.parse('not a score')).toThrow(/Unexpected token at 1:1: `not` \(expected ::SCORE::\)/);
+    expect(() => TmdParser.parse('::SCORE::\npart')).toThrow(/Unexpected token at 2:1: `part` \(expected :\)/);
   });
 
   it('tracks tempo/key/time changes in playback state', () => {
-    const sheet = TMDParser.parse(`::SCORE::\n** Changes **\n!=100\n?=C\n<4/4>\npart:Piano@|0|{\n<4*>\n1 {!+20} 2 {?+2} 3 {<3/4>} 4\n}\n-> part ->#`);
-    const timeline = TMDPlaybackRenderer.render(sheet, 'Piano');
+    const sheet = TmdParser.parse(`::SCORE::\n** Changes **\n!=100\n?=C\n<4/4>\npart:Piano@|0|{\n<4*>\n1 {!+20} 2 {?+2} 3 {<3/4>} 4\n}\n-> part ->#`);
+    const timeline = TmdPlaybackRenderer.render(sheet, 'Piano');
     expect(timeline.events).toHaveLength(4);
     expect(timeline.events[1].state.tempo).toBe(120);
     expect(timeline.events[2].state.keyOffset).toBe(2);
@@ -232,7 +232,7 @@ describe('TMD language edge cases', () => {
     const makeScore = (body: string) => `::SCORE::\n** Repro **\n!= 100\n<4/4>\n\nm:piano@|0|{\n    <4*>\n    ${body}\n}\n\n-> m ->#\n`;
 
     it('parses tuplets with whitespace between % and ( correctly (length = 2 beats)', () => {
-      const sheet = TMDParser.parse(makeScore('(1 2 5 1 2 5) % (--) 4 3'));
+      const sheet = TmdParser.parse(makeScore('(1 2 5 1 2 5) % (--) 4 3'));
       const groups = sheet.entries[0].sections[0].unitGroups;
       const beats = groups.reduce((sum, g) => sum + g.length, 0);
       expect(beats).toBe(4);
@@ -245,7 +245,7 @@ describe('TMD language edge cases', () => {
     });
 
     it('parses unspaced digits inside and outside tuplets as individual notes', () => {
-      const sheet = TMDParser.parse(makeScore('(125125)%(--) 43'));
+      const sheet = TmdParser.parse(makeScore('(125125)%(--) 43'));
       const groups = sheet.entries[0].sections[0].unitGroups;
       const beats = groups.reduce((sum, g) => sum + g.length, 0);
       expect(beats).toBe(4);
@@ -264,7 +264,7 @@ describe('TMD language edge cases', () => {
     });
 
     it('parses unspaced digits with spaces in tuplet: (125125) % (--) 43', () => {
-      const sheet = TMDParser.parse(makeScore('(125125) % (--) 43'));
+      const sheet = TmdParser.parse(makeScore('(125125) % (--) 43'));
       const groups = sheet.entries[0].sections[0].unitGroups;
       const beats = groups.reduce((sum, g) => sum + g.length, 0);
       expect(beats).toBe(4);
@@ -276,7 +276,7 @@ describe('TMD language edge cases', () => {
     it('parses consecutive unspaced ties (---, ----) following notes and rests', () => {
       // 1--- is a whole note (1 beat of note + 3 beats of ties)
       // 0--- is a whole rest (1 beat of rest + 3 beats of ties)
-      const sheet = TMDParser.parse(makeScore('1--- 0--- 5-- 1-'));
+      const sheet = TmdParser.parse(makeScore('1--- 0--- 5-- 1-'));
       const groups = sheet.entries[0].sections[0].unitGroups;
       const beats = groups.reduce((sum, g) => sum + g.length, 0);
       expect(beats).toBe(13); // 1--- (4) + 0--- (4) + 5-- (3) + 1- (2) = 13
@@ -294,7 +294,7 @@ describe('TMD language edge cases', () => {
     it('parses tuplets with various dash lengths and internal consecutive ties or notes', () => {
       // (1 2 3)% (---) -> 3-tuplet over 3 beats
       // (123)%(----) -> 3-tuplet over 4 beats
-      const sheet = TMDParser.parse(makeScore('(1 2 3)% (---) (123)%(----)'));
+      const sheet = TmdParser.parse(makeScore('(1 2 3)% (---) (123)%(----)'));
       const groups = sheet.entries[0].sections[0].unitGroups;
       expect(groups).toHaveLength(2);
       expect(groups[0].units).toHaveLength(3);
@@ -312,7 +312,7 @@ describe('TMD language edge cases', () => {
       // 4 : fa (1 beat)
       // 3 : mi (1 beat)
       // - : one tie (1 beat)
-      const sheet = TMDParser.parse(makeScore("1'^2,_3^-- 43-"));
+      const sheet = TmdParser.parse(makeScore("1'^2,_3^-- 43-"));
       const groups = sheet.entries[0].sections[0].unitGroups;
       const beats = groups.reduce((sum, g) => sum + g.length, 0);
       expect(beats).toBe(8);
@@ -341,12 +341,12 @@ verse:Piano@|0|{
 
 -> verse -> {?-1} -> verse -> {?+2} -> verse ->#
 `;
-      const sheet = TMDParser.parse(score);
+      const sheet = TmdParser.parse(score);
       expect(sheet.playback).toHaveLength(5);
       expect(sheet.playback[1]).toEqual({ type: 'relative', value: '-1' });
       expect(sheet.playback[3]).toEqual({ type: 'relative', value: '+2' });
 
-      const timeline = TMDPlaybackRenderer.render(sheet, 'Piano');
+      const timeline = TmdPlaybackRenderer.render(sheet, 'Piano');
       expect(timeline.events).toHaveLength(12);
       // First verse (C major: keyOffset = 0)
       expect(timeline.events[0].state.keyOffset).toBe(0);
@@ -372,8 +372,8 @@ verse:Piano@|0|{
 
 -> verse ->#
 `;
-      const sheet = TMDParser.parse(score);
-      const timeline = TMDPlaybackRenderer.render(sheet, 'Piano');
+      const sheet = TmdParser.parse(score);
+      const timeline = TmdPlaybackRenderer.render(sheet, 'Piano');
       // Should have 6 notes from tuplet + 1 note from '1', total 7 notes (no extra note from tie)
       expect(timeline.events).toHaveLength(7);
       // Note 6 (index 5) should have duration 1/3 + 1 = 4/3 beats
@@ -384,19 +384,19 @@ verse:Piano@|0|{
     });
 
     it('supports generating MIDI for a single target paragraph and/or instrument', () => {
-      const sheet = TMDParser.parse(sampleTMD);
+      const sheet = TmdParser.parse(sampleTMD);
       // Full score has 1 conductor track + 2 instrument tracks (Piano, Guitar) = 3 tracks
-      const fullMidi = TMDMIDIGenerator.generateMIDI(sheet);
+      const fullMidi = TmdMIDIGenerator.generateMIDI(sheet);
       const fullTracks = (fullMidi[10] << 8) | fullMidi[11];
       expect(fullTracks).toBe(3);
 
       // Generate MIDI for only verse: 1 conductor track + 2 instrument tracks = 3 tracks
-      const verseMidi = TMDMIDIGenerator.generateMIDI(sheet, undefined, { targetParagraph: 'verse' });
+      const verseMidi = TmdMIDIGenerator.generateMIDI(sheet, undefined, { targetParagraph: 'verse' });
       const verseTracks = (verseMidi[10] << 8) | verseMidi[11];
       expect(verseTracks).toBe(3);
 
       // Generate MIDI for only verse with Piano: 1 conductor track + 1 instrument track = 2 tracks
-      const versePianoMidi = TMDMIDIGenerator.generateMIDI(sheet, undefined, {
+      const versePianoMidi = TmdMIDIGenerator.generateMIDI(sheet, undefined, {
         targetParagraph: 'verse',
         targetInstrument: 'Piano',
       });
@@ -433,10 +433,10 @@ outro:Piano@|0|{
 
 -> intro -> verse -> {?+3} -> bridge -> outro ->#
 `;
-      const sheet = TMDParser.parse(input);
+      const sheet = TmdParser.parse(input);
       // intro (4 beats) + verse (4 beats) = 8 beats precede index 2 ({?+3})
       // Start playback directly on {?+3} (order index 2)
-      const timelineFromDirective = TMDPlaybackRenderer.render(sheet, 'Piano', { startOrderIndex: 2 });
+      const timelineFromDirective = TmdPlaybackRenderer.render(sheet, 'Piano', { startOrderIndex: 2 });
       expect(timelineFromDirective.events.length).toBe(5); // 4 notes in bridge + 1 note in outro
       // First note should start immediately at 0
       expect(timelineFromDirective.events[0].position).toBe(0);
@@ -444,7 +444,7 @@ outro:Piano@|0|{
       // Duration should be remaining duration (bridge: 4 beats + outro: 4 beats = 8 beats), NOT 16 beats!
       expect(timelineFromDirective.duration).toBe(8);
 
-      const midiFromDirective = TMDMIDIGenerator.generateMIDI(sheet, undefined, { startOrderIndex: 2 });
+      const midiFromDirective = TmdMIDIGenerator.generateMIDI(sheet, undefined, { startOrderIndex: 2 });
       expect(midiFromDirective).toBeInstanceOf(Uint8Array);
       expect(midiFromDirective.length).toBeGreaterThan(0);
     });
@@ -473,7 +473,7 @@ intro:Bass@|0|{
 
 -> intro ->#
 `;
-      const sheet = TMDParser.parse(input);
+      const sheet = TmdParser.parse(input);
       const instruments = SheetInstrumentHelper.distinctInstruments(sheet);
       expect(instruments).toEqual(["Bass", "LeadVocal", "Piano"]);
 
@@ -500,23 +500,23 @@ theme:Piano@|0|{
 `;
 
     it("renders an explicitly assigned Piano track", () => {
-      const sheet = TMDParser.parse(pianoTrackTMD)!;
+      const sheet = TmdParser.parse(pianoTrackTMD)!;
       expect(sheet).not.toBeNull();
       expect(sheet.entries[0].assignment).toBe("Piano");
 
       // Rendering with "Piano" should play the theme notes
-      const pianoTimeline = TMDPlaybackRenderer.render(sheet, "Piano");
+      const pianoTimeline = TmdPlaybackRenderer.render(sheet, "Piano");
       expect(pianoTimeline.events).toHaveLength(4);
       expect(pianoTimeline.events[0].position).toBe(0);
       expect(pianoTimeline.duration).toBe(4);
 
-      const emptyTimeline = TMDPlaybackRenderer.render(sheet, "");
+      const emptyTimeline = TmdPlaybackRenderer.render(sheet, "");
       expect(emptyTimeline.events).toHaveLength(4);
     });
 
     it("generates playable MIDI with Piano track and program 0", () => {
-      const sheet = TMDParser.parse(pianoTrackTMD)!;
-      const midi = TMDMIDIGenerator.generateMIDI(sheet);
+      const sheet = TmdParser.parse(pianoTrackTMD)!;
+      const midi = TmdMIDIGenerator.generateMIDI(sheet);
       expect(midi.length).toBeGreaterThan(0);
 
       // Track count: 1 conductor + 1 Piano track = 2 tracks
@@ -524,7 +524,7 @@ theme:Piano@|0|{
       expect(tracks).toBe(2);
 
       // Single section preview targeting "theme" with "Piano"
-      const sectionMidi = TMDMIDIGenerator.generateMIDI(sheet, undefined, {
+      const sectionMidi = TmdMIDIGenerator.generateMIDI(sheet, undefined, {
         targetParagraph: "theme",
         targetInstrument: "Piano",
       });
@@ -533,14 +533,14 @@ theme:Piano@|0|{
     });
 
     it("exports MusicXML and ABC with notes for an explicitly assigned track", () => {
-      const sheet = TMDParser.parse(pianoTrackTMD)!;
+      const sheet = TmdParser.parse(pianoTrackTMD)!;
       const instruments = SheetInstrumentHelper.distinctInstruments(sheet);
       expect(instruments).toEqual(["Piano"]);
 
-      const musicxml = TMDMusicXMLGenerator.generateMusicXML(sheet);
+      const musicxml = TmdMusicXMLGenerator.generateMusicXML(sheet);
       expect(musicxml).toContain("<step>C</step>");
 
-      const abc = TMDABCGenerator.generateABC(sheet);
+      const abc = TmdABCGenerator.generateABC(sheet);
       expect(abc).toContain('V:V1 name="Piano"');
     });
   });

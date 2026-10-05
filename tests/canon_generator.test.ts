@@ -1,26 +1,26 @@
 import { describe, expect,it } from "vitest";
 
-import { TMDCanonGenerator } from "../src/domain/canon_gen.js";
-import { TMDPlaybackRenderer } from "../src/playback/playback.js";
-import { TMDParser } from "../src/syntax/parser.js";
-import { TMDMeasureChecker } from "../src/validation/measure_check.js";
+import { TmdCanonGenerator } from "../src/domain/canon_gen.js";
+import { TmdPlaybackRenderer } from "../src/playback/playback.js";
+import { TmdParser } from "../src/syntax/parser.js";
+import { TmdMeasureChecker } from "../src/validation/measure_check.js";
 
-describe("TMDCanonGenerator (TDD port from canon_gen.py)", () => {
+describe("TmdCanonGenerator (TDD port from canon_gen.py)", () => {
   it("rejects canon dimensions beyond the generation limits", () => {
-    expect(() => new TMDCanonGenerator({ numVoices: 17 })).toThrow(/numVoices.*16/);
-    expect(() => new TMDCanonGenerator({ numVariations: 4097 })).toThrow(/numVariations.*4096/);
-    expect(() => new TMDCanonGenerator({ offsetBars: 65 })).toThrow(/offsetBars.*64/);
+    expect(() => new TmdCanonGenerator({ numVoices: 17 })).toThrow(/numVoices.*16/);
+    expect(() => new TmdCanonGenerator({ numVariations: 4097 })).toThrow(/numVariations.*4096/);
+    expect(() => new TmdCanonGenerator({ offsetBars: 65 })).toThrow(/offsetBars.*64/);
   });
 
   it("rejects invalid canon dimensions before allocating voices", () => {
-    expect(() => new TMDCanonGenerator({ numVoices: 0 })).toThrow(/numVoices.*positive integer/);
-    expect(() => new TMDCanonGenerator({ numVariations: 1.5 })).toThrow(/numVariations.*positive integer/);
-    expect(() => new TMDCanonGenerator({ offsetBars: Number.POSITIVE_INFINITY })).toThrow(/offsetBars.*finite/);
-    expect(() => new TMDCanonGenerator({ offsetBars: -1 })).toThrow(/offsetBars.*non-negative integer/);
+    expect(() => new TmdCanonGenerator({ numVoices: 0 })).toThrow(/numVoices.*positive integer/);
+    expect(() => new TmdCanonGenerator({ numVariations: 1.5 })).toThrow(/numVariations.*positive integer/);
+    expect(() => new TmdCanonGenerator({ offsetBars: Number.POSITIVE_INFINITY })).toThrow(/offsetBars.*finite/);
+    expect(() => new TmdCanonGenerator({ offsetBars: -1 })).toThrow(/offsetBars.*non-negative integer/);
   });
 
   it("generates a valid macro-based canon in D major", () => {
-    const generator = new TMDCanonGenerator({
+    const generator = new TmdCanonGenerator({
       title: "My Algorithmic Canon",
       tempo: 64,
       key: "D",
@@ -41,23 +41,23 @@ describe("TMDCanonGenerator (TDD port from canon_gen.py)", () => {
     expect(tmdScore).toContain("(canon (Theme Var1 Var2) (Violin1 Violin2 Violin3) 2)");
 
     // Must parse without syntax errors
-    const sheet = TMDParser.parse(tmdScore);
+    const sheet = TmdParser.parse(tmdScore);
     expect(sheet).not.toBeNull();
     expect(sheet.name).toBe("My Algorithmic Canon");
 
     // Zero measure length errors
-    const issues = TMDMeasureChecker.check(tmdScore);
+    const issues = TmdMeasureChecker.check(tmdScore);
     expect(issues).toEqual([]);
 
     // Can render playback timeline for voices
-    const timelineV1 = TMDPlaybackRenderer.render(sheet, "Violin1");
+    const timelineV1 = TmdPlaybackRenderer.render(sheet, "Violin1");
     expect(timelineV1.events.length).toBeGreaterThan(0);
-    const timelineCello = TMDPlaybackRenderer.render(sheet, "Cello");
+    const timelineCello = TmdPlaybackRenderer.render(sheet, "Cello");
     expect(timelineCello.events.length).toBeGreaterThan(0);
   });
 
   it("generates unrolled canon compatible with standard compiler", () => {
-    const generator = new TMDCanonGenerator({
+    const generator = new TmdCanonGenerator({
       title: "Unrolled Canon",
       tempo: 72,
       key: "Am",
@@ -74,29 +74,29 @@ describe("TMDCanonGenerator (TDD port from canon_gen.py)", () => {
     expect(tmdScore).toContain("canon:Violin2@|+2|{");
     expect(tmdScore).toContain("-> intro -> canon -> outro ->#");
 
-    const sheet = TMDParser.parse(tmdScore);
+    const sheet = TmdParser.parse(tmdScore);
     expect(sheet).not.toBeNull();
 
-    const issues = TMDMeasureChecker.check(tmdScore);
+    const issues = TmdMeasureChecker.check(tmdScore);
     expect(issues).toEqual([]);
   });
 
   it("supports crab canon, mirror canon, and table canon forms", () => {
-    const crabGen = new TMDCanonGenerator({
+    const crabGen = new TmdCanonGenerator({
       canonType: "crab",
       numVariations: 1,
       seed: 99,
     });
     expect(crabGen.generate()).toContain("(play (reverse Theme) Violin2)");
 
-    const mirrorGen = new TMDCanonGenerator({
+    const mirrorGen = new TmdCanonGenerator({
       canonType: "mirror",
       numVariations: 1,
       seed: 99,
     });
     expect(mirrorGen.generate()).toContain("(play (flip Theme) Violin2)");
 
-    const tableGen = new TMDCanonGenerator({
+    const tableGen = new TmdCanonGenerator({
       canonType: "table",
       numVariations: 1,
       seed: 99,
@@ -106,7 +106,7 @@ describe("TMDCanonGenerator (TDD port from canon_gen.py)", () => {
 
   describe("Musical Probability Engineering (RTP / Heuristics Tuning)", () => {
     it("ensures strong beats have high chord-tone density and stepwise voice leading", () => {
-      const generator = new TMDCanonGenerator({
+      const generator = new TmdCanonGenerator({
         mode: "tonal",
         key: "C",
         seed: 777,
@@ -136,7 +136,7 @@ describe("TMDCanonGenerator (TDD port from canon_gen.py)", () => {
     });
 
     it("uses intelligent gap-fill motion to smooth out large leaps in stepInScale", () => {
-      const generator = new TMDCanonGenerator({
+      const generator = new TmdCanonGenerator({
         mode: "tonal",
         key: "D",
         seed: 555,
@@ -150,7 +150,7 @@ describe("TMDCanonGenerator (TDD port from canon_gen.py)", () => {
     });
 
     it("supports tonal inversion axis targeting the 3rd degree to preserve tonal beauty", () => {
-      const mirrorGen = new TMDCanonGenerator({
+      const mirrorGen = new TmdCanonGenerator({
         canonType: "mirror",
         mode: "tonal",
         numVariations: 1,
@@ -163,7 +163,7 @@ describe("TMDCanonGenerator (TDD port from canon_gen.py)", () => {
     });
 
     it("supports Pachelbel authentic half-note bass rhythm (2 beats per harmonic change)", () => {
-      const generator = new TMDCanonGenerator({
+      const generator = new TmdCanonGenerator({
         mode: "tonal",
         key: "D",
         bassRhythm: "half", // Half-note bass rhythm (Pachelbel authentic)
@@ -173,16 +173,16 @@ describe("TMDCanonGenerator (TDD port from canon_gen.py)", () => {
       // With half notes, each bar in 4/4 contains 2 bass notes: e.g. | 1_ - 5__ - |
       expect(tmd).toMatch(/\|\s*\S+\s+-\s+\S+\s+-\s*\|/);
 
-      const sheet = TMDParser.parse(tmd);
+      const sheet = TmdParser.parse(tmd);
       expect(sheet).not.toBeNull();
-      const issues = TMDMeasureChecker.check(tmd);
+      const issues = TmdMeasureChecker.check(tmd);
       expect(issues).toEqual([]);
     });
 
     it("selects a seeded violin arpeggio texture according to probability", () => {
       const bassNotes = ["1_", "5__", "6__", "3__"];
-      const plain = new TMDCanonGenerator({ mode: "tonal", key: "C", arpeggioProbability: 0, seed: 7 });
-      const arpeggiated = new TMDCanonGenerator({ mode: "tonal", key: "C", arpeggioProbability: 1, seed: 7 });
+      const plain = new TmdCanonGenerator({ mode: "tonal", key: "C", arpeggioProbability: 0, seed: 7 });
+      const arpeggiated = new TmdCanonGenerator({ mode: "tonal", key: "C", arpeggioProbability: 1, seed: 7 });
 
       expect(plain.generateThemeBars(bassNotes, 0)[0][0]).toBe("<4*>");
       const [grid, bars] = arpeggiated.generateThemeBars(bassNotes, 0)[0];
@@ -195,12 +195,12 @@ describe("TMDCanonGenerator (TDD port from canon_gen.py)", () => {
       const firstBar = bars[0].trim().split(/\s+/);
       expect(firstBar.slice(0, 4).every((note: string) => firstChord.includes(note))).toBe(true);
       expect(firstBar.slice(4).every((note: string) => secondChord.includes(note))).toBe(true);
-      expect(TMDMeasureChecker.check(arpeggiated.generate())).toEqual([]);
+      expect(TmdMeasureChecker.check(arpeggiated.generate())).toEqual([]);
     });
 
     it("keeps arpeggio generation reproducible with the same seed", () => {
       const options = { mode: "pentatonic" as const, key: "D", arpeggioProbability: 0.5, seed: 1234 };
-      expect(new TMDCanonGenerator(options).generate()).toBe(new TMDCanonGenerator(options).generate());
+      expect(new TmdCanonGenerator(options).generate()).toBe(new TmdCanonGenerator(options).generate());
     });
   });
 });

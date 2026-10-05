@@ -2,7 +2,7 @@ import { describe, expect,it } from 'vitest';
 
 import {
   MIDIInstrument,
-  TMDMIDIGenerator,
+  TmdMIDIGenerator,
 } from '../src/index.js';
 
 describe('MIDIInstrument and GM Mapping (TDD)', () => {
@@ -188,10 +188,10 @@ describe('MIDIInstrument and GM Mapping (TDD)', () => {
     expect(MIDIInstrument.program(MIDIInstrument.resolve('clavinet'))).toBe(7);
   });
 
-  it('exposes generalMidiProgram on TMDMIDIGenerator matching MIDIInstrument', () => {
-    expect(TMDMIDIGenerator.generalMidiProgram('Viola')).toBe(41);
-    expect(TMDMIDIGenerator.generalMidiProgram('Unknown')).toBe(0);
-    expect(TMDMIDIGenerator.generalMidiProgram('prog:60')).toBe(60);
+  it('exposes generalMidiProgram on TmdMIDIGenerator matching MIDIInstrument', () => {
+    expect(TmdMIDIGenerator.generalMidiProgram('Viola')).toBe(41);
+    expect(TmdMIDIGenerator.generalMidiProgram('Unknown')).toBe(0);
+    expect(TmdMIDIGenerator.generalMidiProgram('prog:60')).toBe(60);
   });
 
   it('resolves guzheng, koto, lead, and lead-guitar aliases correctly', () => {

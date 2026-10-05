@@ -1,8 +1,8 @@
 import { describe, expect,it } from "vitest";
 
-import { TMDOutlineGenerator, TMDOutlineNode } from "../src/presentation/outline.js";
+import { TmdOutlineGenerator, TmdOutlineNode } from "../src/presentation/outline.js";
 
-describe("TMDOutlineGenerator (TDD)", () => {
+describe("TmdOutlineGenerator (TDD)", () => {
   it("generates nested outline symbols with sections, tracks, and measures", () => {
     const input = `::SCORE::
 ** Nested Song **
@@ -28,7 +28,7 @@ verse:CHORD@|0|{
 -> intro -> verse ->#
 `;
 
-    const nodes = TMDOutlineGenerator.generate(input);
+    const nodes = TmdOutlineGenerator.generate(input);
 
     expect(nodes.length).toBe(3);
 
@@ -105,7 +105,7 @@ verse:CHORD@|0|{
 -> #
 `;
 
-    const nodes = TMDOutlineGenerator.generate(input);
+    const nodes = TmdOutlineGenerator.generate(input);
     const playbackNode = nodes.find((n) => n.name === "Playback");
     expect(playbackNode).toBeDefined();
 
@@ -214,7 +214,7 @@ intro:Cello@|0|{
 -> intro -> (canon Theme (Violin1 Violin2) 2) -> (layer (loop A Cello 4)) ->#
 `;
 
-    const nodes = TMDOutlineGenerator.generate(input);
+    const nodes = TmdOutlineGenerator.generate(input);
     expect(nodes.length).toBe(3);
 
     // 1. Sections Node

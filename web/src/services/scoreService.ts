@@ -6,7 +6,7 @@ import { t } from "../i18n.js";
 import { decodeShareHash } from "../share.js";
 import { extractTmdTitle,SavedScore, TmdStorage } from "../storage/db.js";
 
-export class TMDScoreService {
+export class TmdScoreService {
   private autoSaveTimer: any = null;
 
   constructor(
@@ -84,7 +84,7 @@ export class TMDScoreService {
       text = await decodeShareHash(window.location.hash);
     } catch (err) {
       console.warn("Invalid share link:", err);
-      TMDScoreService.clearShareHash();
+      TmdScoreService.clearShareHash();
       alert(t("shareInvalidLink"));
       return null;
     }
@@ -97,7 +97,7 @@ export class TMDScoreService {
       alert(t("shareSaveFailed"));
       return null;
     }
-    TMDScoreService.clearShareHash();
+    TmdScoreService.clearShareHash();
     return score;
   }
 
@@ -126,15 +126,15 @@ export class TMDScoreService {
           }));
       } catch (saveErr) {
         console.error("Could not save the gist score into storage:", saveErr);
-        TMDScoreService.clearGistParam();
+        TmdScoreService.clearGistParam();
         if (typeof alert === "function") alert(t("shareSaveFailed"));
         return null;
       }
-      TMDScoreService.clearGistParam();
+      TmdScoreService.clearGistParam();
       return score;
     } catch (err: any) {
       console.warn("Failed to load gist from URL:", err);
-      TMDScoreService.clearGistParam();
+      TmdScoreService.clearGistParam();
       const errorMsg = err?.message || String(err);
       if (typeof alert === "function") {
         alert(t("importGistError").replace("{error}", errorMsg));

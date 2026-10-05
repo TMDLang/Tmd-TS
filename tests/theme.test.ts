@@ -105,7 +105,7 @@ describe("Theme Controller & Light Mode (TDD)", () => {
     const editorPath = path.join(__dirname, "../web/src/editor.ts");
     const editorContent = fs.readFileSync(editorPath, "utf-8");
 
-    // Editor should support setTheme on returned TMDWebEditor
+    // Editor should support setTheme on returned TmdWebEditor
     expect(editorContent).toContain("setTheme");
   });
 });

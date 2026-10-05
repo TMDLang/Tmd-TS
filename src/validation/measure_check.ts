@@ -1,8 +1,8 @@
-import { TMDParser } from "../syntax/parser.js";
+import { TmdParser } from "../syntax/parser.js";
 import { Beat, Sheet } from "../syntax/types.js";
-import { TMDMeasureLexerFallback } from "./measure_lexer_fallback.js";
+import { TmdMeasureLexerFallback } from "./measure_lexer_fallback.js";
 
-export interface TMDMeasureIssue {
+export interface TmdMeasureIssue {
   paragraphName: string;
   instrument: string;
   lineNumber: number;
@@ -16,7 +16,7 @@ export interface TMDMeasureIssue {
   description: string;
 }
 
-function formatIssueDescription(issue: Omit<TMDMeasureIssue, "description">): string {
+function formatIssueDescription(issue: Omit<TmdMeasureIssue, "description">): string {
   if (issue.instrument === "Order") {
     if (issue.paragraphName) {
       return `Playback (line ${issue.lineNumber}): Undefined section '${issue.paragraphName}' in playback (${issue.snippet})`;
@@ -38,11 +38,11 @@ function formatIssueDescription(issue: Omit<TMDMeasureIssue, "description">): st
   return desc;
 }
 
-export class TMDMeasureChecker {
+export class TmdMeasureChecker {
   /** Checks parser-valid structural invariants directly from the canonical AST. */
-  public static checkSheet(sheet: Sheet): TMDMeasureIssue[] {
+  public static checkSheet(sheet: Sheet): TmdMeasureIssue[] {
     const measureDuration = (Math.max(1, sheet.beat.count) * 4) / Math.max(1, sheet.beat.noteValue);
-    const issues: TMDMeasureIssue[] = [];
+    const issues: TmdMeasureIssue[] = [];
     for (const entry of sheet.entries ?? []) {
       for (const section of entry.sections ?? []) {
         const duration = section.unitGroups.reduce(
@@ -69,14 +69,14 @@ export class TMDMeasureChecker {
     return issues;
   }
 
-  public static check(source: string): TMDMeasureIssue[] {
+  public static check(source: string): TmdMeasureIssue[] {
     const astIssues = (() => {
       try {
-        return TMDMeasureChecker.checkSheet(TMDParser.parse(source));
+        return TmdMeasureChecker.checkSheet(TmdParser.parse(source));
       } catch {
         return [];
       }
     })();
-    return [...astIssues, ...TMDMeasureLexerFallback.check(source)];
+    return [...astIssues, ...TmdMeasureLexerFallback.check(source)];
   }
 }

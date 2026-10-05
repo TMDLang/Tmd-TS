@@ -2,11 +2,11 @@ import "fake-indexeddb/auto";
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { TMDScoreService } from "../web/src/services/scoreService.js";
+import { TmdScoreService } from "../web/src/services/scoreService.js";
 import { encodeShareHash } from "../web/src/share.js";
 import { SavedScore, TmdStorage } from "../web/src/storage/db.js";
 
-describe("TMDScoreService Unit Tests", () => {
+describe("TmdScoreService Unit Tests", () => {
   beforeEach(async () => {
     await TmdStorage.clearAll();
     vi.restoreAllMocks();
@@ -20,7 +20,7 @@ describe("TMDScoreService Unit Tests", () => {
       const refreshMock = vi.fn().mockResolvedValue(undefined);
       const feedbackMock = vi.fn();
 
-      const service = new TMDScoreService({
+      const service = new TmdScoreService({
         getIsTemplateScore: () => isTemplate,
         getCurrentScoreId: () => currentScoreId,
         loadScoreIntoEditor: (score) => {
@@ -59,7 +59,7 @@ describe("TMDScoreService Unit Tests", () => {
       const refreshMock = vi.fn().mockResolvedValue(undefined);
       const feedbackMock = vi.fn();
 
-      const service = new TMDScoreService({
+      const service = new TmdScoreService({
         getIsTemplateScore: () => isTemplate,
         getCurrentScoreId: () => currentScoreId,
         loadScoreIntoEditor: vi.fn(),
@@ -81,7 +81,7 @@ describe("TMDScoreService Unit Tests", () => {
 
     it("cancels pending auto-save when requested", async () => {
       let saved = false;
-      const service = new TMDScoreService({
+      const service = new TmdScoreService({
         getIsTemplateScore: () => true,
         getCurrentScoreId: () => null,
         loadScoreIntoEditor: () => {
@@ -115,7 +115,7 @@ describe("TMDScoreService Unit Tests", () => {
         replaceState: replaceStateMock,
       };
 
-      const result = await TMDScoreService.importSharedScore();
+      const result = await TmdScoreService.importSharedScore();
       expect(result).not.toBeNull();
       expect(result?.title).toBe("Shared Melody");
       expect(result?.content).toBe(scoreText);
@@ -141,7 +141,7 @@ describe("TMDScoreService Unit Tests", () => {
         replaceState: vi.fn(),
       };
 
-      const result = await TMDScoreService.importSharedScore();
+      const result = await TmdScoreService.importSharedScore();
       expect(result?.id).toBe(existing.id);
     });
 
@@ -160,7 +160,7 @@ describe("TMDScoreService Unit Tests", () => {
         replaceState: replaceStateMock,
       };
 
-      const result = await TMDScoreService.importSharedScore();
+      const result = await TmdScoreService.importSharedScore();
       expect(result).toBeNull();
       expect(alertMock).toHaveBeenCalled();
       expect(replaceStateMock).toHaveBeenCalledWith(null, "", "/");
@@ -174,7 +174,7 @@ describe("TMDScoreService Unit Tests", () => {
           hash: "",
         },
       };
-      const result = await TMDScoreService.importSharedScore();
+      const result = await TmdScoreService.importSharedScore();
       expect(result).toBeNull();
     });
   });
@@ -184,8 +184,8 @@ describe("TMDScoreService Unit Tests", () => {
       (globalThis as any).window = undefined;
       (globalThis as any).history = undefined;
 
-      expect(() => TMDScoreService.clearShareHash()).not.toThrow();
-      expect(() => TMDScoreService.clearGistParam()).not.toThrow();
+      expect(() => TmdScoreService.clearShareHash()).not.toThrow();
+      expect(() => TmdScoreService.clearGistParam()).not.toThrow();
     });
 
     it("clears gist query param while preserving multiple other query params", () => {
@@ -202,7 +202,7 @@ describe("TMDScoreService Unit Tests", () => {
         replaceState: replaceStateMock,
       };
 
-      TMDScoreService.clearGistParam();
+      TmdScoreService.clearGistParam();
       expect(replaceStateMock).toHaveBeenCalledWith(
         null,
         "",

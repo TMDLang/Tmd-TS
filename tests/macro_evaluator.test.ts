@@ -3,20 +3,20 @@ import { describe, expect,it } from 'vitest';
 import {
   formatOrder,
   formatSheet,
-  TMDMacroError,
-  TMDMacroEvaluator,
-  TMDMeasureChecker,
-  TMDMIDIGenerator,
-  TMDParser,
-  TMDPlaybackRenderer,
-  TMDWAVRenderer,
+  TmdMacroError,
+  TmdMacroEvaluator,
+  TmdMeasureChecker,
+  TmdMIDIGenerator,
+  TmdParser,
+  TmdPlaybackRenderer,
+  TmdWAVRenderer,
 } from '../src/index.js';
 import { macroPlayFixture } from './conformanceFixtures.js';
 
 describe('TMD Macro S-Expression & Abstract Paragraphs (TDD - Red Phase)', () => {
   it('matches the shared prototype-binding macro fixture', () => {
-    const sheet = TMDParser.parse(macroPlayFixture);
-    const playback = TMDPlaybackRenderer.render(sheet, 'Violin');
+    const sheet = TmdParser.parse(macroPlayFixture);
+    const playback = TmdPlaybackRenderer.render(sheet, 'Violin');
 
     expect(sheet.entries?.[0].isPrototype).toBe(true);
     expect(playback.events.map((event) => event.position)).toEqual([0, 1, 2, 3]);
@@ -38,7 +38,7 @@ Theme {
 
 -> Theme ->#
 `;
-      const sheet = TMDParser.parse(input);
+      const sheet = TmdParser.parse(input);
       expect(sheet).not.toBeNull();
       expect(sheet.entries.length).toBe(1);
       const p = sheet.entries[0];
@@ -63,7 +63,7 @@ Theme:Piano@|0|{
 
 -> (canon Theme (Violin1 Violin2) 2) ->#
 `;
-      const sheet = TMDParser.parse(input);
+      const sheet = TmdParser.parse(input);
       expect(sheet).not.toBeNull();
       expect(sheet.playback.length).toBe(1);
       const order = sheet.playback[0];
@@ -92,7 +92,7 @@ Theme {
 
 -> (canon Theme (Violin1 Violin2) 2) ->#
 `;
-      const sheet = TMDParser.parse(input);
+      const sheet = TmdParser.parse(input);
       const formattedOrder = formatOrder(sheet.playback[0]);
       expect(formattedOrder).toBe('(canon Theme (Violin1 Violin2) 2)');
 
@@ -101,7 +101,7 @@ Theme {
     });
   });
 
-  describe('TMDMacroEvaluator (Desugaring AST Expansion)', () => {
+  describe('TmdMacroEvaluator (Desugaring AST Expansion)', () => {
     it('exposes the throwing expansion API as the canonical entry point', () => {
       const input = `::SCORE::
 ** Throwing Expansion API **
@@ -116,7 +116,7 @@ Theme {
 
 -> (play Missing Violin) ->#`;
 
-      expect(() => TMDMacroEvaluator.expandThrowing(TMDParser.parse(input))).toThrow(/Theme 'Missing'/);
+      expect(() => TmdMacroEvaluator.expandThrowing(TmdParser.parse(input))).toThrow(/Theme 'Missing'/);
     });
 
     it('evaluates (play Theme Violin) by binding abstract theme to instrument', () => {
@@ -133,8 +133,8 @@ Theme {
 
 -> (play Theme Violin) ->#
 `;
-      const sheet = TMDParser.parse(input);
-      const playback = TMDPlaybackRenderer.render(sheet, 'Violin');
+      const sheet = TmdParser.parse(input);
+      const playback = TmdPlaybackRenderer.render(sheet, 'Violin');
       expect(playback.events.length).toBe(4);
       expect(playback.events[0].position).toBe(0);
       expect(playback.duration).toBe(4);
@@ -154,8 +154,8 @@ Bass {
 
 -> (loop Bass Cello 3) ->#
 `;
-      const sheet = TMDParser.parse(input);
-      const playback = TMDPlaybackRenderer.render(sheet, 'Cello');
+      const sheet = TmdParser.parse(input);
+      const playback = TmdPlaybackRenderer.render(sheet, 'Cello');
       // 4 beats * 3 iterations = 12 events across 12 beats
       expect(playback.events.length).toBe(12);
       expect(playback.duration).toBe(12);
@@ -175,10 +175,10 @@ Theme {
 
 -> (canon Theme (Violin1 Violin2 Violin3) 2) ->#
 `;
-      const sheet = TMDParser.parse(input);
-      const v1 = TMDPlaybackRenderer.render(sheet, 'Violin1');
-      const v2 = TMDPlaybackRenderer.render(sheet, 'Violin2');
-      const v3 = TMDPlaybackRenderer.render(sheet, 'Violin3');
+      const sheet = TmdParser.parse(input);
+      const v1 = TmdPlaybackRenderer.render(sheet, 'Violin1');
+      const v2 = TmdPlaybackRenderer.render(sheet, 'Violin2');
+      const v3 = TmdPlaybackRenderer.render(sheet, 'Violin3');
 
       expect(v1.events[0].position).toBe(0);
       expect(v2.events[0].position).toBe(8);  // 2 measures * 4 beats
@@ -207,11 +207,11 @@ Theme {
      4
    ) ->#
 `;
-      const sheet = TMDParser.parse(input);
-      const v1 = TMDPlaybackRenderer.render(sheet, 'Violin1');
-      const v2 = TMDPlaybackRenderer.render(sheet, 'Violin2');
-      const f1 = TMDPlaybackRenderer.render(sheet, 'Flute1');
-      const f2 = TMDPlaybackRenderer.render(sheet, 'Flute2');
+      const sheet = TmdParser.parse(input);
+      const v1 = TmdPlaybackRenderer.render(sheet, 'Violin1');
+      const v2 = TmdPlaybackRenderer.render(sheet, 'Violin2');
+      const f1 = TmdPlaybackRenderer.render(sheet, 'Flute1');
+      const f2 = TmdPlaybackRenderer.render(sheet, 'Flute2');
 
       // Inner canon: Violin1 enters at 0, Violin2 enters at 1 bar (4 beats)
       expect(v1.events.length).toBe(4);
@@ -247,12 +247,12 @@ Theme {
      (canon Theme (Violin1 Violin2 Violin3) 2)
      (loop Bass Cello 4)) ->#
 `;
-      const sheet = TMDParser.parse(input);
+      const sheet = TmdParser.parse(input);
 
-      const cello = TMDPlaybackRenderer.render(sheet, 'Cello');
-      const v1 = TMDPlaybackRenderer.render(sheet, 'Violin1');
-      const v2 = TMDPlaybackRenderer.render(sheet, 'Violin2');
-      const v3 = TMDPlaybackRenderer.render(sheet, 'Violin3');
+      const cello = TmdPlaybackRenderer.render(sheet, 'Cello');
+      const v1 = TmdPlaybackRenderer.render(sheet, 'Violin1');
+      const v2 = TmdPlaybackRenderer.render(sheet, 'Violin2');
+      const v3 = TmdPlaybackRenderer.render(sheet, 'Violin3');
 
       // Cello: 4 iterations * 2 measures * 4 beats = 32 beats
       expect(cello.duration).toBe(32);
@@ -292,10 +292,10 @@ B:Bass@|0|{
      A
      (loop B 10)) ->#
 `;
-      expect(() => TMDMacroEvaluator.expand(TMDParser.parse(input))).toThrow(/not a macro expression/);
+      expect(() => TmdMacroEvaluator.expand(TmdParser.parse(input))).toThrow(/not a macro expression/);
     });
 
-    it('passes TMDMeasureChecker and exports MIDI / WAV seamlessly', () => {
+    it('passes TmdMeasureChecker and exports MIDI / WAV seamlessly', () => {
       const input = `::SCORE::
 ** Macro Export & Check **
 != 120
@@ -317,16 +317,16 @@ Theme {
      (loop Bass Cello 3)) ->#
 `;
       // 1. Measure check passes with 0 issues
-      const issues = TMDMeasureChecker.check(input);
+      const issues = TmdMeasureChecker.check(input);
       expect(issues).toEqual([]);
 
       // 2. MIDI generation produces valid bytes without throwing
-      const sheet = TMDParser.parse(input);
-      const midiBytes = TMDMIDIGenerator.generateMIDI(sheet);
+      const sheet = TmdParser.parse(input);
+      const midiBytes = TmdMIDIGenerator.generateMIDI(sheet);
       expect(midiBytes.length).toBeGreaterThan(50);
 
       // 3. WAV synthesis produces valid RIFF WAV data
-      const wavBytes = TMDWAVRenderer.renderWAV(sheet);
+      const wavBytes = TmdWAVRenderer.renderWAV(sheet);
       expect(wavBytes.length).toBeGreaterThan(44);
       const header = String.fromCharCode(...wavBytes.slice(0, 4));
       expect(header).toBe('RIFF');
@@ -363,13 +363,13 @@ BassB {
      (canon (ThemeA ThemeB) (Violin1 Violin2) 2)
      (loop (BassA BassB) Cello 2)) ->#
 `;
-      const sheet = TMDParser.parse(input);
+      const sheet = TmdParser.parse(input);
       expect(sheet).not.toBeNull();
 
-      // TMDPlaybackRenderer verifies the concatenated sections
-      const v1 = TMDPlaybackRenderer.render(sheet, 'Violin1');
-      const v2 = TMDPlaybackRenderer.render(sheet, 'Violin2');
-      const cello = TMDPlaybackRenderer.render(sheet, 'Cello');
+      // TmdPlaybackRenderer verifies the concatenated sections
+      const v1 = TmdPlaybackRenderer.render(sheet, 'Violin1');
+      const v2 = TmdPlaybackRenderer.render(sheet, 'Violin2');
+      const cello = TmdPlaybackRenderer.render(sheet, 'Cello');
 
       // Each theme is 1 measure = 4 beats. ThemeA + ThemeB = 8 beats total per voice.
       // Violin1 starts at 0, has 8 note events
@@ -404,8 +404,8 @@ Theme {
 
 -> (play (transpose Theme 2) Violin) ->#
 `;
-      const sheet = TMDParser.parse(input);
-      const v = TMDPlaybackRenderer.render(sheet, 'Violin');
+      const sheet = TmdParser.parse(input);
+      const v = TmdPlaybackRenderer.render(sheet, 'Violin');
       expect(v.events.length).toBe(4);
       // In C major: 1 is C (MIDI 60), +2 semitones is D (MIDI 62).
       // 2 is D (MIDI 62), +2 is E (MIDI 64).
@@ -413,7 +413,7 @@ Theme {
       // 4 is F (MIDI 65), +2 is G (MIDI 67).
       const pitches = v.events.map((e) => {
         if (e.content.type === 'note') {
-          return TMDMIDIGenerator.noteToMIDIPitch(e.content.note, e.state.keyOffset);
+          return TmdMIDIGenerator.noteToMIDIPitch(e.content.note, e.state.keyOffset);
         }
         return -1;
       });
@@ -435,15 +435,15 @@ Theme {
 -> (play (transpose Theme 12) Flute)
 -> (play (transpose Theme -12) Cello) ->#
 `;
-      const sheet = TMDParser.parse(input);
-      const flute = TMDPlaybackRenderer.render(sheet, 'Flute');
-      const cello = TMDPlaybackRenderer.render(sheet, 'Cello');
+      const sheet = TmdParser.parse(input);
+      const flute = TmdPlaybackRenderer.render(sheet, 'Flute');
+      const cello = TmdPlaybackRenderer.render(sheet, 'Cello');
 
       const flutePitches = flute.events.map((e) =>
-        e.content.type === 'note' ? TMDMIDIGenerator.noteToMIDIPitch(e.content.note, e.state.keyOffset) : 0
+        e.content.type === 'note' ? TmdMIDIGenerator.noteToMIDIPitch(e.content.note, e.state.keyOffset) : 0
       );
       const celloPitches = cello.events.map((e) =>
-        e.content.type === 'note' ? TMDMIDIGenerator.noteToMIDIPitch(e.content.note, e.state.keyOffset) : 0
+        e.content.type === 'note' ? TmdMIDIGenerator.noteToMIDIPitch(e.content.note, e.state.keyOffset) : 0
       );
 
       // C major: 1 3 5 1^ = 60, 64, 67, 72.
@@ -467,11 +467,11 @@ Theme {
 
 -> (play (reverse Theme) Violin) ->#
 `;
-      const sheet = TMDParser.parse(input);
-      const v = TMDPlaybackRenderer.render(sheet, 'Violin');
+      const sheet = TmdParser.parse(input);
+      const v = TmdPlaybackRenderer.render(sheet, 'Violin');
 
       const vPitches = v.events.map((e) =>
-        e.content.type === 'note' ? TMDMIDIGenerator.noteToMIDIPitch(e.content.note, e.state.keyOffset) : 0
+        e.content.type === 'note' ? TmdMIDIGenerator.noteToMIDIPitch(e.content.note, e.state.keyOffset) : 0
       );
 
       // Original: 1 2 3 4 (60, 62, 64, 65) | 5 6 7 1^ (67, 69, 71, 72)
@@ -493,10 +493,10 @@ Theme {
 
 -> (play (flip Theme) Violin) ->#
 `;
-      const sheet = TMDParser.parse(input);
-      const v = TMDPlaybackRenderer.render(sheet, 'Violin');
+      const sheet = TmdParser.parse(input);
+      const v = TmdPlaybackRenderer.render(sheet, 'Violin');
       const vPitches = v.events.map((e) =>
-        e.content.type === 'note' ? TMDMIDIGenerator.noteToMIDIPitch(e.content.note, e.state.keyOffset) : 0
+        e.content.type === 'note' ? TmdMIDIGenerator.noteToMIDIPitch(e.content.note, e.state.keyOffset) : 0
       );
 
       // Original: 1(60), 3(64, +4), 5(67, +7), 1^(72, +12)
@@ -525,37 +525,37 @@ Subject {
      (play (vary Subject +19) Flute)
      (canon (vary Subject reverse -12) (Cello Bass) 1)) ->#
 `;
-      const sheet = TMDParser.parse(input);
+      const sheet = TmdParser.parse(input);
       expect(sheet).not.toBeNull();
 
-      const violin = TMDPlaybackRenderer.render(sheet, 'SoloViolin');
-      const flute = TMDPlaybackRenderer.render(sheet, 'Flute');
-      const cello = TMDPlaybackRenderer.render(sheet, 'Cello');
-      const bass = TMDPlaybackRenderer.render(sheet, 'Bass');
+      const violin = TmdPlaybackRenderer.render(sheet, 'SoloViolin');
+      const flute = TmdPlaybackRenderer.render(sheet, 'Flute');
+      const cello = TmdPlaybackRenderer.render(sheet, 'Cello');
+      const bass = TmdPlaybackRenderer.render(sheet, 'Bass');
 
       // Subject: 1(60), 2(62), 3(64), 5(67)
       const violinPitches = violin.events.map((e) =>
-        e.content.type === 'note' ? TMDMIDIGenerator.noteToMIDIPitch(e.content.note, e.state.keyOffset) : 0
+        e.content.type === 'note' ? TmdMIDIGenerator.noteToMIDIPitch(e.content.note, e.state.keyOffset) : 0
       );
       expect(violinPitches).toEqual([60, 62, 64, 67]);
 
       // Flute: transpose +7, octave +1 -> +19 semitones
       // 60+19=79, 62+19=81, 64+19=83, 67+19=86
       const flutePitches = flute.events.map((e) =>
-        e.content.type === 'note' ? TMDMIDIGenerator.noteToMIDIPitch(e.content.note, e.state.keyOffset) : 0
+        e.content.type === 'note' ? TmdMIDIGenerator.noteToMIDIPitch(e.content.note, e.state.keyOffset) : 0
       );
       expect(flutePitches).toEqual([79, 81, 83, 86]);
 
       // Cello & Bass: reverse (5 3 2 1: 67, 64, 62, 60), octave -1 (-12 semitones: 55, 52, 50, 48)
       // Cello at 0, Bass at 1 bar (4 beats)
       const celloPitches = cello.events.map((e) =>
-        e.content.type === 'note' ? TMDMIDIGenerator.noteToMIDIPitch(e.content.note, e.state.keyOffset) : 0
+        e.content.type === 'note' ? TmdMIDIGenerator.noteToMIDIPitch(e.content.note, e.state.keyOffset) : 0
       );
       expect(celloPitches).toEqual([55, 52, 50, 48]);
       expect(cello.events[0].position).toBe(0);
 
       const bassPitches = bass.events.map((e) =>
-        e.content.type === 'note' ? TMDMIDIGenerator.noteToMIDIPitch(e.content.note, e.state.keyOffset) : 0
+        e.content.type === 'note' ? TmdMIDIGenerator.noteToMIDIPitch(e.content.note, e.state.keyOffset) : 0
       );
       expect(bassPitches).toEqual([55, 52, 50, 48]);
       expect(bass.events[0].position).toBe(4);
@@ -576,14 +576,14 @@ Theme {
 -> (play (vary Theme +2) Violin)
 -> (play (vary Theme reverse flip) Cello) ->#
 `;
-      const sheet = TMDParser.parse(input);
-      const v = TMDPlaybackRenderer.render(sheet, 'Violin');
-      const cello = TMDPlaybackRenderer.render(sheet, 'Cello');
+      const sheet = TmdParser.parse(input);
+      const v = TmdPlaybackRenderer.render(sheet, 'Violin');
+      const cello = TmdPlaybackRenderer.render(sheet, 'Cello');
 
       // Theme: 1(60), 3(64), 5(67), 1^(72)
       // Violin (+2): 62, 66, 69, 74
       const vPitches = v.events.map((e) =>
-        e.content.type === 'note' ? TMDMIDIGenerator.noteToMIDIPitch(e.content.note, e.state.keyOffset) : 0
+        e.content.type === 'note' ? TmdMIDIGenerator.noteToMIDIPitch(e.content.note, e.state.keyOffset) : 0
       );
       expect(vPitches).toEqual([62, 66, 69, 74]);
 
@@ -595,7 +595,7 @@ Theme {
       // 64 -> 72 - (-8) = 80
       // 60 -> 72 - (-12) = 84
       const celloPitches = cello.events.map((e) =>
-        e.content.type === 'note' ? TMDMIDIGenerator.noteToMIDIPitch(e.content.note, e.state.keyOffset) : 0
+        e.content.type === 'note' ? TmdMIDIGenerator.noteToMIDIPitch(e.content.note, e.state.keyOffset) : 0
       );
       expect(celloPitches).toEqual([72, 77, 80, 84]);
     });
@@ -618,24 +618,24 @@ Theme {
      4
    ) ->#
 `;
-      const sheet = TMDParser.parse(input);
-      const v1 = TMDPlaybackRenderer.render(sheet, 'Violin1');
-      const v2 = TMDPlaybackRenderer.render(sheet, 'Violin2');
-      const f1 = TMDPlaybackRenderer.render(sheet, 'Flute1');
-      const f2 = TMDPlaybackRenderer.render(sheet, 'Flute2');
+      const sheet = TmdParser.parse(input);
+      const v1 = TmdPlaybackRenderer.render(sheet, 'Violin1');
+      const v2 = TmdPlaybackRenderer.render(sheet, 'Violin2');
+      const f1 = TmdPlaybackRenderer.render(sheet, 'Flute1');
+      const f2 = TmdPlaybackRenderer.render(sheet, 'Flute2');
 
       // Theme: 1 2 3 4 (60, 62, 64, 65)
       // Inner canon:
       // Violin1 starts at 0, plays 1 bar (4 beats). In reversed form, it plays 4 3 2 1:
       const v1Pitches = v1.events.map((e) =>
-        e.content.type === 'note' ? TMDMIDIGenerator.noteToMIDIPitch(e.content.note, e.state.keyOffset) : 0
+        e.content.type === 'note' ? TmdMIDIGenerator.noteToMIDIPitch(e.content.note, e.state.keyOffset) : 0
       );
       expect(v1Pitches).toEqual([65, 64, 62, 60]);
 
       // Flute1 is outer counterpart of Violin1, offset by 4 bars (16 beats)
       expect(f1.events[0].position).toBe(16);
       const f1Pitches = f1.events.map((e) =>
-        e.content.type === 'note' ? TMDMIDIGenerator.noteToMIDIPitch(e.content.note, e.state.keyOffset) : 0
+        e.content.type === 'note' ? TmdMIDIGenerator.noteToMIDIPitch(e.content.note, e.state.keyOffset) : 0
       );
       expect(f1Pitches).toEqual([65, 64, 62, 60]);
     });
@@ -658,21 +658,21 @@ Theme {
      4
    ) ->#
 `;
-      const sheet = TMDParser.parse(input);
-      const v1 = TMDPlaybackRenderer.render(sheet, 'Violin1');
-      const f1 = TMDPlaybackRenderer.render(sheet, 'Flute1');
+      const sheet = TmdParser.parse(input);
+      const v1 = TmdPlaybackRenderer.render(sheet, 'Violin1');
+      const f1 = TmdPlaybackRenderer.render(sheet, 'Flute1');
 
       // Theme: 1(60), 3(64), 5(67), 1^(72)
       // Inverted around 60: 60, 56, 53, 48
       const v1Pitches = v1.events.map((e) =>
-        e.content.type === 'note' ? TMDMIDIGenerator.noteToMIDIPitch(e.content.note, e.state.keyOffset) : 0
+        e.content.type === 'note' ? TmdMIDIGenerator.noteToMIDIPitch(e.content.note, e.state.keyOffset) : 0
       );
       expect(v1Pitches).toEqual([60, 56, 53, 48]);
 
       // Flute1 starts at 16 beats with inverted pitches
       expect(f1.events[0].position).toBe(16);
       const f1Pitches = f1.events.map((e) =>
-        e.content.type === 'note' ? TMDMIDIGenerator.noteToMIDIPitch(e.content.note, e.state.keyOffset) : 0
+        e.content.type === 'note' ? TmdMIDIGenerator.noteToMIDIPitch(e.content.note, e.state.keyOffset) : 0
       );
       expect(f1Pitches).toEqual([60, 56, 53, 48]);
     });
@@ -695,8 +695,8 @@ ThemeB {
 
 -> (seq (play ThemeA Piano) (play ThemeB Piano)) ->#
 `;
-      const sheet = TMDParser.parse(input);
-      const playback = TMDPlaybackRenderer.render(sheet, 'Piano');
+      const sheet = TmdParser.parse(input);
+      const playback = TmdPlaybackRenderer.render(sheet, 'Piano');
       expect(playback.events.length).toBe(8);
       expect(playback.events[0].position).toBe(0);
       expect(playback.events[4].position).toBe(4);
@@ -717,8 +717,8 @@ Theme {
 
 -> (play (vary Theme -2 reverse minor) Viola) ->#
 `;
-      const sheet = TMDParser.parse(input);
-      const va = TMDPlaybackRenderer.render(sheet, 'Viola');
+      const sheet = TmdParser.parse(input);
+      const va = TmdPlaybackRenderer.render(sheet, 'Viola');
 
       // In (vary Theme -2 reverse minor):
       // 1. -2 semitones: all notes shifted by -2 semitones
@@ -728,7 +728,7 @@ Theme {
       // When minor runs, it flattens notes whose *degrees* are 3, 6, 7.
       // Therefore, the resulting pitches match [70, 68, 67, 65, 63, 62, 60, 58].
       const vaPitches = va.events.map((e) =>
-        e.content.type === 'note' ? TMDMIDIGenerator.noteToMIDIPitch(e.content.note, e.state.keyOffset) : 0
+        e.content.type === 'note' ? TmdMIDIGenerator.noteToMIDIPitch(e.content.note, e.state.keyOffset) : 0
       );
       expect(vaPitches).toEqual([70, 68, 67, 65, 63, 62, 60, 58]);
     });
@@ -747,10 +747,10 @@ Theme {
 
 -> (play (minor Theme) Piano) ->#
 `;
-      const sheet = TMDParser.parse(input);
-      const playback = TMDPlaybackRenderer.render(sheet, 'Piano');
+      const sheet = TmdParser.parse(input);
+      const playback = TmdPlaybackRenderer.render(sheet, 'Piano');
       const pitches = playback.events.map((e) =>
-        e.content.type === 'note' ? TMDMIDIGenerator.noteToMIDIPitch(e.content.note, e.state.keyOffset) : 0
+        e.content.type === 'note' ? TmdMIDIGenerator.noteToMIDIPitch(e.content.note, e.state.keyOffset) : 0
       );
       // Original C major: 1(60), 2(62), 3(64), 4(65), 5(67), 6(69), 7(71), 1^(72)
       // Parallel C minor: 1(60), 2(62), 3,(63, Eb), 4(65), 5(67), 6,(68, Ab), 7,(70, Bb), 1^(72)
@@ -771,10 +771,10 @@ ThemeMinor {
 
 -> (play (major ThemeMinor) Piano) ->#
 `;
-      const sheet = TMDParser.parse(input);
-      const playback = TMDPlaybackRenderer.render(sheet, 'Piano');
+      const sheet = TmdParser.parse(input);
+      const playback = TmdPlaybackRenderer.render(sheet, 'Piano');
       const pitches = playback.events.map((e) =>
-        e.content.type === 'note' ? TMDMIDIGenerator.noteToMIDIPitch(e.content.note, e.state.keyOffset) : 0
+        e.content.type === 'note' ? TmdMIDIGenerator.noteToMIDIPitch(e.content.note, e.state.keyOffset) : 0
       );
       // Converted to C major: 1(60), 2(62), 3(64), 4(65), 5(67), 6(69), 7(71), 1^(72)
       expect(pitches).toEqual([60, 62, 64, 65, 67, 69, 71, 72]);
@@ -785,8 +785,8 @@ ThemeMinor {
         const input = `::SCORE::
 Theme { <4*> 1 2 3 4 }
 -> ${macroStr} ->#`;
-        const sheet = TMDParser.parse(input);
-        return TMDMacroEvaluator.expand(sheet);
+        const sheet = TmdParser.parse(input);
+        return TmdMacroEvaluator.expand(sheet);
       };
 
       it('validates play arguments', () => {
@@ -844,17 +844,17 @@ Theme { <4*> 1 2 3 4 }
         expect(() => expandMacro("(play NonExistent Violin)")).toThrow(/Macro error.*: Theme 'NonExistent' is not a prototype/);
       });
 
-      it('attaches exact line and column to TMDMacroError', () => {
+      it('attaches exact line and column to TmdMacroError', () => {
         const input = `::SCORE::
 Theme { <4*> 1 2 3 4 }
 
 -> (play Theme) ->#`;
-        const sheet = TMDParser.parse(input);
+        const sheet = TmdParser.parse(input);
         try {
-          TMDMacroEvaluator.expand(sheet);
-          expect.unreachable('Should have thrown TMDMacroError');
+          TmdMacroEvaluator.expand(sheet);
+          expect.unreachable('Should have thrown TmdMacroError');
         } catch (err: any) {
-          expect(err).toBeInstanceOf(TMDMacroError);
+          expect(err).toBeInstanceOf(TmdMacroError);
           expect(err.line).toBe(4);
           expect(err.column).toBe(4);
           expect(err.message).toMatch(/Macro error at line 4, col 4: 'play' requires theme and instrument/);
@@ -866,7 +866,7 @@ Theme { <4*> 1 2 3 4 }
 Theme { <4*> 1 2 3 4 }
 
 -> (play Theme Violin ->#`;
-        expect(() => TMDParser.parse(input)).toThrow(/expected \)/);
+        expect(() => TmdParser.parse(input)).toThrow(/expected \)/);
       });
 
       it('throws syntax error when nested opening parenthesis is not closed', () => {
@@ -874,7 +874,7 @@ Theme { <4*> 1 2 3 4 }
 Theme { <4*> 1 2 3 4 }
 
 -> (layer (canon Theme (Violin1 Violin2) 2) ->#`;
-        expect(() => TMDParser.parse(input)).toThrow(/expected \)/);
+        expect(() => TmdParser.parse(input)).toThrow(/expected \)/);
       });
     });
   });

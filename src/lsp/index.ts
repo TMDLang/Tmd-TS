@@ -1,20 +1,20 @@
-import { TMDOutlineGenerator, TMDOutlineNode } from "../presentation/index.js";
-import { TMDRefactor } from "../refactoring/index.js";
-import { TMDParser } from "../syntax/index.js";
-import { TMDMeasureChecker } from "../validation/index.js";
+import { TmdOutlineGenerator, TmdOutlineNode } from "../presentation/index.js";
+import { TmdRefactor } from "../refactoring/index.js";
+import { TmdParser } from "../syntax/index.js";
+import { TmdMeasureChecker } from "../validation/index.js";
 import { TMD_VERSION } from "../version.js";
 
 // MARK: - LSP Data Structures
 
-export class TMDLSPPosition {
+export class TmdLSPPosition {
   constructor(public line: number, public character: number) {}
 }
 
-export class TMDLSPRange {
-  constructor(public start: TMDLSPPosition, public end: TMDLSPPosition) {}
+export class TmdLSPRange {
+  constructor(public start: TmdLSPPosition, public end: TmdLSPPosition) {}
 }
 
-export enum TMDLSPCompletionItemKind {
+export enum TmdLSPCompletionItemKind {
   Text = 1,
   Method = 2,
   Function = 3,
@@ -35,7 +35,7 @@ export enum TMDLSPCompletionItemKind {
   Reference = 18,
 }
 
-export enum TMDLSPSymbolKind {
+export enum TmdLSPSymbolKind {
   File = 1,
   Module = 2,
   Namespace = 3,
@@ -64,33 +64,33 @@ export enum TMDLSPSymbolKind {
   TypeParameter = 26,
 }
 
-export function fromOutlineKind(outlineKind: string): TMDLSPSymbolKind {
+export function fromOutlineKind(outlineKind: string): TmdLSPSymbolKind {
   switch (outlineKind.toLowerCase()) {
-    case "file": return TMDLSPSymbolKind.File;
-    case "namespace": return TMDLSPSymbolKind.Namespace;
-    case "class": return TMDLSPSymbolKind.Class;
-    case "method": return TMDLSPSymbolKind.Method;
-    case "property": return TMDLSPSymbolKind.Property;
-    case "field": return TMDLSPSymbolKind.Field;
-    case "event": return TMDLSPSymbolKind.Event;
-    case "operator": return TMDLSPSymbolKind.Operator;
-    case "string": return TMDLSPSymbolKind.String;
-    case "number": return TMDLSPSymbolKind.Number;
-    default: return TMDLSPSymbolKind.Variable;
+    case "file": return TmdLSPSymbolKind.File;
+    case "namespace": return TmdLSPSymbolKind.Namespace;
+    case "class": return TmdLSPSymbolKind.Class;
+    case "method": return TmdLSPSymbolKind.Method;
+    case "property": return TmdLSPSymbolKind.Property;
+    case "field": return TmdLSPSymbolKind.Field;
+    case "event": return TmdLSPSymbolKind.Event;
+    case "operator": return TmdLSPSymbolKind.Operator;
+    case "string": return TmdLSPSymbolKind.String;
+    case "number": return TmdLSPSymbolKind.Number;
+    default: return TmdLSPSymbolKind.Variable;
   }
 }
 
-export interface TMDLSPCompletionItem {
+export interface TmdLSPCompletionItem {
   label: string;
-  kind: TMDLSPCompletionItemKind;
+  kind: TmdLSPCompletionItemKind;
   detail?: string;
   documentation?: string;
   insertText?: string;
   insertTextFormat?: number; // 1: PlainText, 2: Snippet
 }
 
-export interface TMDLSPDiagnostic {
-  range: TMDLSPRange;
+export interface TmdLSPDiagnostic {
+  range: TmdLSPRange;
   severity: number; // 1: Error, 2: Warning, 3: Information, 4: Hint
   source?: string;
   message: string;
@@ -98,7 +98,7 @@ export interface TMDLSPDiagnostic {
 
 // MARK: - JSON-RPC Frame & Codec
 
-export interface TMDJSONRPCFrame {
+export interface TmdJSONRPCFrame {
   id?: number | string | null;
   method?: string;
   params?: any;
@@ -106,20 +106,20 @@ export interface TMDJSONRPCFrame {
   error?: any;
 }
 
-export interface TMDJSONRPCResponse {
+export interface TmdJSONRPCResponse {
   id?: number | string | null;
   result?: any;
   error?: any;
 }
 
-export class TMDJSONRPCCodec {
-  public static decode(input: string): TMDJSONRPCFrame[] {
+export class TmdJSONRPCCodec {
+  public static decode(input: string): TmdJSONRPCFrame[] {
     const res = this.decodeBuffer(new TextEncoder().encode(input));
     return res.frames;
   }
 
-  public static decodeBuffer(buffer: Uint8Array): { frames: TMDJSONRPCFrame[]; remaining: Uint8Array } {
-    const frames: TMDJSONRPCFrame[] = [];
+  public static decodeBuffer(buffer: Uint8Array): { frames: TmdJSONRPCFrame[]; remaining: Uint8Array } {
+    const frames: TmdJSONRPCFrame[] = [];
     let current = buffer;
     const separator = new TextEncoder().encode("\r\n\r\n");
     const decoder = new TextDecoder();
@@ -179,7 +179,7 @@ export class TMDJSONRPCCodec {
     return { frames, remaining: current };
   }
 
-  public static encode(response: TMDJSONRPCResponse): string {
+  public static encode(response: TmdJSONRPCResponse): string {
     const payload: Record<string, any> = {
       jsonrpc: "2.0",
       id: response.id !== undefined ? response.id : null,
@@ -207,7 +207,7 @@ export class TMDJSONRPCCodec {
 
 // MARK: - Completion Engine
 
-export class TMDLSPCompletionEngine {
+export class TmdLSPCompletionEngine {
   public static readonly standardInstruments: string[] = [
     // Keyboard & Piano
     "Piano", "AcousticGrandPiano", "BrightAcousticPiano", "ElectricGrandPiano", "HonkyTonkPiano", "ElectricPiano", "Harpsichord", "Clavinet",
@@ -239,23 +239,23 @@ export class TMDLSPCompletionEngine {
     { label: "play", insertText: "(play ${1:Theme} ${2:Violin})", detail: "Track Binding: (play <theme> <assignment>)" }
   ];
 
-  public static readonly sectionDirectiveCompletions: TMDLSPCompletionItem[] = [
-    { label: "!= 120", kind: TMDLSPCompletionItemKind.Snippet, detail: "Absolute Tempo (BPM)", insertText: "!= ${1:120}}", insertTextFormat: 2 },
-    { label: "!+ 10", kind: TMDLSPCompletionItemKind.Snippet, detail: "Relative Tempo Change (+BPM)", insertText: "!+ ${1:10}}", insertTextFormat: 2 },
-    { label: "?= C", kind: TMDLSPCompletionItemKind.Snippet, detail: "Movable-do Base", insertText: "?= ${1:C}}", insertTextFormat: 2 },
-    { label: "?+ 2", kind: TMDLSPCompletionItemKind.Snippet, detail: "Relative Movable-do Transposition (+semitones)", insertText: "?+ ${1:2}}", insertTextFormat: 2 },
-    { label: "?- 2", kind: TMDLSPCompletionItemKind.Snippet, detail: "Relative Movable-do Transposition (-semitones)", insertText: "?- ${1:2}}", insertTextFormat: 2 },
-    { label: "key= Bm", kind: TMDLSPCompletionItemKind.Snippet, detail: "Explicit Tonality (B minor)", insertText: "key= ${1:Bm}}", insertTextFormat: 2 },
+  public static readonly sectionDirectiveCompletions: TmdLSPCompletionItem[] = [
+    { label: "!= 120", kind: TmdLSPCompletionItemKind.Snippet, detail: "Absolute Tempo (BPM)", insertText: "!= ${1:120}}", insertTextFormat: 2 },
+    { label: "!+ 10", kind: TmdLSPCompletionItemKind.Snippet, detail: "Relative Tempo Change (+BPM)", insertText: "!+ ${1:10}}", insertTextFormat: 2 },
+    { label: "?= C", kind: TmdLSPCompletionItemKind.Snippet, detail: "Movable-do Base", insertText: "?= ${1:C}}", insertTextFormat: 2 },
+    { label: "?+ 2", kind: TmdLSPCompletionItemKind.Snippet, detail: "Relative Movable-do Transposition (+semitones)", insertText: "?+ ${1:2}}", insertTextFormat: 2 },
+    { label: "?- 2", kind: TmdLSPCompletionItemKind.Snippet, detail: "Relative Movable-do Transposition (-semitones)", insertText: "?- ${1:2}}", insertTextFormat: 2 },
+    { label: "key= Bm", kind: TmdLSPCompletionItemKind.Snippet, detail: "Explicit Tonality (B minor)", insertText: "key= ${1:Bm}}", insertTextFormat: 2 },
     ...["ppp", "pp", "p", "mp", "mf", "f", "ff", "fff"].map((mark) => ({
       label: mark,
-      kind: TMDLSPCompletionItemKind.Value,
+      kind: TmdLSPCompletionItemKind.Value,
       detail: `Dynamics (${mark})`,
       insertText: `${mark}}`,
     })),
-    { label: "<4/4>", kind: TMDLSPCompletionItemKind.Snippet, detail: "Time Signature Change", insertText: "<${1:4}/${2:4}>}", insertTextFormat: 2 },
+    { label: "<4/4>", kind: TmdLSPCompletionItemKind.Snippet, detail: "Time Signature Change", insertText: "<${1:4}/${2:4}>}", insertTextFormat: 2 },
   ];
 
-  public static complete(source: string, position: TMDLSPPosition): TMDLSPCompletionItem[] {
+  public static complete(source: string, position: TmdLSPPosition): TmdLSPCompletionItem[] {
     const lines = source.split("\n");
     if (position.line >= lines.length) return [];
     const currentLine = lines[position.line] || "";
@@ -270,7 +270,7 @@ export class TMDLSPCompletionEngine {
     if (/:\s*[A-Za-z][A-Za-z0-9_-]*\[$/.test(prefix)) {
       return [{
         label: "pitchMode=fixed",
-        kind: TMDLSPCompletionItemKind.Value,
+        kind: TmdLSPCompletionItemKind.Value,
         detail: "Fixed Pitch Entry Attribute",
         documentation: "Keep this entry at its written pitch during playback transposition.",
         insertText: "pitchMode=fixed]",
@@ -285,7 +285,7 @@ export class TMDLSPCompletionEngine {
         }
         return {
           label: m.label,
-          kind: TMDLSPCompletionItemKind.Snippet,
+          kind: TmdLSPCompletionItemKind.Snippet,
           detail: m.detail,
           documentation: m.detail,
           insertText: cleanInsert,
@@ -296,10 +296,10 @@ export class TMDLSPCompletionEngine {
 
     // 2. Playback section completion: after "->"
     if (prefix.includes("->")) {
-      const sectionNames = TMDOutlineGenerator.extractSectionNames(source);
+      const sectionNames = TmdOutlineGenerator.extractSectionNames(source);
       return sectionNames.map((name) => ({
         label: name,
-        kind: TMDLSPCompletionItemKind.Field,
+        kind: TmdLSPCompletionItemKind.Field,
         detail: `TMD Section: ${name}`,
         documentation: "Playback section or abstract theme",
       }));
@@ -313,7 +313,7 @@ export class TMDLSPCompletionEngine {
       if (!/[\s\[\{]/.test(afterColon)) {
         return this.standardInstruments.map((inst) => ({
           label: inst,
-          kind: TMDLSPCompletionItemKind.Keyword,
+          kind: TmdLSPCompletionItemKind.Keyword,
           detail: `General MIDI Assignment: ${inst}`,
           documentation: "Standard assignment sound",
         }));
@@ -327,7 +327,7 @@ export class TMDLSPCompletionEngine {
       if (!afterBracket.includes("]") && !/[\s\{\}]/.test(afterBracket)) {
         let keyStr = "C";
         try {
-          const sheet = TMDParser.parse(source);
+          const sheet = TmdParser.parse(source);
           if (sheet?.declaredKey) {
             keyStr = sheet.declaredKey;
           } else if (sheet?.keySignature) {
@@ -346,7 +346,7 @@ export class TMDLSPCompletionEngine {
         const appendClosingBracket = nextChar !== "]";
         return chords.map((chord) => ({
           label: chord,
-          kind: TMDLSPCompletionItemKind.Value,
+          kind: TmdLSPCompletionItemKind.Value,
           detail: this.scaleDegreeChords.includes(chord) ? `Scale Degree Chord: [${chord}]` : `Diatonic Chord in ${keyStr}`,
           insertText: appendClosingBracket ? `${chord}]` : chord,
         }));
@@ -392,18 +392,18 @@ export class TMDLSPCompletionEngine {
 
 // MARK: - Diagnostic Engine
 
-export class TMDLSPDiagnosticEngine {
-  public static diagnose(source: string): TMDLSPDiagnostic[] {
-    const diagnostics: TMDLSPDiagnostic[] = [];
+export class TmdLSPDiagnosticEngine {
+  public static diagnose(source: string): TmdLSPDiagnostic[] {
+    const diagnostics: TmdLSPDiagnostic[] = [];
 
     // 1. Measure consistency check
     try {
-      const issues = TMDMeasureChecker.check(source);
+      const issues = TmdMeasureChecker.check(source);
       for (const issue of issues) {
         const line = Math.max(0, issue.lineNumber - 1);
-        const range = new TMDLSPRange(
-          new TMDLSPPosition(line, 0),
-          new TMDLSPPosition(line, 80)
+        const range = new TmdLSPRange(
+          new TmdLSPPosition(line, 0),
+          new TmdLSPPosition(line, 80)
         );
         diagnostics.push({
           range,
@@ -416,16 +416,16 @@ export class TMDLSPDiagnosticEngine {
 
     // 2. Syntax / Parser check
     try {
-      TMDParser.parseThrowing(source);
+      TmdParser.parseThrowing(source);
     } catch (err: any) {
       if (err?.range) {
         const line = Math.max(0, (err.range.start?.line ?? 1) - 1);
         const col = Math.max(0, (err.range.start?.column ?? 1) - 1);
         const len = Math.max(1, err.range.length ?? 1);
         diagnostics.push({
-          range: new TMDLSPRange(
-            new TMDLSPPosition(line, col),
-            new TMDLSPPosition(line, col + len)
+          range: new TmdLSPRange(
+            new TmdLSPPosition(line, col),
+            new TmdLSPPosition(line, col + len)
           ),
           severity: 1,
           source: "tmd-parser",
@@ -433,9 +433,9 @@ export class TMDLSPDiagnosticEngine {
         });
       } else {
         diagnostics.push({
-          range: new TMDLSPRange(
-            new TMDLSPPosition(0, 0),
-            new TMDLSPPosition(0, 80)
+          range: new TmdLSPRange(
+            new TmdLSPPosition(0, 0),
+            new TmdLSPPosition(0, 80)
           ),
           severity: 1,
           source: "tmd-parser",
@@ -450,13 +450,13 @@ export class TMDLSPDiagnosticEngine {
 
 // MARK: - LSP Server Handler & Event Loop
 
-export class TMDLSPServer {
+export class TmdLSPServer {
   public documents: Map<string, string> = new Map();
   public isRunning: boolean = true;
 
   constructor(public sendOutput?: (data: string) => void) {}
 
-  public handle(message: TMDJSONRPCFrame): void {
+  public handle(message: TmdJSONRPCFrame): void {
     if (!message.method) return;
 
     switch (message.method) {
@@ -476,7 +476,7 @@ export class TMDLSPServer {
             version: TMD_VERSION,
           },
         };
-        const resp = TMDJSONRPCCodec.encode({ id: message.id, result: capabilities });
+        const resp = TmdJSONRPCCodec.encode({ id: message.id, result: capabilities });
         this.send(resp);
         break;
       }
@@ -485,7 +485,7 @@ export class TMDLSPServer {
         break;
 
       case "shutdown": {
-        const resp = TMDJSONRPCCodec.encode({ id: message.id, result: null });
+        const resp = TmdJSONRPCCodec.encode({ id: message.id, result: null });
         this.send(resp);
         break;
       }
@@ -536,8 +536,8 @@ export class TMDLSPServer {
 
         if (uri && pos && this.documents.has(uri)) {
           const source = this.documents.get(uri)!;
-          const position = new TMDLSPPosition(pos.line, pos.character);
-          const items = TMDLSPCompletionEngine.complete(source, position);
+          const position = new TmdLSPPosition(pos.line, pos.character);
+          const items = TmdLSPCompletionEngine.complete(source, position);
           completionItems = items.map((item) => ({
             label: item.label,
             kind: item.kind,
@@ -548,7 +548,7 @@ export class TMDLSPServer {
           }));
         }
 
-        const resp = TMDJSONRPCCodec.encode({ id: message.id, result: completionItems });
+        const resp = TmdJSONRPCCodec.encode({ id: message.id, result: completionItems });
         this.send(resp);
         break;
       }
@@ -560,7 +560,7 @@ export class TMDLSPServer {
 
         if (uri && this.documents.has(uri)) {
           const source = this.documents.get(uri)!;
-          const formatted = TMDRefactor.format(source);
+          const formatted = TmdRefactor.format(source);
           const lines = source.split("\n");
           const lastLineIndex = Math.max(0, lines.length - 1);
           const lastLineChar = (lines[lastLineIndex] || "").length;
@@ -574,7 +574,7 @@ export class TMDLSPServer {
           });
         }
 
-        const resp = TMDJSONRPCCodec.encode({ id: message.id, result: edits });
+        const resp = TmdJSONRPCCodec.encode({ id: message.id, result: edits });
         this.send(resp);
         break;
       }
@@ -586,18 +586,18 @@ export class TMDLSPServer {
 
         if (uri && this.documents.has(uri)) {
           const source = this.documents.get(uri)!;
-          const nodes = TMDOutlineGenerator.generate(source);
+          const nodes = TmdOutlineGenerator.generate(source);
           symbols = nodes.map((node) => this.nodeToLSPDocumentSymbol(node));
         }
 
-        const resp = TMDJSONRPCCodec.encode({ id: message.id, result: symbols });
+        const resp = TmdJSONRPCCodec.encode({ id: message.id, result: symbols });
         this.send(resp);
         break;
       }
 
       default: {
         if (message.id !== undefined && message.id !== null) {
-          const resp = TMDJSONRPCCodec.encode({ id: message.id, result: null });
+          const resp = TmdJSONRPCCodec.encode({ id: message.id, result: null });
           this.send(resp);
         }
       }
@@ -611,7 +611,7 @@ export class TMDLSPServer {
   }
 
   private publishDiagnostics(uri: string, source: string): void {
-    const diags = TMDLSPDiagnosticEngine.diagnose(source);
+    const diags = TmdLSPDiagnosticEngine.diagnose(source);
     const diagDicts = diags.map((d) => ({
       range: {
         start: { line: d.range.start.line, character: d.range.start.character },
@@ -625,14 +625,14 @@ export class TMDLSPServer {
   }
 
   private sendDiagnosticsNotification(uri: string, diagnostics: any[]): void {
-    const encoded = TMDJSONRPCCodec.encodeNotification("textDocument/publishDiagnostics", {
+    const encoded = TmdJSONRPCCodec.encodeNotification("textDocument/publishDiagnostics", {
       uri,
       diagnostics,
     });
     this.send(encoded);
   }
 
-  private nodeToLSPDocumentSymbol(node: TMDOutlineNode): any {
+  private nodeToLSPDocumentSymbol(node: TmdOutlineNode): any {
     const symbolKind = fromOutlineKind(node.kind);
     const dict: Record<string, any> = {
       name: node.name,

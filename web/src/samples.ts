@@ -4,14 +4,14 @@ import legacy from "./samples/legacy.tmd?raw";
 import sandiansanye from "./samples/sandiansanye.tmd?raw";
 import starter from "./samples/starter.tmd?raw";
 
-export interface TMDSample {
+export interface TmdSample {
   id: string;
   name: string;
   category: string;
   content: string;
 }
 
-export const SAMPLES: TMDSample[] = [
+export const SAMPLES: TmdSample[] = [
   {
     id: "starter_template",
     name: "《小星星》(入門示範)",

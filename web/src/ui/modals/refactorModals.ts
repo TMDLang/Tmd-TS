@@ -1,7 +1,7 @@
-import { TMDRefactor } from "../../../../src/refactoring/refactor.js";
-import { TMDParser } from "../../../../src/syntax/parser.js";
+import { TmdRefactor } from "../../../../src/refactoring/refactor.js";
+import { TmdParser } from "../../../../src/syntax/parser.js";
 import { Sheet } from "../../../../src/syntax/types.js";
-import type { TMDWebEditor } from "../../editor.js";
+import type { TmdWebEditor } from "../../editor.js";
 import { escapeHtml } from "../../html.js";
 import { t } from "../../i18n.js";
 import { extractTmdTitle, SavedScore,TmdStorage } from "../../storage/db.js";
@@ -80,7 +80,7 @@ export interface RefactorModalsElements {
 
 export function setupRefactorModals(
   elements: RefactorModalsElements,
-  editor: TMDWebEditor
+  editor: TmdWebEditor
 ): {
   openDuplicateModal: (initialSection?: string, initialInstrument?: string) => void;
   openHarmonyModal: (initialSection?: string, initialInstrument?: string) => void;
@@ -155,7 +155,7 @@ export function setupRefactorModals(
     const text = editor.getContent();
     let sheet: Sheet | null = null;
     try {
-      sheet = TMDParser.parse(text);
+      sheet = TmdParser.parse(text);
     } catch {
       // ignore
     }
@@ -178,7 +178,7 @@ export function setupRefactorModals(
     if (!oldInst || !newInst) return;
     try {
       const text = editor.getContent();
-      const refactored = TMDRefactor.renameInstrument(text, oldInst, newInst);
+      const refactored = TmdRefactor.renameInstrument(text, oldInst, newInst);
       editor.setContent(refactored);
       onScoreUpdated(refactored);
       refactorInstrumentModal.close();
@@ -194,7 +194,7 @@ export function setupRefactorModals(
     const text = editor.getContent();
     let sheet: Sheet | null = null;
     try {
-      sheet = TMDParser.parse(text);
+      sheet = TmdParser.parse(text);
     } catch {
       // ignore
     }
@@ -217,7 +217,7 @@ export function setupRefactorModals(
     if (!oldSec || !newSec) return;
     try {
       const text = editor.getContent();
-      const refactored = TMDRefactor.renameSection(text, oldSec, newSec);
+      const refactored = TmdRefactor.renameSection(text, oldSec, newSec);
       editor.setContent(refactored);
       onScoreUpdated(refactored);
       refactorSectionModal.close();
@@ -233,7 +233,7 @@ export function setupRefactorModals(
     const text = editor.getContent();
     let sheet: Sheet | null = null;
     try {
-      sheet = TMDParser.parse(text);
+      sheet = TmdParser.parse(text);
     } catch {
       // ignore
     }
@@ -254,7 +254,7 @@ export function setupRefactorModals(
     if (!inst) return;
     try {
       const text = editor.getContent();
-      const extractedTmd = TMDRefactor.extractInstrument(text, inst);
+      const extractedTmd = TmdRefactor.extractInstrument(text, inst);
       const title = extractTmdTitle(extractedTmd) || `${inst}_score`;
       const newScore = await TmdStorage.saveScore({
         title,
@@ -277,7 +277,7 @@ export function setupRefactorModals(
     const text = editor.getContent();
     let sheet: Sheet | null = null;
     try {
-      sheet = TMDParser.parse(text);
+      sheet = TmdParser.parse(text);
     } catch {
       // ignore
     }
@@ -307,7 +307,7 @@ export function setupRefactorModals(
     const text = editor.getContent();
     let sheet: Sheet | null = null;
     try {
-      sheet = TMDParser.parse(text);
+      sheet = TmdParser.parse(text);
     } catch {
       // ignore
     }
@@ -350,7 +350,7 @@ export function setupRefactorModals(
     if (!source || !target) return;
     try {
       const text = editor.getContent();
-      const refactored = TMDRefactor.duplicateTrack(text, source, target, { section, octaveShift });
+      const refactored = TmdRefactor.duplicateTrack(text, source, target, { section, octaveShift });
       editor.setContent(refactored);
       onScoreUpdated(refactored);
       refactorDuplicateModal.close();
@@ -379,7 +379,7 @@ export function setupRefactorModals(
     if (!source || !target) return;
     try {
       const text = editor.getContent();
-      const refactored = TMDRefactor.generateHarmony(text, source, target, { section, intervalSteps });
+      const refactored = TmdRefactor.generateHarmony(text, source, target, { section, intervalSteps });
       editor.setContent(refactored);
       onScoreUpdated(refactored);
       refactorHarmonyModal.close();
@@ -423,11 +423,11 @@ export function setupRefactorModals(
     try {
       if (applyToSelection) {
         const selectionText = editor.getSelection();
-        const transposed = TMDRefactor.transpose(selectionText, { semitones });
+        const transposed = TmdRefactor.transpose(selectionText, { semitones });
         editor.replaceSelection(transposed);
       } else {
         const full = editor.getContent();
-        const transposed = TMDRefactor.transpose(full, { semitones, updateKeySignature });
+        const transposed = TmdRefactor.transpose(full, { semitones, updateKeySignature });
         editor.setContent(transposed);
       }
       const updated = editor.getContent();
@@ -445,7 +445,7 @@ export function setupRefactorModals(
     if (!confirm(t("confirmInlineOrders"))) return;
     try {
       const text = editor.getContent();
-      const inlined = TMDRefactor.inlineOrders(text);
+      const inlined = TmdRefactor.inlineOrders(text);
       editor.setContent(inlined);
       onScoreUpdated(inlined);
       showToast(t("toastInlinedOrders"));

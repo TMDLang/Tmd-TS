@@ -1,4 +1,4 @@
-import type { TMDWebEditor } from "../../editor.js";
+import type { TmdWebEditor } from "../../editor.js";
 import { t } from "../../i18n.js";
 
 export interface InsertSectionModalElements {
@@ -18,7 +18,7 @@ export interface InsertSectionModalElements {
 
 export function setupInsertSectionModal(
   elements: InsertSectionModalElements,
-  editor: TMDWebEditor
+  editor: TmdWebEditor
 ): {
   openInsertSectionModal: () => void;
 } {

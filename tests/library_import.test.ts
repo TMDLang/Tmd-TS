@@ -63,9 +63,9 @@ describe("Library Score File Import (TDD)", () => {
     });
   });
 
-  describe("TMDLibraryDrawerController importScoreFile and drag-drop", () => {
+  describe("TmdLibraryDrawerController importScoreFile and drag-drop", () => {
     it("imports score file via File object and notifies toast", async () => {
-      const { TMDLibraryDrawerController } = await import("../web/src/ui/libraryDrawer.js");
+      const { TmdLibraryDrawerController } = await import("../web/src/ui/libraryDrawer.js");
 
       const eventListeners: Record<string, Function[]> = {};
       const classListSet = new Set<string>();
@@ -108,7 +108,7 @@ describe("Library Score File Import (TDD)", () => {
         },
       } as any;
 
-      const controller = new TMDLibraryDrawerController(
+      const controller = new TmdLibraryDrawerController(
         {
           libraryDrawer: mockDrawer,
           inputImportTmd: mockInput,
@@ -199,8 +199,8 @@ describe("Library Score File Import (TDD)", () => {
         },
       } as any;
 
-      const { TMDLibraryDrawerController } = await import("../web/src/ui/libraryDrawer.js");
-      const controller = new TMDLibraryDrawerController(
+      const { TmdLibraryDrawerController } = await import("../web/src/ui/libraryDrawer.js");
+      const controller = new TmdLibraryDrawerController(
         {
           libraryDrawer: makeMockElement() as any,
           libraryScoresList: makeMockElement() as any,
@@ -269,8 +269,8 @@ describe("Library Score File Import (TDD)", () => {
           },
         };
 
-        const { TMDLibraryDrawerController } = await import("../web/src/ui/libraryDrawer.js");
-        const controller = new TMDLibraryDrawerController(
+        const { TmdLibraryDrawerController } = await import("../web/src/ui/libraryDrawer.js");
+        const controller = new TmdLibraryDrawerController(
           {
             libraryDrawer: { classList: { contains: () => false, add: () => {}, remove: () => {} }, addEventListener: () => {} } as any,
             libraryScoresList: mockScoresList,
@@ -347,8 +347,8 @@ describe("Library Score File Import (TDD)", () => {
           },
         };
 
-        const { TMDLibraryDrawerController } = await import("../web/src/ui/libraryDrawer.js");
-        const controller = new TMDLibraryDrawerController(
+        const { TmdLibraryDrawerController } = await import("../web/src/ui/libraryDrawer.js");
+        const controller = new TmdLibraryDrawerController(
           {
             libraryDrawer: { classList: { contains: () => false, add: () => {}, remove: () => {} }, addEventListener: () => {} } as any,
             libraryScoresList: mockScoresList,

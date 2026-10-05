@@ -1,10 +1,10 @@
-import type { TMDTimingProfile } from "../analysis/inspector.js";
-import { PlaybackDirectiveEvent, PlaybackState,TMDPlaybackRenderer } from "../playback/playback.js";
+import type { TmdTimingProfile } from "../analysis/inspector.js";
+import { PlaybackDirectiveEvent, PlaybackState,TmdPlaybackRenderer } from "../playback/playback.js";
 import { DEFAULT_TEMPO_BPM, KeySignature, Playback, Sheet } from "../syntax/types.js";
 
 /** Computes score timing independently from the Inspector facade. */
-export class TMDSongTimingAnalyzer {
-  public static analyze(sheet: Sheet, timelineDirectives: PlaybackDirectiveEvent[]): TMDTimingProfile {
+export class TmdSongTimingAnalyzer {
+  public static analyze(sheet: Sheet, timelineDirectives: PlaybackDirectiveEvent[]): TmdTimingProfile {
     const orders: Playback[] = sheet.playback.length > 0
       ? sheet.playback
       : Array.from(new Set(sheet.entries.map((entry) => entry.name)))
@@ -16,7 +16,7 @@ export class TMDSongTimingAnalyzer {
       timeSignature: sheet.beat,
       dynamicLevel: "mf",
     };
-    const sections: TMDTimingProfile["sections"] = [];
+    const sections: TmdTimingProfile["sections"] = [];
     let currentQuarterPosition = 0;
     let currentSeconds = 0;
     let currentMeasure = 1;
@@ -36,7 +36,7 @@ export class TMDSongTimingAnalyzer {
       }
       if (order.type !== "name") continue;
 
-      const duration = TMDPlaybackRenderer.durationOf(order.name, sheet);
+      const duration = TmdPlaybackRenderer.durationOf(order.name, sheet);
       const startPosition = currentQuarterPosition;
       const endPosition = startPosition + duration;
       let cursor = startPosition;
