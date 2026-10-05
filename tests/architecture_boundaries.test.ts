@@ -99,9 +99,21 @@ describe("core architecture boundaries", () => {
   });
 
   it("uses one shared vocal instrument resolver across Vocaloid exporters", () => {
-    const vocaloid = readFileSync(join(sourceRoot, "exporters", "vocaloid.ts"), "utf8");
-    expect(vocaloid.match(/private static resolveTargetInstrument\(/g)).toBeNull();
-    expect(vocaloid.match(/SheetInstrumentHelper\.resolveVocalInstrument\(/g)).toHaveLength(2);
+    const vsq = readFileSync(join(sourceRoot, "exporters", "vsq.ts"), "utf8");
+    const vsqx = readFileSync(join(sourceRoot, "exporters", "vsqx.ts"), "utf8");
+    expect(vsq.match(/private static resolveTargetInstrument\(/g)).toBeNull();
+    expect(vsqx.match(/private static resolveTargetInstrument\(/g)).toBeNull();
+    expect(vsq.match(/SheetInstrumentHelper\.resolveVocalInstrument\(/g)).toHaveLength(1);
+    expect(vsqx.match(/SheetInstrumentHelper\.resolveVocalInstrument\(/g)).toHaveLength(1);
+  });
+
+  it("separates Vocaloid format exporters from shared phoneme mapping", () => {
+    for (const file of ["vocaloid_phoneme.ts", "vsq.ts", "vsqx.ts"]) {
+      expect(existsSync(join(sourceRoot, "exporters", file))).toBe(true);
+    }
+    const facade = readFileSync(join(sourceRoot, "exporters", "vocaloid.ts"), "utf8");
+    expect(facade.includes("export class TmdVSQGenerator")).toBe(false);
+    expect(facade.includes("export class TmdVSQXGenerator")).toBe(false);
   });
 
   it("keeps presentation consumers outside the syntax core", () => {
