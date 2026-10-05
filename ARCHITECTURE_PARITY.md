@@ -11,7 +11,7 @@ the Swift and TypeScript implementations.
 | Playback timeline and measure rendering | `Sources/TmdSwift/Playback/` | `src/playback/` | Aligned |
 | Source refactoring | `Sources/TmdSwift/Refactoring/Refactor.swift` | `src/refactoring/refactor.ts` | Aligned |
 | Text I/O | `Sources/TmdSwift/IO/TMDTextIO.swift` | `src/io/text_io.ts` | Aligned |
-| Source formatting | `Sources/TmdSwift/Formatting/Format.swift` | `src/formatting/format.ts` | Aligned |
+| Source formatting | `Sources/TmdSwift/Syntax/Format.swift` | `src/syntax/format.ts` | Aligned |
 | Outline and visual presentation | `Sources/TmdSwift/Presentation/` | `src/presentation/` | Aligned |
 | Public responsibility entrypoints | SwiftPM target exports symbols directly | `src/*/index.ts` plus `src/index.ts` | Intentional language difference |
 
