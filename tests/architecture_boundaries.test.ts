@@ -98,6 +98,12 @@ describe("core architecture boundaries", () => {
     expect(fallback.includes("function formatIssueDescription")).toBe(false);
   });
 
+  it("uses one shared vocal instrument resolver across Vocaloid exporters", () => {
+    const vocaloid = readFileSync(join(sourceRoot, "exporters", "vocaloid.ts"), "utf8");
+    expect(vocaloid.match(/private static resolveTargetInstrument\(/g)).toBeNull();
+    expect(vocaloid.match(/SheetInstrumentHelper\.resolveVocalInstrument\(/g)).toHaveLength(2);
+  });
+
   it("keeps presentation consumers outside the syntax core", () => {
     expect(existsSync(join(sourceRoot, "presentation", "outline.ts"))).toBe(true);
     expect(existsSync(join(sourceRoot, "presentation", "tonality_visualizer.ts"))).toBe(true);

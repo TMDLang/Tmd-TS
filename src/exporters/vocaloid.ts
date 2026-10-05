@@ -178,7 +178,7 @@ export class TmdVSQGenerator {
     const preMeasure = options.preMeasure !== undefined ? options.preMeasure : 4;
     const defaultLyric = options.defaultLyric || 'a';
 
-    const selectedInstrument = this.resolveTargetInstrument(sheet, targetInstrument);
+    const selectedInstrument = SheetInstrumentHelper.resolveVocalInstrument(sheet, targetInstrument);
     const timeline = TmdPlaybackRenderer.render(sheet, selectedInstrument);
 
     // Track 0: Conductor Track (Tempo & Time Signature)
@@ -202,10 +202,6 @@ export class TmdVSQGenerator {
     );
 
     return TmdMIDIEncoder.encodeFile([conductorTrackData, vsqTrackData], this.ticksPerQuarter);
-  }
-
-  private static resolveTargetInstrument(sheet: Sheet, requested?: string): string {
-    return SheetInstrumentHelper.resolveVocalInstrument(sheet, requested);
   }
 
   private static generateVsqTrack(
@@ -401,7 +397,7 @@ export class TmdVSQXGenerator {
     const preMeasure = options.preMeasure !== undefined ? options.preMeasure : 4;
     const defaultLyric = options.defaultLyric || 'a';
 
-    const selectedInstrument = this.resolveTargetInstrument(sheet, targetInstrument);
+    const selectedInstrument = SheetInstrumentHelper.resolveVocalInstrument(sheet, targetInstrument);
     const timeline = TmdPlaybackRenderer.render(sheet, selectedInstrument);
 
     const bpm = sheet.speed && sheet.speed > 0 ? sheet.speed : 120.0;
@@ -584,22 +580,6 @@ export class TmdVSQXGenerator {
 `;
 
     return xml;
-  }
-
-  private static resolveTargetInstrument(sheet: Sheet, requested?: string): string {
-    const distinct = Array.from(new Set(
-      sheet.entries.map((p) => p.assignment).filter((assignment): assignment is string => Boolean(assignment && assignment.trim().length > 0))
-    )).sort();
-    if (requested) {
-      const matched = distinct.find((instrument) => instrument.toLocaleLowerCase() === requested.toLocaleLowerCase());
-      if (matched) return matched;
-    }
-    const regex = /vocal|voice|miku|sing|lead|melody/i;
-    const matched = distinct.find((inst) => regex.test(inst));
-    if (matched) {
-      return matched;
-    }
-    return distinct[0] || 'Vocal';
   }
 
   private static escapeCDATA(text: string): string {
