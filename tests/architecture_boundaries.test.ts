@@ -177,6 +177,13 @@ describe("core architecture boundaries", () => {
     expect(checker.includes("private static checkWithLexer")).toBe(false);
   });
 
+  it("keeps the lexer fallback independent from the parser facade", () => {
+    const fallback = readFileSync(join(sourceRoot, "validation", "measure_lexer_fallback.ts"), "utf8");
+    expect(fallback.includes('from "../syntax/parser.js"')).toBe(false);
+    expect(fallback.includes('from "../syntax/lexer.js"')).toBe(true);
+    expect(fallback.includes('from "../syntax/tokens.js"')).toBe(true);
+  });
+
   it("keeps localization owned by the analysis boundary", () => {
     expect(existsSync(join(sourceRoot, "analysis", "localization.ts"))).toBe(true);
     expect(existsSync(join(sourceRoot, "core", "localization.ts"))).toBe(false);

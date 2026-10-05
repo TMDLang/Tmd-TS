@@ -1,4 +1,5 @@
-import { LexedToken, Lexer, Token } from "../syntax/parser.js";
+import { Lexer } from "../syntax/lexer.js";
+import type { LexedToken, Token } from "../syntax/tokens.js";
 import { Beat } from "../syntax/types.js";
 import type { TmdMeasureIssue } from "./measure_issue.js";
 import { formatMeasureIssueDescription } from "./measure_issue.js";
