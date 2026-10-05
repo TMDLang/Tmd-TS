@@ -2,7 +2,6 @@ export * from './analysis/index.js';
 export * from './audio.js';
 export * from './domain/index.js';
 export * from './exporters/index.js';
-export * from './formatting/index.js';
 export * from './io/index.js';
 export * from './lsp/index.js';
 export * from './mcp/index.js';

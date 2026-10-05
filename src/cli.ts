@@ -23,13 +23,13 @@ import {
   TMDVSQGenerator,
   TMDVSQXGenerator,
 } from "./exporters/index.js";
-import { formatSummary } from "./formatting/index.js";
 import { readUTF8, writeUTF8 } from "./io/text_io.js";
 import { TMDJSONRPCCodec,TMDLSPServer } from "./lsp/index.js";
 import { TmdMcpInstaller,TmdMcpServer } from "./mcp/index.js";
 import { TMDOutlineGenerator, TMDOutlineNode, TMDTonalityVisualizer } from "./presentation/index.js";
 import { TMDRefactor } from "./refactoring/index.js";
 import { TmdSkill } from "./skill.js";
+import { formatSummary } from "./syntax/index.js";
 import { TmdParser } from "./syntax/index.js";
 import { TMDMeasureChecker } from "./validation/index.js";
 import { TMD_VERSION } from "./version.js";

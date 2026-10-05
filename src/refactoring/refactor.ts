@@ -1,4 +1,4 @@
-import { formatParagraph,formatSheet } from "../formatting/format.js";
+import { formatParagraph,formatSheet } from "../syntax/format.js";
 import { Lexer, TmdParser } from "../syntax/parser.js";
 import {
   Entry,

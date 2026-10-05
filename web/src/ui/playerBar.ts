@@ -1,5 +1,5 @@
 import { TMDMIDIGenerator } from "../../../src/exporters/midi.js";
-import { formatOrder } from "../../../src/formatting/format.js";
+import { formatOrder } from "../../../src/syntax/format.js";
 import { TmdParser } from "../../../src/syntax/parser.js";
 import { Sheet } from "../../../src/syntax/types.js";
 import type { TMDWebEditor } from "../editor.js";

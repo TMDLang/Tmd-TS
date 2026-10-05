@@ -12,7 +12,6 @@ describe("public architecture entrypoints", () => {
       "validation",
       "analysis",
       "playback",
-      "formatting",
       "presentation",
       "io",
       "refactoring",

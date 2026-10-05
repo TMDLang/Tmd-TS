@@ -36,9 +36,13 @@ describe("core architecture boundaries", () => {
   });
 
   it("keeps presentation consumers outside the syntax core", () => {
-    expect(existsSync(join(sourceRoot, "formatting", "format.ts"))).toBe(true);
     expect(existsSync(join(sourceRoot, "presentation", "outline.ts"))).toBe(true);
     expect(existsSync(join(sourceRoot, "presentation", "tonality_visualizer.ts"))).toBe(true);
+  });
+
+  it("keeps source formatting inside the syntax boundary", () => {
+    expect(existsSync(join(sourceRoot, "syntax", "format.ts"))).toBe(true);
+    expect(existsSync(join(sourceRoot, "formatting", "format.ts"))).toBe(false);
   });
 
   it("keeps macro expansion inside the playback boundary", () => {
