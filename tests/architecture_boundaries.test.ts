@@ -66,6 +66,12 @@ describe("core architecture boundaries", () => {
     expect(facade.includes("currentNoteLength = 4")).toBe(false);
   });
 
+  it("gives refactoring track operations an explicit responsibility boundary", () => {
+    expect(existsSync(join(sourceRoot, "refactoring", "tracks.ts"))).toBe(true);
+    const facade = readFileSync(join(sourceRoot, "refactoring", "refactor.ts"), "utf8");
+    expect(facade.includes("const clonedSections = orig.sections.map")).toBe(false);
+  });
+
   it("keeps presentation consumers outside the syntax core", () => {
     expect(existsSync(join(sourceRoot, "presentation", "outline.ts"))).toBe(true);
     expect(existsSync(join(sourceRoot, "presentation", "tonality_visualizer.ts"))).toBe(true);
