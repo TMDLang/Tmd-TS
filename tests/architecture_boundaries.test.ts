@@ -35,7 +35,10 @@ describe("core architecture boundaries", () => {
     expect(parser.includes('from "node:fs"')).toBe(false);
     expect(parser.includes("TextEncodingDetector")).toBe(false);
     expect(parser.includes("FilePathNormalizer")).toBe(false);
-    expect(parser.includes('from "../io/parser_io.js"')).toBe(true);
+    expect(parser.includes('from "../io/parser_io.js"')).toBe(false);
+    expect(parser.includes("parseData(data:")).toBe(false);
+    expect(parser.includes("parseFile(filePathOrURL:")).toBe(false);
+    expect(parser.includes("parseURL(fileURL:")).toBe(false);
     const core = readFileSync(join(sourceRoot, "syntax", "parser_core.ts"), "utf8");
     expect(core.includes('from "../io/parser_io.js"')).toBe(false);
   });
