@@ -60,6 +60,12 @@ describe("core architecture boundaries", () => {
     expect(facade.includes("const semitones = options.semitones")).toBe(false);
   });
 
+  it("gives refactoring grid operations an explicit responsibility boundary", () => {
+    expect(existsSync(join(sourceRoot, "refactoring", "grid.ts"))).toBe(true);
+    const facade = readFileSync(join(sourceRoot, "refactoring", "refactor.ts"), "utf8");
+    expect(facade.includes("currentNoteLength = 4")).toBe(false);
+  });
+
   it("keeps presentation consumers outside the syntax core", () => {
     expect(existsSync(join(sourceRoot, "presentation", "outline.ts"))).toBe(true);
     expect(existsSync(join(sourceRoot, "presentation", "tonality_visualizer.ts"))).toBe(true);
