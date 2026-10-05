@@ -6,8 +6,8 @@ import {
   TMDMusicXMLGenerator,
   TMDReaperGenerator,
 } from "../../../src/exporters/index.js";
-import { TmdSkill } from "../../../src/skill.js";
-import { TmdParser } from "../../../src/syntax/parser.js";
+import { TMDSkill } from "../../../src/skill.js";
+import { TMDParser } from "../../../src/syntax/parser.js";
 import { accidentalToSemitone,scaleDegreeLetter, Sheet } from "../../../src/syntax/types.js";
 import { TMDMeasureChecker } from "../../../src/validation/measure_check.js";
 
@@ -48,7 +48,7 @@ export const buildTmdWebMcpTools = (ctx: TmdWebMcpContext): WebMcpTool[] => [
       type: "object",
       properties: {},
     },
-    handler: async () => textContent(TmdSkill.skillMarkdown),
+    handler: async () => textContent(TMDSkill.skillMarkdown),
   },
   {
     name: "parseTmd",
@@ -66,7 +66,7 @@ export const buildTmdWebMcpTools = (ctx: TmdWebMcpContext): WebMcpTool[] => [
     },
     handler: async ({ text }) => {
       try {
-        const sheet = TmdParser.parse(text);
+        const sheet = TMDParser.parse(text);
         if (!sheet) {
           return textContent(
             JSON.stringify({
@@ -188,7 +188,7 @@ export const buildTmdWebMcpTools = (ctx: TmdWebMcpContext): WebMcpTool[] => [
       required: ["text", "format"],
     },
     handler: async ({ text, format }) => {
-      const sheet = TmdParser.parse(text);
+      const sheet = TMDParser.parse(text);
       if (!sheet) {
         throw new Error("Invalid TMD score text");
       }

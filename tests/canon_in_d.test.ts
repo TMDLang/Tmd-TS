@@ -5,7 +5,7 @@ import { describe, expect,it } from 'vitest';
 
 import {
   TMDMeasureChecker,
-  TmdParser,
+  TMDParser,
   TMDPlaybackRenderer,
 } from '../src/index.js';
 
@@ -19,7 +19,7 @@ describe('Canon in D score verification', () => {
     expect(issues).toEqual([]);
 
     // 2. Parser succeeds
-    const sheet = TmdParser.parse(content);
+    const sheet = TMDParser.parse(content);
     expect(sheet).not.toBeNull();
     expect(sheet.name).toBe('Canon in D ( Complete Macro Edition )');
 

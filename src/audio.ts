@@ -2,7 +2,7 @@ import { SheetInstrumentHelper } from "./domain/index.js";
 import { PlaybackDirectiveEvent, PlaybackEvent, TMDMacroEvaluator, TMDPlaybackRenderer } from "./playback/index.js";
 import { Accidental, DEFAULT_INSTRUMENT, Note, Sheet } from "./syntax/index.js";
 
-export class TmdAudioError extends Error {}
+export class TMDAudioError extends Error {}
 
 export interface TMDWAVRendererOptions {
   sampleRate?: number;
@@ -29,7 +29,7 @@ export class TMDWAVRenderer {
     }
 
     if (options?.soundfont) {
-      throw new TmdAudioError(
+      throw new TMDAudioError(
         "External SoundFont/DLS rendering is not supported by the portable WAV renderer."
       );
     }
@@ -45,7 +45,7 @@ export class TMDWAVRenderer {
     }
 
     if (!Number.isFinite(sampleRate) || sampleRate < 8000)
-      throw new TmdAudioError("Sample rate must be at least 8000 Hz");
+      throw new TMDAudioError("Sample rate must be at least 8000 Hz");
 
     const events: PlaybackEvent[] = [];
     const directives: PlaybackDirectiveEvent[] = [];

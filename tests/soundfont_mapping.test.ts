@@ -138,7 +138,7 @@ describe("Soundfont Instrument Mapping & MIDI Scanning (TDD)", () => {
 
   describe("TMDMIDIGenerator multi-track channel allocation", () => {
     it("shares channels among tracks with the same GM program without overflowing channels", async () => {
-      const { TmdParser, TMDMIDIGenerator } = await import("../src/index.js");
+      const { TMDParser, TMDMIDIGenerator } = await import("../src/index.js");
       const tmd = `::SCORE::
 ** Multi-Track Channel Invariant **
 != 120
@@ -153,7 +153,7 @@ p6:Drum@|0|{ <4*> 1 2 3 4 }
 p7:Drum-Kick@|0|{ <4*> 1 2 3 4 }
 p8:Clarinet@|0|{ <4*> 1 2 3 4 }
 `;
-      const sheet = TmdParser.parse(tmd);
+      const sheet = TMDParser.parse(tmd);
       const midiBytes = TMDMIDIGenerator.generateMIDI(sheet);
       const { programs, hasDrums, instrumentNames } = scanMidiProgramsAndDrums(midiBytes);
 

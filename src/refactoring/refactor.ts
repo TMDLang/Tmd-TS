@@ -1,5 +1,5 @@
 import { formatParagraph,formatSheet } from "../syntax/format.js";
-import { Lexer, TmdParser } from "../syntax/parser.js";
+import { Lexer, TMDParser } from "../syntax/parser.js";
 import {
   Entry,
   KeySignature,
@@ -266,10 +266,10 @@ export class TMDRefactor {
     const replaced = source.replace(pattern, `$1:${newInstrument}@`);
     if (replaced === source) {
       // Check if score even parses
-      TmdParser.parseThrowing(source);
+      TMDParser.parseThrowing(source);
     }
     // Verify valid TMD score after rename
-    TmdParser.parseThrowing(replaced);
+    TMDParser.parseThrowing(replaced);
     return replaced;
   }
 
@@ -287,12 +287,12 @@ export class TMDRefactor {
     result = result.replace(orderPattern, `$1${newSection}`);
 
     // Verify valid TMD score after rename
-    TmdParser.parseThrowing(result);
+    TMDParser.parseThrowing(result);
     return result;
   }
 
   public static extractInstrument(source: string, instrument: string): string {
-    const sheet = TmdParser.parseThrowing(source);
+    const sheet = TMDParser.parseThrowing(source);
     const matchingParagraphs = sheet.entries.filter((p) => p.assignment === instrument);
     if (matchingParagraphs.length === 0) {
       throw new TMDRefactorError(`Instrument '${instrument}' not found in score`);
@@ -339,7 +339,7 @@ export class TMDRefactor {
     }
 
     const formatted = this.format(resultLines.join("\n"));
-    TmdParser.parseThrowing(formatted);
+    TMDParser.parseThrowing(formatted);
     return formatted;
   }
 
@@ -349,7 +349,7 @@ export class TMDRefactor {
     targetInstrument: string,
     options?: { section?: string; octaveShift?: number }
   ): string {
-    const sheet = TmdParser.parseThrowing(source);
+    const sheet = TMDParser.parseThrowing(source);
     let matching = sheet.entries.filter((p) => p.assignment === sourceInstrument);
     if (options?.section) {
       matching = matching.filter((p) => p.name === options.section);
@@ -415,7 +415,7 @@ export class TMDRefactor {
     }
 
     const formatted = this.format(combined);
-    TmdParser.parseThrowing(formatted);
+    TMDParser.parseThrowing(formatted);
     return formatted;
   }
 
@@ -425,7 +425,7 @@ export class TMDRefactor {
     harmonyInstrument: string,
     options: { section?: string; intervalSteps: number }
   ): string {
-    const sheet = TmdParser.parseThrowing(source);
+    const sheet = TMDParser.parseThrowing(source);
     let matching = sheet.entries.filter((p) => p.assignment === sourceInstrument);
     if (options?.section) {
       matching = matching.filter((p) => p.name === options.section);
@@ -504,12 +504,12 @@ export class TMDRefactor {
     }
 
     const formatted = this.format(combined);
-    TmdParser.parseThrowing(formatted);
+    TMDParser.parseThrowing(formatted);
     return formatted;
   }
 
   public static inlineOrders(source: string): string {
-    const sheet = TmdParser.parseThrowing(source);
+    const sheet = TMDParser.parseThrowing(source);
     if (sheet.playback.length === 0) {
       return source;
     }
@@ -713,7 +713,7 @@ export class TMDRefactor {
     // Optimize each paragraph independently so one indivisible track does not block other tracks
     let current = source;
     try {
-      const sheet = TmdParser.parseThrowing(current);
+      const sheet = TMDParser.parseThrowing(current);
       for (const p of sheet.entries) {
         let paraCurrent = current;
         while (true) {

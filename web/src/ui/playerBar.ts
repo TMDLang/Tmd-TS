@@ -1,6 +1,6 @@
 import { TMDMIDIGenerator } from "../../../src/exporters/midi.js";
 import { formatOrder } from "../../../src/syntax/format.js";
-import { TmdParser } from "../../../src/syntax/parser.js";
+import { TMDParser } from "../../../src/syntax/parser.js";
 import { Sheet } from "../../../src/syntax/types.js";
 import type { TMDWebEditor } from "../editor.js";
 import { t } from "../i18n.js";
@@ -99,7 +99,7 @@ export class TMDPlayerController {
     const text = customText !== undefined ? customText : editor.getContent();
     let sheet: Sheet | null = null;
     try {
-      sheet = TmdParser.parse(text);
+      sheet = TMDParser.parse(text);
     } catch (err: any) {
       alert(`${t("alertCannotPlaySyntax")}\n${err.message}`);
       return;
@@ -127,7 +127,7 @@ export class TMDPlayerController {
     const text = editor.getContent();
     let sheet: Sheet | null = null;
     try {
-      sheet = TmdParser.parse(text);
+      sheet = TMDParser.parse(text);
     } catch (err: any) {
       alert(`${t("alertCannotPlaySyntax")}\n${err.message}`);
       return;
@@ -161,7 +161,7 @@ export class TMDPlayerController {
     const text = editor.getContent();
     let sheet: Sheet | null = null;
     try {
-      sheet = TmdParser.parse(text);
+      sheet = TMDParser.parse(text);
     } catch (err: any) {
       alert(`${t("alertCannotPlaySyntax")}\n${err.message}`);
       return;

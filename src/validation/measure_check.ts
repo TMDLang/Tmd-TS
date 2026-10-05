@@ -1,4 +1,4 @@
-import { LexedToken, Lexer, TmdParser,Token } from "../syntax/parser.js";
+import { LexedToken, Lexer, TMDParser,Token } from "../syntax/parser.js";
 import { Beat } from "../syntax/types.js";
 
 export interface TMDMeasureIssue {
@@ -107,7 +107,7 @@ export class TMDMeasureChecker {
   public static check(source: string): TMDMeasureIssue[] {
     const astIssues = (() => {
       try {
-        return TMDMeasureChecker.checkSheet(TmdParser.parse(source));
+        return TMDMeasureChecker.checkSheet(TMDParser.parse(source));
       } catch {
         return [];
       }

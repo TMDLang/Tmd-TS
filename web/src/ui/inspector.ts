@@ -2,7 +2,7 @@ import { TMDSongInspector, TMDSongProfile } from "../../../src/analysis/inspecto
 import { SheetInstrumentHelper } from "../../../src/domain/instruments.js";
 import { TMDOutlineGenerator } from "../../../src/presentation/outline.js";
 import { TMDTonalityVisualizer } from "../../../src/presentation/tonality_visualizer.js";
-import { TmdParser } from "../../../src/syntax/parser.js";
+import { TMDParser } from "../../../src/syntax/parser.js";
 import { accidentalToSemitone, DEFAULT_INSTRUMENT,scaleDegreeLetter, Sheet } from "../../../src/syntax/types.js";
 import { escapeHtml } from "../html.js";
 import { getCurrentLocale,t } from "../i18n.js";
@@ -438,7 +438,7 @@ export function setupInspectorPanelEvents(
     try {
       const content = typeof editor.getContent === "function" ? editor.getContent() : "";
       if (!content) return;
-      const sheet = TmdParser.parse(content);
+      const sheet = TMDParser.parse(content);
       if (!sheet) return;
       const locale = getCurrentLocale() === "zh-TW" ? "zh-Hant" : "en";
       const profile = TMDSongInspector.inspect(sheet, undefined, locale);
@@ -461,7 +461,7 @@ export function setupInspectorPanelEvents(
     try {
       const content = typeof editor.getContent === "function" ? editor.getContent() : "";
       if (!content) return;
-      const sheet = TmdParser.parse(content);
+      const sheet = TMDParser.parse(content);
       if (!sheet) return;
       const locale = getCurrentLocale() === "zh-TW" ? "zh-Hant" : "en";
       const profile = TMDSongInspector.inspect(sheet, undefined, locale);

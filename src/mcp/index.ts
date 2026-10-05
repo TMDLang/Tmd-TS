@@ -17,8 +17,8 @@ import {
   TMDVSQGenerator,
   TMDVSQXGenerator,
 } from "../exporters/index.js";
-import { TmdSkill } from "../skill.js";
-import { accidentalToSemitone, scaleDegreeLetter, TmdParser } from "../syntax/index.js";
+import { TMDSkill } from "../skill.js";
+import { accidentalToSemitone, scaleDegreeLetter, TMDParser } from "../syntax/index.js";
 import { TMDMeasureChecker } from "../validation/index.js";
 import { TMD_VERSION } from "../version.js";
 
@@ -33,7 +33,7 @@ const textContent = (text: string) => ({
 
 export class TmdMcpServer {
   public static async handleGetSkill() {
-    return textContent(TmdSkill.skillMarkdown);
+    return textContent(TMDSkill.skillMarkdown);
   }
 
   public static async handleParseTmd({ text, filePath }: { text?: string; filePath?: string }) {
@@ -51,7 +51,7 @@ export class TmdMcpServer {
         );
       }
 
-      const sheet = TmdParser.parse(content);
+      const sheet = TMDParser.parse(content);
       if (!sheet) {
         return textContent(
           JSON.stringify({
@@ -166,7 +166,7 @@ export class TmdMcpServer {
       throw new Error("Either 'text' or 'filePath' must be provided");
     }
 
-    const sheet = TmdParser.parse(content);
+    const sheet = TMDParser.parse(content);
     if (!sheet) {
       throw new Error("Invalid TMD score content");
     }

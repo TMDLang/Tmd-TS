@@ -1,5 +1,5 @@
 import { TMDRefactor } from "../../src/refactoring/refactor.js";
-import { TmdParser } from "../../src/syntax/parser.js";
+import { TMDParser } from "../../src/syntax/parser.js";
 import { Sheet } from "../../src/syntax/types.js";
 import { AIProviderType } from "./ai/index.js";
 import { createTmdEditor, TMDWebEditor } from "./editor.js";
@@ -120,7 +120,7 @@ function updateInspector(text: string) {
         selectedPitchInstrument = inst;
       },
     },
-    (code) => TmdParser.parse(code)
+    (code) => TMDParser.parse(code)
   );
 
   if (keyboardController) {

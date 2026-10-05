@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { TMDPlaybackRenderer } from "../src/playback/playback.js";
 import { formatSheet } from "../src/syntax/format.js";
-import { TmdParser } from "../src/syntax/parser.js";
+import { TMDParser } from "../src/syntax/parser.js";
 
 const canonicalPlaybackFixture = `::SCORE::
 ** Canonical Playback Fixture **
@@ -29,7 +29,7 @@ Intro:Timpani[pitchMode=fixed]@|+1|{
 
 describe("Swift playback parity", () => {
   it("matches the shared canonical playback fixture", () => {
-    const sheet = TmdParser.parse(canonicalPlaybackFixture);
+    const sheet = TMDParser.parse(canonicalPlaybackFixture);
     const piano = TMDPlaybackRenderer.render(sheet, "Piano");
     const timpani = TMDPlaybackRenderer.render(sheet, "Timpani");
 
@@ -46,7 +46,7 @@ describe("Swift playback parity", () => {
   });
 
   it("expands macros before calculating the global earliest playback position", () => {
-    const sheet = TmdParser.parse(`::SCORE::
+    const sheet = TMDParser.parse(`::SCORE::
 ** Macro Earliest Position **
 != 120
 ?= C
@@ -65,7 +65,7 @@ Theme{
   });
 
   it("uses one state transition path for playback order modifiers", () => {
-    const sheet = TmdParser.parse(`::SCORE::
+    const sheet = TMDParser.parse(`::SCORE::
 ** Playback Order State **
 != 120
 ?= C
@@ -84,7 +84,7 @@ A:Piano@|0|{
   });
 
   it("merges conductor directives from all instruments", () => {
-    const sheet = TmdParser.parse(`::SCORE::
+    const sheet = TMDParser.parse(`::SCORE::
 ** Conductor Directives **
 != 120
 ?= C
@@ -109,7 +109,7 @@ A:Violin@|0|{
   });
 
   it("validates tempo conflicts for canonical sheets without parser helper methods", () => {
-    const sheet = TmdParser.parse(`::SCORE::
+    const sheet = TMDParser.parse(`::SCORE::
 ** Canonical Tempo Conflict **
 != 120
 ?= C
@@ -127,7 +127,7 @@ A:Violin@|0|{ <4*> 1 {!=100} 2 3 4 }
   });
 
   it("parses and plays + connected notes at the same position", () => {
-    const sheet = TmdParser.parse(`::SCORE::
+    const sheet = TMDParser.parse(`::SCORE::
 ** Multi-note **
 != 120
 ?= C
@@ -156,7 +156,7 @@ A:Piano@|0|{
   });
 
   it("merges all same-section paragraphs and preserves staggered starts", () => {
-    const sheet = TmdParser.parse(`::SCORE::
+    const sheet = TMDParser.parse(`::SCORE::
 ** Merged sections **
 != 120
 ?= C
@@ -183,7 +183,7 @@ A:Piano@|1|{
   });
 
   it("matches assignment names case-insensitively when rendering playback", () => {
-    const sheet = TmdParser.parse(`::SCORE::
+    const sheet = TMDParser.parse(`::SCORE::
 A:Piano@|0|{
 <4*>
 | 1 2 3 4 |
@@ -197,7 +197,7 @@ A:Piano@|0|{
   });
 
   it("reports conflicting absolute tempo directives at one position", () => {
-    const sheet = TmdParser.parse(`::SCORE::
+    const sheet = TMDParser.parse(`::SCORE::
 Intro:Piano@|0|{
 <4*>
 {!=90}{!=100} 1 2 3 4
@@ -212,7 +212,7 @@ Intro:Piano@|0|{
   });
 
   it("keeps meter modifiers local to the containing entry", () => {
-    const sheet = TmdParser.parse(`::SCORE::
+    const sheet = TMDParser.parse(`::SCORE::
 A:Piano@|0|{
 <4*>
 {<3/4>} 1
@@ -232,7 +232,7 @@ B:Piano@|0|{
   });
 
   it("persists tempo and dynamics per assignment across entries", () => {
-    const sheet = TmdParser.parse(`::SCORE::
+    const sheet = TMDParser.parse(`::SCORE::
 A:Piano@|0|{
 <4*>
 {!=90} {f} 1
@@ -259,7 +259,7 @@ A:Violin@|0|{
   });
 
   it("applies playback and entry key modifiers in reading order per assignment", () => {
-    const sheet = TmdParser.parse(`::SCORE::
+    const sheet = TMDParser.parse(`::SCORE::
 A:Piano@|0|{
 <4*>
 {?=E} 1
@@ -289,7 +289,7 @@ B:Violin@|0|{
   });
 
   it("normalizes a negative pickup globally while retaining later section content", () => {
-    const sheet = TmdParser.parse(`::SCORE::
+    const sheet = TMDParser.parse(`::SCORE::
 ** Pickup **
 != 120
 ?= C
@@ -316,7 +316,7 @@ A:Piano@|0|{
   });
 
   it("reports overlapping entries for one assignment", () => {
-    const sheet = TmdParser.parse(`::SCORE::
+    const sheet = TMDParser.parse(`::SCORE::
 A:Piano@|0|{ <4*> 1 2 3 4 }
 A:piano@|0|{ <4*> 5 6 7 1^ }`);
 
@@ -326,7 +326,7 @@ A:piano@|0|{ <4*> 5 6 7 1^ }`);
   });
 
   it("allows adjacent entries for one assignment", () => {
-    const sheet = TmdParser.parse(`::SCORE::
+    const sheet = TMDParser.parse(`::SCORE::
 A:Piano@|0|{ <4*> 1 2 3 4 }
 A:piano@|1|{ <4*> 5 6 7 1^ }`);
 

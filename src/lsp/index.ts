@@ -1,6 +1,6 @@
 import { TMDOutlineGenerator, TMDOutlineNode } from "../presentation/index.js";
 import { TMDRefactor } from "../refactoring/index.js";
-import { TmdParser } from "../syntax/index.js";
+import { TMDParser } from "../syntax/index.js";
 import { TMDMeasureChecker } from "../validation/index.js";
 import { TMD_VERSION } from "../version.js";
 
@@ -327,7 +327,7 @@ export class TMDLSPCompletionEngine {
       if (!afterBracket.includes("]") && !/[\s\{\}]/.test(afterBracket)) {
         let keyStr = "C";
         try {
-          const sheet = TmdParser.parse(source);
+          const sheet = TMDParser.parse(source);
           if (sheet?.declaredKey) {
             keyStr = sheet.declaredKey;
           } else if (sheet?.keySignature) {
@@ -416,7 +416,7 @@ export class TMDLSPDiagnosticEngine {
 
     // 2. Syntax / Parser check
     try {
-      TmdParser.parseThrowing(source);
+      TMDParser.parseThrowing(source);
     } catch (err: any) {
       if (err?.range) {
         const line = Math.max(0, (err.range.start?.line ?? 1) - 1);

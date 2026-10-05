@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import { TMDSongInspector } from "../src/analysis/inspector.js";
-import { TmdParser } from "../src/syntax/parser.js";
+import { TMDParser } from "../src/syntax/parser.js";
 
-const inferentialScore = (movableDoBase: string, playback = "", declaredKey = "") => TmdParser.parse(`::SCORE::
+const inferentialScore = (movableDoBase: string, playback = "", declaredKey = "") => TMDParser.parse(`::SCORE::
 ** Inference Contract **
 != 120
 ?= ${movableDoBase}
@@ -48,7 +48,7 @@ describe("tonality inference contract", () => {
   });
 
   it("reports insufficient evidence instead of forcing a major key", () => {
-    const sheet = TmdParser.parse(`::SCORE::
+    const sheet = TMDParser.parse(`::SCORE::
 ** Empty Tonality **
 != 120
 ?= C
@@ -77,7 +77,7 @@ verse:Piano@|0|{
   });
 
   it("reports a modulation only when independent section inference changes", () => {
-    const sheet = TmdParser.parse(`::SCORE::
+    const sheet = TMDParser.parse(`::SCORE::
 ** Inferred Section Change **
 != 120
 ?= C

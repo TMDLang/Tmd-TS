@@ -5,7 +5,7 @@ import { TMDLilyPondGenerator } from "../src/exporters/lilypond.js";
 import { TMDMIDIGenerator } from "../src/exporters/midi.js";
 import { TMDMusicXMLGenerator } from "../src/exporters/musicxml.js";
 import { TMDPlaybackRenderer } from "../src/playback/index.js";
-import { TmdParser } from "../src/syntax/index.js";
+import { TMDParser } from "../src/syntax/index.js";
 
 describe("Fixed Pitch Entry Attribute", () => {
   it("rejects legacy inline fixed-pitch directives", () => {
@@ -26,7 +26,7 @@ verse:Timpani[pitchMode=fixed]@|0|{
     3 - - -
 }
 `;
-    expect(() => TmdParser.parseThrowing(tmd)).toThrow();
+    expect(() => TMDParser.parseThrowing(tmd)).toThrow();
   });
 
   it("locks keyOffset to 0 in timeline rendering regardless of initial key or order transpositions", () => {
@@ -50,7 +50,7 @@ verse:Piano@|0|{
 
 -> {?+3} -> verse ->#
 `;
-    const sheet = TmdParser.parse(tmd);
+    const sheet = TMDParser.parse(tmd);
     expect(sheet).not.toBeNull();
 
     // The entry attribute forces keyOffset = 0 regardless of initial key G or global transposition {?+3}.
@@ -69,7 +69,7 @@ verse:Piano@|0|{
   });
 
   it("entry pitchMode=fixed ignores playback key modifiers", () => {
-    const sheet = TmdParser.parse(`
+    const sheet = TMDParser.parse(`
 ::SCORE::
 ?= G
 <4/4>
@@ -83,7 +83,7 @@ Intro:Timpani[pitchMode=fixed]@|0|{ <4*> 1 2 3 4 }
   });
 
   it("keeps fixed pitch after a trailing key directive at a section boundary", () => {
-    const sheet = TmdParser.parse(`
+    const sheet = TMDParser.parse(`
 ::SCORE::
 ?= C
 <4/4>
@@ -117,7 +117,7 @@ intro:Timpani[pitchMode=fixed]@|0|{
 }
 -> intro ->#
 `;
-    const sheet = TmdParser.parse(tmd)!;
+    const sheet = TMDParser.parse(tmd)!;
 
     // MIDI
     const midiBytes = TMDMIDIGenerator.generateMIDI(sheet);

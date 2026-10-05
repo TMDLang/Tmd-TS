@@ -1,4 +1,4 @@
-import { Sheet, TMDParseError, TmdParser } from "../../../src/syntax/index.js";
+import { Sheet, TMDParseError, TMDParser } from "../../../src/syntax/index.js";
 
 export interface ValidationSuccess {
   valid: true;
@@ -37,7 +37,7 @@ export function validateTmdCode(tmd: string): ValidationResult {
   const lines = tmd.split("\n");
 
   try {
-    const sheet = TmdParser.parseThrowing(tmd);
+    const sheet = TMDParser.parseThrowing(tmd);
     if (!sheet) {
       return {
         valid: false,

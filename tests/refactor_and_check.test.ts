@@ -10,7 +10,7 @@ import {
   Lexer,
   TMDMeasureChecker,
   TMDMeasureIssue,
-  TmdParser,
+  TMDParser,
   TMDRefactor,
 } from "../src/index.js";
 import { diagnosticMeasureFixture } from "./conformanceFixtures.js";
@@ -60,8 +60,8 @@ intro:Piano@|0|{
     expect(formatted).toContain("}");
     expect(formatted).toContain("-> intro ->#");
 
-    const origSheet = TmdParser.parse(input);
-    const newSheet = TmdParser.parse(formatted);
+    const origSheet = TMDParser.parse(input);
+    const newSheet = TMDParser.parse(formatted);
     expect(origSheet.name).toBe(newSheet.name);
     expect(origSheet.entries.length).toBe(newSheet.entries.length);
     expect(origSheet.playback.length).toBe(newSheet.playback.length);
@@ -130,7 +130,7 @@ outro:Piano@|0|{
     expect(result).toContain("verse:Guitar@|0|{");
     expect(result).not.toContain(":Piano@");
 
-    const sheet = TmdParser.parse(result);
+    const sheet = TMDParser.parse(result);
     expect(sheet.entries[0].assignment).toBe("GrandPiano");
     expect(sheet.entries[1].assignment).toBe("Guitar");
     expect(sheet.entries[2].assignment).toBe("GrandPiano");
@@ -169,7 +169,7 @@ verse:Bass@|0|{
     expect(result).not.toContain("verse:Bass@");
     expect(result).toContain("-> intro -> A -> {?+2} -> A ->#");
 
-    const sheet = TmdParser.parse(result);
+    const sheet = TMDParser.parse(result);
     expect(sheet.entries[1].name).toBe("A");
     expect(sheet.entries[2].name).toBe("A");
     expect(sheet.playback).toEqual([
@@ -222,7 +222,7 @@ XsTt
     expect(extracted).not.toContain(":Drums@");
     expect(extracted).toContain("-> intro -> verse ->#");
 
-    const sheet = TmdParser.parse(extracted);
+    const sheet = TMDParser.parse(extracted);
     expect(sheet.name).toBe("Full Band Song");
     expect(sheet.entries.length).toBe(2);
     expect(sheet.entries.every((p) => p.assignment === "Piano")).toBe(true);
@@ -701,7 +701,7 @@ verse:Piano@|0|{
     expect(inlined).toContain("| 1 2 3 4 |");
     expect(inlined).toContain("| 5 6 7 1^ |");
 
-    const sheet = TmdParser.parse(inlined);
+    const sheet = TMDParser.parse(inlined);
     expect(sheet.entries).toHaveLength(1);
     expect(sheet.entries[0].sections).toHaveLength(3);
     expect(sheet.entries[0].sections.reduce((total, section) => total + section.unitGroups.length, 0)).toBe(12); // 4 + 4 + 4
@@ -725,7 +725,7 @@ intro:Piano@|0|{
 `;
 
     const inlined = TMDRefactor.inlineOrders(input.replace("5 6 7 1^", "{!= 90} 5 6 7 1^"));
-    const sheet = TmdParser.parse(inlined);
+    const sheet = TMDParser.parse(inlined);
     const sections = sheet.entries[0].sections;
 
     expect(sections.map((section) => section.noteLength)).toEqual([4, 8]);

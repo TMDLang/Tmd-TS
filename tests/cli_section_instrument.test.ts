@@ -8,7 +8,7 @@ import { TMDWAVRenderer } from "../src/audio.js";
 import { main, printHelp } from "../src/cli.js";
 import { TMDMIDIGenerator } from "../src/exporters/midi.js";
 import { TmdMcpServer } from "../src/mcp/index.js";
-import { TmdParser } from "../src/syntax/parser.js";
+import { TMDParser } from "../src/syntax/parser.js";
 
 describe("CLI & Renderer --section and --instrument alignment (TDD)", () => {
   let tmpDir: string;
@@ -144,7 +144,7 @@ verse:Piano@|0|{
   });
 
   it("TMDWAVRenderer supports targetParagraph and targetInstrument options directly", () => {
-    const sheet = TmdParser.parse(multiSectionTmd);
+    const sheet = TMDParser.parse(multiSectionTmd);
 
     const fullWav = TMDWAVRenderer.renderWAV(sheet, 8000);
     const fullSeconds = new DataView(fullWav.buffer).getUint32(40, true) / 4 / 8000;
@@ -179,7 +179,7 @@ verse:Piano@|0|{
 
 -> (play Theme Piano) -> verse ->#
 `;
-    const sheet = TmdParser.parse(macroTmd);
+    const sheet = TMDParser.parse(macroTmd);
 
     // When exporting MIDI for verse in a score with macros, macro expansion in sheet must not break
     const midi = TMDMIDIGenerator.generateMIDI(sheet, undefined, {

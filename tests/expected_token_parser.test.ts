@@ -1,12 +1,12 @@
 import { describe, expect,it } from 'vitest';
 
-import { TMDParseError,TmdParser } from '../src/syntax/parser.js';
+import { TMDParseError,TMDParser } from '../src/syntax/parser.js';
 
 describe('Expected tokens on TMD parse syntax errors', () => {
   it('reports expected tokens when ::SCORE:: is missing', () => {
     expect.assertions(6);
     try {
-      TmdParser.parseThrowing('not-a-score');
+      TMDParser.parseThrowing('not-a-score');
     } catch (error) {
       expect(error).toBeInstanceOf(TMDParseError);
       const err = error as TMDParseError;
@@ -21,7 +21,7 @@ describe('Expected tokens on TMD parse syntax errors', () => {
   it('reports expected token for malformed paragraph missing colon', () => {
     expect.assertions(5);
     try {
-      TmdParser.parseThrowing('::SCORE::\nintro');
+      TMDParser.parseThrowing('::SCORE::\nintro');
     } catch (error) {
       expect(error).toBeInstanceOf(TMDParseError);
       const err = error as TMDParseError;
@@ -35,7 +35,7 @@ describe('Expected tokens on TMD parse syntax errors', () => {
   it('reports expected tokens for missing @ in paragraph header', () => {
     expect.assertions(4);
     try {
-      TmdParser.parseThrowing('::SCORE::\nintro:Piano|0|{\n<4*>\n1 2 3 4\n}');
+      TMDParser.parseThrowing('::SCORE::\nintro:Piano|0|{\n<4*>\n1 2 3 4\n}');
     } catch (error) {
       expect(error).toBeInstanceOf(TMDParseError);
       const err = error as TMDParseError;
@@ -48,7 +48,7 @@ describe('Expected tokens on TMD parse syntax errors', () => {
   it('reports expected tokens for missing { in paragraph header', () => {
     expect.assertions(4);
     try {
-      TmdParser.parseThrowing('::SCORE::\nintro:Piano@|0|\n<4*>\n1 2 3 4\n}');
+      TMDParser.parseThrowing('::SCORE::\nintro:Piano@|0|\n<4*>\n1 2 3 4\n}');
     } catch (error) {
       expect(error).toBeInstanceOf(TMDParseError);
       const err = error as TMDParseError;
@@ -61,7 +61,7 @@ describe('Expected tokens on TMD parse syntax errors', () => {
   it('reports expected tokens for missing < inside paragraph section', () => {
     expect.assertions(4);
     try {
-      TmdParser.parseThrowing('::SCORE::\nintro:Piano@|0|{\n4*>\n1 2 3 4\n}');
+      TMDParser.parseThrowing('::SCORE::\nintro:Piano@|0|{\n4*>\n1 2 3 4\n}');
     } catch (error) {
       expect(error).toBeInstanceOf(TMDParseError);
       const err = error as TMDParseError;
@@ -71,28 +71,28 @@ describe('Expected tokens on TMD parse syntax errors', () => {
     }
   });
 
-  it('TmdParser.parse throws syntax error with line:column, offending token and expected tokens', () => {
-    expect(() => TmdParser.parse('not a score')).toThrowError(
+  it('TMDParser.parse throws syntax error with line:column, offending token and expected tokens', () => {
+    expect(() => TMDParser.parse('not a score')).toThrowError(
       /Unexpected token at 1:1: `not` \(expected ::SCORE::\)/
     );
-    expect(() => TmdParser.parse('::SCORE::\nintro')).toThrowError(
+    expect(() => TMDParser.parse('::SCORE::\nintro')).toThrowError(
       /Unexpected token at 2:1: `intro` \(expected :\)/
     );
-    expect(() => TmdParser.parse('::SCORE::\nintro:Piano@|0|{\n4*>\n1 2 3 4\n}')).toThrowError(
+    expect(() => TMDParser.parse('::SCORE::\nintro:Piano@|0|{\n4*>\n1 2 3 4\n}')).toThrowError(
       /Unexpected token at 3:1: `4` \(expected <\)/
     );
   });
 
   it('rejects invalid token in paragraph body with expected unit tokens', () => {
     expect(() =>
-      TmdParser.parse('::SCORE::\nintro:Piano@|0|{\n<4*>\n1 2 Foo 4\n}')
+      TMDParser.parse('::SCORE::\nintro:Piano@|0|{\n<4*>\n1 2 Foo 4\n}')
     ).toThrowError(/expected note, chord, tie, rest, percussion, tuplet, directive, }/);
   });
 
   it('includes drum/percussion hint when encountering unknown alphabetic token in measure body', () => {
     expect.assertions(3);
     try {
-      TmdParser.parse('::SCORE::\nintro:Drums@|0|{\n<4*>\n1 2 A 4\n}');
+      TMDParser.parse('::SCORE::\nintro:Drums@|0|{\n<4*>\n1 2 A 4\n}');
     } catch (error) {
       expect(error).toBeInstanceOf(TMDParseError);
       const err = error as TMDParseError;
@@ -104,7 +104,7 @@ describe('Expected tokens on TMD parse syntax errors', () => {
   it('does not append drum hint when expectedTokens does not include percussion', () => {
     expect.assertions(3);
     try {
-      TmdParser.parse('::SCORE::\nintro:Piano@|0|\n<4*>\n1 2 3 4\n}');
+      TMDParser.parse('::SCORE::\nintro:Piano@|0|\n<4*>\n1 2 3 4\n}');
     } catch (error) {
       expect(error).toBeInstanceOf(TMDParseError);
       const err = error as TMDParseError;
@@ -115,7 +115,7 @@ describe('Expected tokens on TMD parse syntax errors', () => {
   it('formats code frame with line number, context lines, and caret pointer', () => {
     const input = `::SCORE::\nintro:Piano@|0|{\n<4*>\n1 2 Foo 4\n}`;
     try {
-      TmdParser.parse(input);
+      TMDParser.parse(input);
       expect.unreachable();
     } catch (error) {
       expect(error).toBeInstanceOf(TMDParseError);
@@ -142,7 +142,7 @@ describe('Expected tokens on TMD parse syntax errors', () => {
 
     for (const { text, expected } of fullwidthCases) {
       try {
-        TmdParser.parse(`::SCORE::\nintro:Piano@|0|{\n<4*>\n1 2 ${text} 4\n}`);
+        TMDParser.parse(`::SCORE::\nintro:Piano@|0|{\n<4*>\n1 2 ${text} 4\n}`);
         expect.unreachable();
       } catch (error) {
         expect(error).toBeInstanceOf(TMDParseError);
@@ -154,7 +154,7 @@ describe('Expected tokens on TMD parse syntax errors', () => {
 
   it('diagnoses accidental typos like 1# or 4# and suggests TMD accidental syntax', () => {
     try {
-      TmdParser.parse('::SCORE::\nintro:Piano@|0|{\n<4*>\n1# 2 3 4\n}');
+      TMDParser.parse('::SCORE::\nintro:Piano@|0|{\n<4*>\n1# 2 3 4\n}');
       expect.unreachable();
     } catch (error) {
       expect(error).toBeInstanceOf(TMDParseError);
@@ -163,7 +163,7 @@ describe('Expected tokens on TMD parse syntax errors', () => {
     }
 
     try {
-      TmdParser.parse('::SCORE::\nintro:Piano@|0|{\n<4*>\n1 4# 3 4\n}');
+      TMDParser.parse('::SCORE::\nintro:Piano@|0|{\n<4*>\n1 4# 3 4\n}');
       expect.unreachable();
     } catch (error) {
       expect(error).toBeInstanceOf(TMDParseError);
@@ -174,7 +174,7 @@ describe('Expected tokens on TMD parse syntax errors', () => {
 
   it('diagnoses missing time grid when entering paragraph notes directly without <4*>', () => {
     try {
-      TmdParser.parse('::SCORE::\nintro:Piano@|0|{\n1 2 3 4\n}');
+      TMDParser.parse('::SCORE::\nintro:Piano@|0|{\n1 2 3 4\n}');
       expect.unreachable();
     } catch (error) {
       expect(error).toBeInstanceOf(TMDParseError);

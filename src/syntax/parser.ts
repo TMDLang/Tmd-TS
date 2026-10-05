@@ -554,7 +554,7 @@ export class Lexer {
   }
 }
 
-export class TmdParser {
+export class TMDParser {
   private tokens: Token[];
   private pos = 0;
   public failureIndex?: number;
@@ -570,7 +570,7 @@ export class TmdParser {
 
   public static parseThrowing(input: string): Sheet {
     const lexedTokens = new Lexer(input).tokenizeWithRanges();
-    const parser = new TmdParser(lexedTokens.map(lt => lt.token));
+    const parser = new TMDParser(lexedTokens.map(lt => lt.token));
     const sheet = parser.parseSheet();
 
     const diagnosticIndex = (idx: number, tokenCount: number): number => {

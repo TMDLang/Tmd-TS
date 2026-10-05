@@ -1,4 +1,4 @@
-import { TmdParser } from "../../../src/syntax/parser.js";
+import { TMDParser } from "../../../src/syntax/parser.js";
 import { TMDMeasureChecker, TMDMeasureIssue } from "../../../src/validation/measure_check.js";
 import type { TMDWebEditor } from "../editor.js";
 import { escapeHtml } from "../html.js";
@@ -36,7 +36,7 @@ export function updateProblemsPanel(
 
   // First check if syntax parse fails
   try {
-    TmdParser.parse(text);
+    TMDParser.parse(text);
     currentSyntaxError = null;
   } catch (err: any) {
     const line = err.range?.start?.line ?? 1;

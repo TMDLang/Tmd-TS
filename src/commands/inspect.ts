@@ -1,7 +1,7 @@
 import { TMDSongInspector } from "../analysis/index.js";
 import { readUTF8 } from "../io/text_io.js";
 import { TMDTonalityVisualizer } from "../presentation/index.js";
-import { TmdParser } from "../syntax/index.js";
+import { TMDParser } from "../syntax/index.js";
 
 export function handleInspectCommand(argv: string[]): number {
   let inputPath: string | undefined;
@@ -45,7 +45,7 @@ OPTIONS:
     return 1;
   }
   let sheet;
-  try { sheet = TmdParser.parse(content); }
+  try { sheet = TMDParser.parse(content); }
   catch (error: any) {
     console.error(`Parse error in ${inputPath}: ${error.message || String(error)}`);
     return 1;

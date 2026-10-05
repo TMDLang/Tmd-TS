@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { formatSheet } from "../src/syntax/format.js";
-import { TmdParser } from "../src/syntax/parser.js";
+import { TMDParser } from "../src/syntax/parser.js";
 
 describe("Phase 1 canonical source model", () => {
   it("exposes only canonical source-model fields", () => {
@@ -18,7 +18,7 @@ describe("Phase 1 canonical source model", () => {
   });
 
   it("does not expose removed compatibility fields at runtime", () => {
-    const sheet = TmdParser.parse(`::SCORE::
+    const sheet = TMDParser.parse(`::SCORE::
 Theme{
   <4*> 1 2 3 4
 }`);
@@ -29,7 +29,7 @@ Theme{
   });
 
   it("exposes assignments, prototypes, and fixed-pitch entry attributes", () => {
-    const sheet = TmdParser.parse(`::SCORE::
+    const sheet = TMDParser.parse(`::SCORE::
 Intro:Timpani[pitchMode=fixed]@|0|{
   <4*> 2__ - - -
 }
@@ -49,7 +49,7 @@ Theme{
   });
 
   it("treats assignment identity as case-insensitive", () => {
-    const sheet = TmdParser.parse(`::SCORE::
+    const sheet = TMDParser.parse(`::SCORE::
 A:Piano@|0|{ <4*> 1 2 3 4 }
 B:piano@|0|{ <4*> 5 6 7 1^ }`);
 
@@ -57,7 +57,7 @@ B:piano@|0|{ <4*> 5 6 7 1^ }`);
   });
 
   it("uses the canonical assignment field when building playback", async () => {
-    const sheet = TmdParser.parse(`::SCORE::
+    const sheet = TMDParser.parse(`::SCORE::
 Theme:Piano@|0|{
   <4*> 1 2 3 4
     }`);
@@ -68,7 +68,7 @@ Theme:Piano@|0|{
   });
 
   it("preserves explicit barline positions through formatting", () => {
-    const sheet = TmdParser.parse(`::SCORE::
+    const sheet = TMDParser.parse(`::SCORE::
 intro:Piano@|0|{
 <4*>
 | 1 2 3 4 | 5 6 7 1 |
@@ -81,11 +81,11 @@ intro:Piano@|0|{
   });
 
   it("preserves canonical fixed-pitch entry attributes through formatting", () => {
-    const sheet = TmdParser.parse(`::SCORE::
+    const sheet = TMDParser.parse(`::SCORE::
 Intro:Timpani[pitchMode=fixed]@|0|{ <4*> 2__ - - - }`);
 
     const formatted = formatSheet(sheet);
-    const reparsed = TmdParser.parse(formatted);
+    const reparsed = TMDParser.parse(formatted);
     const timpani = reparsed.entries?.[0];
 
     expect(formatted).toContain("Intro:Timpani[pitchMode=fixed]");
@@ -94,7 +94,7 @@ Intro:Timpani[pitchMode=fixed]@|0|{ <4*> 2__ - - - }`);
   });
 
   it("exposes the score playback sequence through the canonical view", () => {
-    const sheet = TmdParser.parse(`::SCORE::
+    const sheet = TMDParser.parse(`::SCORE::
 Intro:Piano@|0|{ <4*> 1 2 3 4 }
 -> Intro ->#`);
 

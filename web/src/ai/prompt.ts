@@ -1,8 +1,8 @@
-import { TmdSkill } from "../../../src/skill.js";
+import { TMDSkill } from "../../../src/skill.js";
 import { GenerateOptions } from "./types.js";
 
 export function buildSystemPrompt(): string {
-  return `${TmdSkill.skillMarkdown}
+  return `${TMDSkill.skillMarkdown}
 
 You are an expert composer, orchestrator, and master of TMD (Timebase Mark Down).
 Your primary goal is to write or modify TMD musical scores.

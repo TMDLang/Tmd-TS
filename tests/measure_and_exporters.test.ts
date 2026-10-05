@@ -8,7 +8,7 @@ import {
   TMDMeasureRenderer,
   TMDMIDIGenerator,
   TMDMusicXMLGenerator,
-  TmdParser,
+  TMDParser,
 } from '../src/index.js';
 import { musicXmlExportFixture } from './conformanceFixtures.js';
 
@@ -22,7 +22,7 @@ intro:Piano@|0|{
 }
 -> intro ->#
 `;
-    const sheet = TmdParser.parse(source);
+    const sheet = TMDParser.parse(source);
     const issues = TMDMeasureChecker.checkSheet(sheet);
 
     expect(issues.some((issue) => issue.snippet.includes('explicit barlines'))).toBe(true);
@@ -60,7 +60,7 @@ A:Piano@|0|{
 }
 -> A ->#
 `;
-    const sheet = TmdParser.parse(tmd)!;
+    const sheet = TMDParser.parse(tmd)!;
     expect(sheet).not.toBeNull();
 
     const measures = TMDMeasureRenderer.renderMeasures(sheet, 'Piano');
@@ -74,7 +74,7 @@ A:Piano@|0|{
   });
 
   it('uses the state at the measure boundary for summaries and padded rests', () => {
-    const sheet = TmdParser.parse(`
+    const sheet = TMDParser.parse(`
 ::SCORE::
 ** Measure State Boundary **
 != 120
@@ -113,7 +113,7 @@ A:Piano@|0|{
 }
 -> A ->#
 `;
-    const sheet = TmdParser.parse(tmd)!;
+    const sheet = TMDParser.parse(tmd)!;
     const measures = TMDMeasureRenderer.renderMeasures(sheet, 'Piano');
     expect(measures.length).toBe(2);
 
@@ -130,7 +130,7 @@ A:Piano@|0|{
 
 describe('MusicXML Exporter Invariants', () => {
   it('matches the shared MusicXML exporter fixture', () => {
-    const sheet = TmdParser.parse(musicXmlExportFixture);
+    const sheet = TMDParser.parse(musicXmlExportFixture);
     const xml = TMDMusicXMLGenerator.generateMusicXML(sheet);
 
     expect(xml).toContain("<part-name>Piano</part-name>");
@@ -150,7 +150,7 @@ Theme {
     1 2 3 4
 }
 `;
-    const sheet = TmdParser.parse(tmd)!;
+    const sheet = TMDParser.parse(tmd)!;
     const xml = TMDMusicXMLGenerator.generateMusicXML(sheet);
 
     expect(xml).toContain('<score-partwise');
@@ -173,7 +173,7 @@ A:Piano@|0|{
 }
 -> A ->#
 `;
-    const sheet = TmdParser.parse(tmd)!;
+    const sheet = TMDParser.parse(tmd)!;
     const xml = TMDMusicXMLGenerator.generateMusicXML(sheet);
 
     expect(xml).toContain('<score-partwise');
@@ -207,7 +207,7 @@ A:Drums@|0|{
 }
 -> A ->#
 `;
-    const sheet = TmdParser.parse(tmd)!;
+    const sheet = TMDParser.parse(tmd)!;
     const xml = TMDMusicXMLGenerator.generateMusicXML(sheet);
 
     expect(xml).toContain('<time-modification>');
@@ -219,7 +219,7 @@ A:Drums@|0|{
 
 describe('MIDI Exporter Invariants', () => {
   it('does not create a playback track for a rest-only assignment', () => {
-    const sheet = TmdParser.parse(`::SCORE::
+    const sheet = TMDParser.parse(`::SCORE::
 ** Rest Only **
 != 120
 ?= C
@@ -241,7 +241,7 @@ Piano:Piano@|0|{
 
 describe('Percussion assignment identity', () => {
   it('matches lowercase percussion assignments in LilyPond and ABC exporters', () => {
-    const sheet = TmdParser.parse(`::SCORE::
+    const sheet = TMDParser.parse(`::SCORE::
 ** Lowercase Drums **
 != 120
 ?= C
@@ -280,7 +280,7 @@ A:Piano@|0|{
 }
 -> A ->#
 `;
-    const sheet = TmdParser.parse(tmd)!;
+    const sheet = TMDParser.parse(tmd)!;
     const ly = TMDLilyPondGenerator.generateLilyPond(sheet);
 
     expect(ly).toContain('\\version "2.24.0"');
@@ -314,7 +314,7 @@ A:Piano@|0|{
 }
 -> A ->#
 `;
-    const sheet = TmdParser.parse(tmd)!;
+    const sheet = TMDParser.parse(tmd)!;
     const abc = TMDABCGenerator.generateABC(sheet);
 
     expect(abc).toContain('M:4/4');
@@ -355,7 +355,7 @@ A:Piano@|0|{
 }
 -> A ->#
 `;
-    const sheetG = TmdParser.parse(tmdG)!;
+    const sheetG = TMDParser.parse(tmdG)!;
     const abcG = TMDABCGenerator.generateABC(sheetG);
 
     expect(abcG).toContain('K:G');
@@ -381,7 +381,7 @@ Theme {
 
 -> (canon Theme (Violin1 Violin2) 0) ->#
 `;
-    const sheet = TmdParser.parse(macroTmd)!;
+    const sheet = TMDParser.parse(macroTmd)!;
 
     // MusicXML
     const xml = TMDMusicXMLGenerator.generateMusicXML(sheet);
@@ -422,7 +422,7 @@ A:CHORD@|0|{
 }
 -> A ->#
 `;
-    const sheet = TmdParser.parse(tmd)!;
+    const sheet = TMDParser.parse(tmd)!;
     const xml = TMDMusicXMLGenerator.generateMusicXML(sheet);
 
     // Clefs
@@ -462,7 +462,7 @@ A:Piano@|0|{
 }
 -> A ->#
 `;
-    const sheet = TmdParser.parse(tmd)!;
+    const sheet = TMDParser.parse(tmd)!;
 
     // MusicXML
     const xml = TMDMusicXMLGenerator.generateMusicXML(sheet);
@@ -517,7 +517,7 @@ A:Piano@|0|{
 }
 -> A ->#
 `;
-    const sheet = TmdParser.parse(extremeTmd)!;
+    const sheet = TMDParser.parse(extremeTmd)!;
     const abc = TMDABCGenerator.generateABC(sheet);
     expect(abc).toContain("C,");
     expect(abc).toContain("c'");
@@ -546,7 +546,7 @@ A:Piano@|0|{
 }
 -> A ->#
 `;
-      const sheet = TmdParser.parse(tmd)!;
+      const sheet = TMDParser.parse(tmd)!;
 
       // MusicXML: 6/8 with quarterBPM 120 -> 120 / 1.5 = 80 bpm with dotted-quarter
       const xml = TMDMusicXMLGenerator.generateMusicXML(sheet);
@@ -579,7 +579,7 @@ A:Piano@|0|{
 }
 -> A ->#
 `;
-      const sheet = TmdParser.parse(tmd)!;
+      const sheet = TMDParser.parse(tmd)!;
 
       // MusicXML: half note beat-unit, 120 / 2 = 60 bpm
       const xml = TMDMusicXMLGenerator.generateMusicXML(sheet);
@@ -610,7 +610,7 @@ A:Piano@|0|{
 }
 -> A ->#
 `;
-      const sheet = TmdParser.parse(tmd)!;
+      const sheet = TMDParser.parse(tmd)!;
       const xml = TMDMusicXMLGenerator.generateMusicXML(sheet);
 
       // Must have <chord/> elements for the second note of each dyad
@@ -633,7 +633,7 @@ A:Piano@|0|{
 }
 -> A ->#
 `;
-      const sheet = TmdParser.parse(tmd)!;
+      const sheet = TMDParser.parse(tmd)!;
       const abc = TMDABCGenerator.generateABC(sheet);
 
       // 1+3 in C major is C4 and E4, 1 beat = 4 16ths -> [CE]4 or [C4E4]

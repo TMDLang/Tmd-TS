@@ -6,13 +6,13 @@ import { describe, expect,it } from 'vitest';
 
 import { main } from '../src/cli.js';
 import {
-  TmdParser,
+  TMDParser,
   TMDReaperGenerator,
 } from '../src/index.js';
 
 describe('TMDReaperGenerator (.rpp export)', () => {
   it('does not create a REAPER track for a rest-only assignment', () => {
-    const sheet = TmdParser.parse(`::SCORE::
+    const sheet = TMDParser.parse(`::SCORE::
 ** Rest Only Reaper **
 != 120
 ?= C
@@ -48,7 +48,7 @@ Verse:Piano@|0|{
 }
 -> Intro -> Verse ->#
 `;
-    const sheet = TmdParser.parse(tmd)!;
+    const sheet = TMDParser.parse(tmd)!;
     const rpp = TMDReaperGenerator.generateRPP(sheet);
 
     // Project structure
@@ -80,7 +80,7 @@ A:Piano@|0|{
 }
 -> A ->#
 `;
-    const sheet = TmdParser.parse(tmd)!;
+    const sheet = TMDParser.parse(tmd)!;
     const rpp = TMDReaperGenerator.generateRPP(sheet);
 
     // Initial tempo: 60 BPM at 0.0s
@@ -116,7 +116,7 @@ C:Piano@|0|{
 }
 -> A -> B -> C ->#
 `;
-    const sheet = TmdParser.parse(tmd)!;
+    const sheet = TMDParser.parse(tmd)!;
     const rpp = TMDReaperGenerator.generateRPP(sheet);
 
     // A = 4 quarters, B starts one active 3/4 bar later and lasts 4 quarters.
@@ -148,7 +148,7 @@ A:Drums@|0|{
 }
 -> A ->#
 `;
-    const sheet = TmdParser.parse(tmd)!;
+    const sheet = TMDParser.parse(tmd)!;
     const rpp = TMDReaperGenerator.generateRPP(sheet);
 
     // Tracks exist
@@ -226,7 +226,7 @@ Theme {
 
 -> (canon Theme (Violin1 Violin2) 0) ->#
 `;
-    const sheet = TmdParser.parse(tmd)!;
+    const sheet = TMDParser.parse(tmd)!;
     const rpp = TMDReaperGenerator.generateRPP(sheet);
 
     expect(rpp).toContain('NAME "Violin1"');

@@ -6,12 +6,12 @@ import { TMDSongPitchRangeAnalyzer } from "../src/analysis/pitch_range_analyzer.
 import { TMDSongTimingAnalyzer } from "../src/analysis/timing_analyzer.js";
 import { TMDSongTonalityAnalyzer } from "../src/analysis/tonality_analyzer.js";
 import { TMDPlaybackRenderer } from "../src/playback/playback.js";
-import { TmdParser } from "../src/syntax/parser.js";
+import { TMDParser } from "../src/syntax/parser.js";
 import { inspectorBasicFixture } from "./conformanceFixtures.js";
 
 describe("TMDSongInspector (TDD port from TmdSwift)", () => {
   it("runs timing analysis independently from the Inspector facade", () => {
-    const sheet = TmdParser.parse(`::SCORE::
+    const sheet = TMDParser.parse(`::SCORE::
 ** Timing Analyzer **
 != 120
 ?= C
@@ -33,7 +33,7 @@ intro:Piano@|0|{
   });
 
   it("runs pitch-range analysis independently from the Inspector facade", () => {
-    const sheet = TmdParser.parse(`::SCORE::
+    const sheet = TMDParser.parse(`::SCORE::
 ** Pitch Analyzer **
 != 120
 ?= C
@@ -58,7 +58,7 @@ intro:Piano@|0|{
   });
 
   it("runs harmony analysis independently from the Inspector facade", () => {
-    const sheet = TmdParser.parse(`::SCORE::
+    const sheet = TMDParser.parse(`::SCORE::
 ** Harmony Analyzer **
 != 120
 ?= C
@@ -79,7 +79,7 @@ intro:Piano@|0|{
   });
 
   it("runs tonality analysis independently from the Inspector facade", () => {
-    const sheet = TmdParser.parse(`::SCORE::
+    const sheet = TMDParser.parse(`::SCORE::
 ** Tonality Analyzer **
 != 120
 ?= C
@@ -102,7 +102,7 @@ intro:Piano@|0|{
   });
 
   it("matches the shared Inspector fixture's stable profile fields", () => {
-    const sheet = TmdParser.parse(inspectorBasicFixture);
+    const sheet = TMDParser.parse(inspectorBasicFixture);
     const profile = TMDSongInspector.inspect(sheet);
 
     expect(profile.timing.totalMeasures).toBe(1);
@@ -116,7 +116,7 @@ intro:Piano@|0|{
   });
 
   it("localizes vocal range report labels in Traditional Chinese", () => {
-    const sheet = TmdParser.parse(`::SCORE::
+    const sheet = TMDParser.parse(`::SCORE::
 ** Vocal Report **
 != 120
 ?= C
@@ -137,7 +137,7 @@ verse:Vocal@|0|{
   });
 
   it("does not create an Inspector Piano track for a prototype-only score", () => {
-    const sheet = TmdParser.parse(`::SCORE::
+    const sheet = TMDParser.parse(`::SCORE::
 ** Prototype Only **
 != 120
 ?= C
@@ -156,7 +156,7 @@ Theme{
   });
 
   it("uses section tempo directives for timing duration and note timestamps", () => {
-    const sheet = TmdParser.parse(`::SCORE::
+    const sheet = TMDParser.parse(`::SCORE::
 ** Inspector Tempo **
 != 60
 ?= C
@@ -218,7 +218,7 @@ chorus:Bass@|0|{
 -> intro -> verse -> {?+2} -> chorus ->#
 `;
 
-    const sheet = TmdParser.parse(tmd);
+    const sheet = TMDParser.parse(tmd);
     expect(sheet).toBeDefined();
 
     const profile = TMDSongInspector.inspect(sheet);
@@ -314,7 +314,7 @@ Bass {
 -> (canon Theme (V1 V2) 0) -> (loop Bass Cello 2) ->#
 `;
 
-    const sheet = TmdParser.parse(tmd);
+    const sheet = TMDParser.parse(tmd);
     expect(sheet).toBeDefined();
 
     const profile = TMDSongInspector.inspect(sheet!);
@@ -429,7 +429,7 @@ chorus:Vocal@|0|{
 -> verse -> chorus -> {?+2} -> verse -> chorus ->#
 `;
 
-    const sheet = TmdParser.parse(tmd);
+    const sheet = TMDParser.parse(tmd);
     expect(sheet).toBeDefined();
     const profile = TMDSongInspector.inspect(sheet);
 
@@ -480,7 +480,7 @@ chorus:Piano@|0|{
 -> verse -> {?+2} -> chorus ->#
 `;
 
-    const sheet = TmdParser.parse(tmd);
+    const sheet = TMDParser.parse(tmd);
     expect(sheet).toBeDefined();
     const profile = TMDSongInspector.inspect(sheet!);
 
@@ -537,7 +537,7 @@ verse:Vocal@|0|{
 -> verse ->#
 `;
 
-    const sheet = TmdParser.parse(tmd);
+    const sheet = TMDParser.parse(tmd);
     expect(sheet).toBeDefined();
     const profile = TMDSongInspector.inspect(sheet!);
 
@@ -574,7 +574,7 @@ verse:Piano@|0|{
 -> verse ->#
 `;
 
-    const sheet = TmdParser.parse(tmd);
+    const sheet = TMDParser.parse(tmd);
     expect(sheet).toBeDefined();
     const profile = TMDSongInspector.inspect(sheet!);
     expect(profile.tonality).toBeDefined();
@@ -610,7 +610,7 @@ chorus:Piano@|0|{
 -> verse -> {?+2} -> chorus ->#
 `;
 
-    const sheet = TmdParser.parse(tmd);
+    const sheet = TMDParser.parse(tmd);
     expect(sheet).toBeDefined();
     const profile = TMDSongInspector.inspect(sheet!);
     expect(profile.tonality).toBeDefined();
@@ -644,7 +644,7 @@ chorus:Piano@|0|{
 -> verse -> {?+2} -> chorus ->#
 `;
 
-    const sheet = TmdParser.parse(tmd);
+    const sheet = TMDParser.parse(tmd);
     expect(sheet).toBeDefined();
     const profile = TMDSongInspector.inspect(sheet!);
 
@@ -680,7 +680,7 @@ verse:Piano@|0|{
 -> verse ->#
 `;
 
-    const sheet = TmdParser.parse(tmd);
+    const sheet = TMDParser.parse(tmd);
     expect(sheet).toBeDefined();
     const profile = TMDSongInspector.inspect(sheet!, undefined, "en");
     const report = TMDSongInspector.generateReport(profile);

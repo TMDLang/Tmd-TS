@@ -12,7 +12,7 @@ import {
   VocaloidPhoneme,
 } from '../src/exporters/vocaloid.js';
 import { TmdMcpServer } from '../src/mcp/index.js';
-import { TmdParser } from '../src/syntax/index.js';
+import { TMDParser } from '../src/syntax/index.js';
 
 describe('VocaloidPhoneme (Japanese to X-SAMPA)', () => {
   it('resolves basic vowels in Romaji, Hiragana, and Katakana', () => {
@@ -63,7 +63,7 @@ Intro:Vocal@|0|{
 `;
 
   it('generates valid SMF Format 1 binary with 2 tracks (conductor + vocal)', () => {
-    const sheet = TmdParser.parse(tmdSource)!;
+    const sheet = TMDParser.parse(tmdSource)!;
     expect(sheet).toBeDefined();
 
     const vsqData = TMDVSQGenerator.generateVSQ(sheet, { singerName: 'Miku' });
@@ -88,7 +88,7 @@ Intro:Vocal@|0|{
   });
 
   it('embeds INI structure, singer name, preMeasure, and note events', () => {
-    const sheet = TmdParser.parse(tmdSource)!;
+    const sheet = TMDParser.parse(tmdSource)!;
     const vsqData = TMDVSQGenerator.generateVSQ(sheet, {
       singerName: 'Hatsune Miku',
       preMeasure: 4,
@@ -139,7 +139,7 @@ Intro:MikuVoice@|0|{
     3 4 5 6
 }
 `;
-    const sheet = TmdParser.parse(multiTrackTmd)!;
+    const sheet = TMDParser.parse(multiTrackTmd)!;
     const vsqData = TMDVSQGenerator.generateVSQ(sheet);
     const binaryStr = new TextDecoder('latin1').decode(vsqData);
     expect(binaryStr).toContain('Name=MikuVoice');
@@ -159,7 +159,7 @@ Verse:Vocal@|0|{
 `;
 
   it('does not select a prototype as the vocal assignment', () => {
-    const sheet = TmdParser.parse(`::SCORE::
+    const sheet = TMDParser.parse(`::SCORE::
 ** Prototype Before Bass **
 != 120
 ?= C
@@ -180,7 +180,7 @@ Verse:Bass@|0|{
   });
 
   it('generates valid VOCALOID4 XML document with correct root and schema', () => {
-    const sheet = TmdParser.parse(tmdSource)!;
+    const sheet = TMDParser.parse(tmdSource)!;
     const vsqx = TMDVSQXGenerator.generateVSQX(sheet, { singerName: 'Hatsune Miku' });
 
     expect(vsqx).toContain('<?xml version="1.0" encoding="UTF-8" standalone="no"?>');
@@ -193,7 +193,7 @@ Verse:Bass@|0|{
   });
 
   it('correctly calculates tempo (scaled x100), time signature, and note ticks', () => {
-    const sheet = TmdParser.parse(tmdSource)!;
+    const sheet = TMDParser.parse(tmdSource)!;
     const vsqx = TMDVSQXGenerator.generateVSQX(sheet, {
       singerName: 'Hatsune Miku',
       preMeasure: 4,

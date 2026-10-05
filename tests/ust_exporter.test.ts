@@ -6,7 +6,7 @@ import { describe, expect,it } from "vitest";
 
 import { main } from "../src/cli.js";
 import { TMDUSTGenerator } from "../src/exporters/ust.js";
-import { TmdParser } from "../src/syntax/index.js";
+import { TMDParser } from "../src/syntax/index.js";
 
 describe("TMDUSTGenerator (UTAU .ust Export)", () => {
   const sampleTmd = `::SCORE::
@@ -24,7 +24,7 @@ verse:Vocal@|0|{
 `;
 
   it("generates standard UTAU [#SETTING] header with tempo and metadata", () => {
-    const sheet = TmdParser.parse(sampleTmd)!;
+    const sheet = TMDParser.parse(sampleTmd)!;
     const ust = TMDUSTGenerator.generateUST(sheet);
 
     expect(ust).toContain("[#SETTING]");
@@ -36,7 +36,7 @@ verse:Vocal@|0|{
   });
 
   it("renders note events with Length, Lyric, NoteNum, and default parameters", () => {
-    const sheet = TmdParser.parse(sampleTmd)!;
+    const sheet = TMDParser.parse(sampleTmd)!;
     const ust = TMDUSTGenerator.generateUST(sheet, "Vocal", {
       lyrics: ["do", "re", "mi", "fa"],
     });
@@ -80,7 +80,7 @@ melody:Vocal@|+1|{
 }
 -> melody ->#
 `;
-    const sheet = TmdParser.parse(tmdWithGaps)!;
+    const sheet = TMDParser.parse(tmdWithGaps)!;
     const ust = TMDUSTGenerator.generateUST(sheet);
 
     // Initial 1-bar offset (@|+1| = 4 quarter notes = 1920 ticks gap)
@@ -104,7 +104,7 @@ part1:Vocal@|0|{
 }
 -> part1 ->#
 `;
-    const sheet = TmdParser.parse(tmdTempo)!;
+    const sheet = TMDParser.parse(tmdTempo)!;
     const ust = TMDUSTGenerator.generateUST(sheet);
 
     expect(ust).toContain("Tempo=100.00");
@@ -145,7 +145,7 @@ verse:Vocal@|0|{
 }
 -> verse ->#
 `;
-    const sheet = TmdParser.parse(multiNoteTmd)!;
+    const sheet = TMDParser.parse(multiNoteTmd)!;
     const ust = TMDUSTGenerator.generateUST(sheet);
 
     // 1+3 (C4=60, E4=64) should pick the highest pitch (64) without creating overlapping notes at the same position

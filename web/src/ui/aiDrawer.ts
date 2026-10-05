@@ -1,4 +1,4 @@
-import { TmdSkill } from "../../../src/skill.js";
+import { TMDSkill } from "../../../src/skill.js";
 import {
   AIProviderType,
   AISettingsState,
@@ -117,7 +117,7 @@ export class TMDAIDrawerController {
 
     aiBtnCopySkill?.addEventListener("click", async () => {
       try {
-        await navigator.clipboard.writeText(TmdSkill.skillMarkdown);
+        await navigator.clipboard.writeText(TMDSkill.skillMarkdown);
         const prevText = aiBtnCopySkill.textContent;
         aiBtnCopySkill.textContent = `✓ ${t("aiSkillCopied")}`;
         setTimeout(() => {

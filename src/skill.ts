@@ -2,7 +2,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 
-export class TmdSkill {
+export class TMDSkill {
   static readonly skillName = "tmd";
   static readonly skillMarkdown = `---
 name: tmd

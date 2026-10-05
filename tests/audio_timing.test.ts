@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { TMDWAVRenderer } from "../src/audio.js";
-import { TmdParser } from "../src/syntax/parser.js";
+import { TMDParser } from "../src/syntax/parser.js";
 
 function wavDurationSeconds(wav: Uint8Array, sampleRate: number): number {
   const dataBytes = new DataView(wav.buffer).getUint32(40, true);
@@ -15,7 +15,7 @@ function wavEnergy(wav: Uint8Array): number {
 
 describe("TMDWAVRenderer timing and percussion", () => {
   it("converts beat positions through tempo changes instead of using one global tempo", () => {
-    const sheet = TmdParser.parse(`::SCORE::
+    const sheet = TMDParser.parse(`::SCORE::
 ** Tempo map **
 != 60
 ?= C
@@ -36,7 +36,7 @@ A:Piano@|0|{
   });
 
   it("renders percussion events into audible PCM", () => {
-    const sheet = TmdParser.parse(`::SCORE::
+    const sheet = TMDParser.parse(`::SCORE::
 ** Drums **
 != 120
 ?= C

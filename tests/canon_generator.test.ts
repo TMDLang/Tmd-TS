@@ -2,7 +2,7 @@ import { describe, expect,it } from "vitest";
 
 import { TMDCanonGenerator } from "../src/domain/canon_gen.js";
 import { TMDPlaybackRenderer } from "../src/playback/playback.js";
-import { TmdParser } from "../src/syntax/parser.js";
+import { TMDParser } from "../src/syntax/parser.js";
 import { TMDMeasureChecker } from "../src/validation/measure_check.js";
 
 describe("TMDCanonGenerator (TDD port from canon_gen.py)", () => {
@@ -41,7 +41,7 @@ describe("TMDCanonGenerator (TDD port from canon_gen.py)", () => {
     expect(tmdScore).toContain("(canon (Theme Var1 Var2) (Violin1 Violin2 Violin3) 2)");
 
     // Must parse without syntax errors
-    const sheet = TmdParser.parse(tmdScore);
+    const sheet = TMDParser.parse(tmdScore);
     expect(sheet).not.toBeNull();
     expect(sheet.name).toBe("My Algorithmic Canon");
 
@@ -74,7 +74,7 @@ describe("TMDCanonGenerator (TDD port from canon_gen.py)", () => {
     expect(tmdScore).toContain("canon:Violin2@|+2|{");
     expect(tmdScore).toContain("-> intro -> canon -> outro ->#");
 
-    const sheet = TmdParser.parse(tmdScore);
+    const sheet = TMDParser.parse(tmdScore);
     expect(sheet).not.toBeNull();
 
     const issues = TMDMeasureChecker.check(tmdScore);
@@ -173,7 +173,7 @@ describe("TMDCanonGenerator (TDD port from canon_gen.py)", () => {
       // With half notes, each bar in 4/4 contains 2 bass notes: e.g. | 1_ - 5__ - |
       expect(tmd).toMatch(/\|\s*\S+\s+-\s+\S+\s+-\s*\|/);
 
-      const sheet = TmdParser.parse(tmd);
+      const sheet = TMDParser.parse(tmd);
       expect(sheet).not.toBeNull();
       const issues = TMDMeasureChecker.check(tmd);
       expect(issues).toEqual([]);

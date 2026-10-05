@@ -28,9 +28,9 @@ import { TMDJSONRPCCodec,TMDLSPServer } from "./lsp/index.js";
 import { TmdMcpInstaller,TmdMcpServer } from "./mcp/index.js";
 import { TMDOutlineGenerator, TMDOutlineNode, TMDTonalityVisualizer } from "./presentation/index.js";
 import { TMDRefactor } from "./refactoring/index.js";
-import { TmdSkill } from "./skill.js";
+import { TMDSkill } from "./skill.js";
 import { formatSummary } from "./syntax/index.js";
-import { TmdParser } from "./syntax/index.js";
+import { TMDParser } from "./syntax/index.js";
 import { TMDMeasureChecker } from "./validation/index.js";
 import { TMD_VERSION } from "./version.js";
 
@@ -242,7 +242,7 @@ export function main(argv = process.argv.slice(2)): number {
     if (!input) return results.every((result) => result.installed) ? 0 : 1;
   }
   if (installSkills) {
-    const results = TmdSkill.installSkills();
+    const results = TMDSkill.installSkills();
     results.forEach((result) =>
       console.log(
         `${result.installed ? "Installed" : "Failed"} TMD skill: ${result.path}${
@@ -267,7 +267,7 @@ export function main(argv = process.argv.slice(2)): number {
   }
   let sheet;
   try {
-    sheet = TmdParser.parse(fileContent);
+    sheet = TMDParser.parse(fileContent);
   } catch (error) {
     console.error(
       `Error: Could not parse TMD file at ${input}: ${

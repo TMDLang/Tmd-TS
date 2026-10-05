@@ -4,7 +4,7 @@ import * as path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { TMDSongInspector } from "../src/analysis/inspector.js";
-import { TmdParser } from "../src/syntax/parser.js";
+import { TMDParser } from "../src/syntax/parser.js";
 import { renderTonalityProfileHtml } from "../web/src/ui/tonality.js";
 
 
@@ -15,7 +15,7 @@ describe("Web Studio tonality visualization", () => {
     expect(indexHtml).not.toContain('data-i18n="statLabelKey"');
   });
   it("renders the same inspector-level tonality details as the VSCode view", () => {
-    const sheet = TmdParser.parse(`::SCORE::
+    const sheet = TMDParser.parse(`::SCORE::
 ** Tonality UI **
 != 120
 ?= C
@@ -46,7 +46,7 @@ verse:Piano@|0|{
   });
 
   it("localizes the tonality panel and uses theme tokens instead of dark-only colors", () => {
-    const sheet = TmdParser.parse(`::SCORE::
+    const sheet = TMDParser.parse(`::SCORE::
 ** 調性 l10n **
 != 120
 ?= C
@@ -70,7 +70,7 @@ A:Piano@|0|{ <4*> 1 3 5 1^ }
   });
 
   it("relocalizes stored tonality narratives when the UI locale changes", () => {
-    const sheet = TmdParser.parse(`::SCORE::
+    const sheet = TMDParser.parse(`::SCORE::
 ** Narrative Locale Override **
 != 120
 ?= C
@@ -87,7 +87,7 @@ A:Piano@|0|{ <4*> 1 3 5 1^ }
   });
 
   it("renders declared tonality metric when sheet has declared key", () => {
-    const sheet = TmdParser.parse(`::SCORE::
+    const sheet = TMDParser.parse(`::SCORE::
 ** Declared Tonality Score **
 != 120
 ?= D

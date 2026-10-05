@@ -6,7 +6,7 @@ import { describe, expect,it } from 'vitest';
 
 import { main } from '../src/cli.js';
 import { TMDChordProGenerator } from '../src/exporters/chordpro.js';
-import { TmdParser } from '../src/syntax/index.js';
+import { TMDParser } from '../src/syntax/index.js';
 
 describe('TMDChordProGenerator', () => {
   it('generates standard ChordPro metadata directives', () => {
@@ -25,7 +25,7 @@ A:Guitar@|0|{
 }
 -> A ->#
 `;
-    const sheet = TmdParser.parse(tmd)!;
+    const sheet = TMDParser.parse(tmd)!;
     const cho = TMDChordProGenerator.generateChordPro(sheet);
 
     expect(cho).toContain('{title: Amazing Grace}');
@@ -52,7 +52,7 @@ Verse:Guitar@|0|{
 }
 -> Verse ->#
 `;
-    const sheet = TmdParser.parse(tmd)!;
+    const sheet = TMDParser.parse(tmd)!;
     const cho = TMDChordProGenerator.generateChordPro(sheet);
 
     expect(cho).toContain('{comment: Verse}');
@@ -79,7 +79,7 @@ Chorus:Guitar@|0|{
 
 -> Intro -> Chorus -> Intro ->#
 `;
-    const sheet = TmdParser.parse(tmd)!;
+    const sheet = TMDParser.parse(tmd)!;
     const cho = TMDChordProGenerator.generateChordPro(sheet);
 
     // Intro appears twice according to order
@@ -103,7 +103,7 @@ Verse:Guitar@|0|{
 }
 -> Verse -> {?+2} -> Verse ->#
 `;
-    const sheet = TmdParser.parse(tmd)!;
+    const sheet = TMDParser.parse(tmd)!;
     const cho = TMDChordProGenerator.generateChordPro(sheet);
 
     expect((cho.match(/\[C\]/g) || []).length).toBe(1);
@@ -128,7 +128,7 @@ Verse:Guitar@|0|{
 }
 -> Verse ->#
 `;
-    const sheet = TmdParser.parse(tmd)!;
+    const sheet = TMDParser.parse(tmd)!;
     const cho = TMDChordProGenerator.generateChordPro(sheet, { measuresPerLine: 4 });
 
     // After 4 measures, there should be a newline before the 5th measure
