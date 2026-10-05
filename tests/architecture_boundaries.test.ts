@@ -48,4 +48,16 @@ describe("core architecture boundaries", () => {
   it("keeps the canonical source model inside the syntax boundary", () => {
     expect(existsSync(join(sourceRoot, "syntax", "types.ts"))).toBe(true);
   });
+
+  it("keeps domain models and generators outside the legacy core directory", () => {
+    for (const file of ["canon_gen.ts", "instruments.ts", "measure.ts"]) {
+      expect(existsSync(join(sourceRoot, "domain", file))).toBe(true);
+      expect(existsSync(join(sourceRoot, "core", file))).toBe(false);
+    }
+  });
+
+  it("keeps localization owned by the analysis boundary", () => {
+    expect(existsSync(join(sourceRoot, "analysis", "localization.ts"))).toBe(true);
+    expect(existsSync(join(sourceRoot, "core", "localization.ts"))).toBe(false);
+  });
 });

@@ -1,5 +1,5 @@
 import { TMDLocale, TMDSectionTimingProfile, TMDSongInspector,TMDTonalityProfile } from "../../../src/analysis/inspector.js";
-import { TMDLocalizationKey, TMDLocalizer } from "../../../src/core/localization.js";
+import { TMDLocalizationKey, TMDLocalizer } from "../../../src/analysis/localization.js";
 import { escapeHtml } from "../html.js";
 import { en } from "../locales/en.js";
 import { zhTW } from "../locales/zh-TW.js";

@@ -1,5 +1,5 @@
 import { TMDSongInspector, TMDSongProfile } from "../../../src/analysis/inspector.js";
-import { SheetInstrumentHelper } from "../../../src/core/instruments.js";
+import { SheetInstrumentHelper } from "../../../src/domain/instruments.js";
 import { TMDOutlineGenerator } from "../../../src/presentation/outline.js";
 import { TMDTonalityVisualizer } from "../../../src/presentation/tonality_visualizer.js";
 import { TmdParser } from "../../../src/syntax/parser.js";

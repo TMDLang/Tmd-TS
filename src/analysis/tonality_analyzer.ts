@@ -12,11 +12,11 @@ import type {
   TMDTonalityNarrative,
   TMDTonalityProfile,
 } from "../analysis/inspector.js";
-import { SheetInstrumentHelper } from "../core/instruments.js";
-import type { TMDLocale } from "../core/localization.js";
-import { TMDLocalizationKey, TMDLocalizer } from "../core/localization.js";
+import { SheetInstrumentHelper } from "../domain/instruments.js";
 import { PlaybackEvent, TMDPlaybackRenderer } from "../playback/playback.js";
 import { chordQualityIntervals, ChordSymbol, noteToMIDIPitch, Sheet } from "../syntax/types.js";
+import type { TMDLocale } from "./localization.js";
+import { TMDLocalizationKey, TMDLocalizer } from "./localization.js";
 
 export class TMDSongTonalityAnalyzer {
 private static readonly KS_MAJOR_PROFILE: number[] = [

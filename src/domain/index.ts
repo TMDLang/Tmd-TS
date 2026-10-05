@@ -1,3 +1,3 @@
-export * from "../core/canon_gen.js";
-export * from "../core/instruments.js";
-export * from "../core/measure.js";
+export * from "./canon_gen.js";
+export * from "./instruments.js";
+export * from "./measure.js";

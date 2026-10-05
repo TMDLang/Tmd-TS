@@ -1,6 +1,6 @@
 import { describe, expect,it } from "vitest";
 
-import { TMDCanonGenerator } from "../src/core/canon_gen.js";
+import { TMDCanonGenerator } from "../src/domain/canon_gen.js";
 import { TMDPlaybackRenderer } from "../src/playback/playback.js";
 import { TmdParser } from "../src/syntax/parser.js";
 import { TMDMeasureChecker } from "../src/validation/measure_check.js";

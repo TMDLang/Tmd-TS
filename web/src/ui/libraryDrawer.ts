@@ -1,4 +1,4 @@
-import { TMDCanonGenerator } from "../../../src/core/canon_gen.js";
+import { TMDCanonGenerator } from "../../../src/domain/canon_gen.js";
 import type { TMDWebEditor } from "../editor.js";
 import { fetchGistTmd } from "../gist.js";
 import { escapeHtml } from "../html.js";

@@ -1,4 +1,4 @@
-import { SheetInstrumentHelper } from "../core/instruments.js";
+import { SheetInstrumentHelper } from "../domain/instruments.js";
 import { TMDMacroEvaluator } from "../playback/macro.js";
 import { PlaybackDirectiveEvent,PlaybackEvent, PlaybackState, TMDPlaybackRenderer } from "../playback/playback.js";
 import {
@@ -13,11 +13,11 @@ import {
   scaleDegreeLetter,
   Sheet,
 } from "../syntax/types.js";
-export type { TMDLocale } from "../core/localization.js";
-export { TMDLocalizationKey,TMDLocalizer } from "../core/localization.js";
-import type { TMDLocale } from "../core/localization.js";
-import { TMDLocalizationKey, TMDLocalizer } from "../core/localization.js";
+export type { TMDLocale } from "./localization.js";
+export { TMDLocalizationKey,TMDLocalizer } from "./localization.js";
 import { TMDSongHarmonyAnalyzer } from "./harmony_analyzer.js";
+import type { TMDLocale } from "./localization.js";
+import { TMDLocalizationKey, TMDLocalizer } from "./localization.js";
 import { TMDSongPitchRangeAnalyzer } from "./pitch_range_analyzer.js";
 import { TMDSongTimingAnalyzer } from "./timing_analyzer.js";
 import { TMDSongTonalityAnalyzer } from "./tonality_analyzer.js";
