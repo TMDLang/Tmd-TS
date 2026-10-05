@@ -22,7 +22,7 @@ the Swift and TypeScript implementations.
   not placed in either implementation's syntax core.
 - Swift keeps package/module names such as `TmdSwift` and `TmdSkill` for source
   and distribution compatibility. Canonical public symbols use the `TMD`
-  acronym; deprecated aliases remain during migration.
+  acronym; migrated deprecated aliases have been removed.
 - Swift currently uses directories inside one SwiftPM target. Splitting them
   into separate targets is intentionally deferred until dependency rules are
   stable.
