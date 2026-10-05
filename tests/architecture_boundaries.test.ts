@@ -19,6 +19,15 @@ describe("core architecture boundaries", () => {
     }
   });
 
+  it("separates syntax lexer, parser, and diagnostics responsibilities", () => {
+    for (const file of ["lexer.ts", "parser.ts", "parse_diagnostics.ts"]) {
+      expect(existsSync(join(sourceRoot, "syntax", file))).toBe(true);
+    }
+    const parser = readFileSync(join(sourceRoot, "syntax", "parser.ts"), "utf8");
+    expect(parser.includes("export class Lexer")).toBe(false);
+    expect(parser.includes("export class TMDParseError")).toBe(false);
+  });
+
   it("keeps inspector analyzers inside the analysis boundary", () => {
     for (const file of [
       "harmony_analyzer.ts",
