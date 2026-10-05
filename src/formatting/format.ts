@@ -10,7 +10,7 @@ import {
   Sheet,
   Unit,
   UnitGroup,
-} from "./types";
+} from "../core/types.js";
 
 export function formatNote(note: Note): string {
   let str = `${note.degree}`;

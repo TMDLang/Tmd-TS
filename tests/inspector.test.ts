@@ -648,7 +648,7 @@ chorus:Piano@|0|{
     expect(sheet).toBeDefined();
     const profile = TMDSongInspector.inspect(sheet!);
 
-    const { TMDTonalityVisualizer } = await import("../src/core/tonality_visualizer.js");
+    const { TMDTonalityVisualizer } = await import("../src/presentation/tonality_visualizer.js");
 
     // 1. SVG Generation
     const svg = TMDTonalityVisualizer.generateSVG(profile, "en");

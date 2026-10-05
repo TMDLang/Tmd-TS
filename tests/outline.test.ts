@@ -1,6 +1,6 @@
 import { describe, expect,it } from "vitest";
 
-import { TMDOutlineGenerator, TMDOutlineNode } from "../src/core/outline.js";
+import { TMDOutlineGenerator, TMDOutlineNode } from "../src/presentation/outline.js";
 
 describe("TMDOutlineGenerator (TDD)", () => {
   it("generates nested outline symbols with sections, tracks, and measures", () => {

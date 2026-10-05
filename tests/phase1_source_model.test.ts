@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { formatSheet } from "../src/core/format.js";
+import { formatSheet } from "../src/formatting/format.js";
 import { TmdParser } from "../src/syntax/parser.js";
 
 describe("Phase 1 canonical source model", () => {

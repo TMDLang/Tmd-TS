@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { formatSheet } from "../src/core/format.js";
+import { formatSheet } from "../src/formatting/format.js";
 import { TMDPlaybackRenderer } from "../src/playback/playback.js";
 import { TmdParser } from "../src/syntax/parser.js";
 
