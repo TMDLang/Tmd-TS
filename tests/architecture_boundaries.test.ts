@@ -18,4 +18,15 @@ describe("core architecture boundaries", () => {
       expect(existsSync(join(sourceRoot, boundary, file))).toBe(true);
     }
   });
+
+  it("keeps inspector analyzers inside the analysis boundary", () => {
+    for (const file of [
+      "harmony_analyzer.ts",
+      "pitch_range_analyzer.ts",
+      "timing_analyzer.ts",
+      "tonality_analyzer.ts",
+    ]) {
+      expect(existsSync(join(sourceRoot, "analysis", file))).toBe(true);
+    }
+  });
 });

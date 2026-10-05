@@ -15,12 +15,12 @@ import {
 import { PlaybackDirectiveEvent,PlaybackEvent, PlaybackState, TMDPlaybackRenderer } from "../playback/playback.js";
 export type { TMDLocale } from "../core/localization.js";
 export { TMDLocalizationKey,TMDLocalizer } from "../core/localization.js";
-import { TMDSongHarmonyAnalyzer } from "../core/harmony_analyzer.js";
 import type { TMDLocale } from "../core/localization.js";
 import { TMDLocalizationKey, TMDLocalizer } from "../core/localization.js";
-import { TMDSongPitchRangeAnalyzer } from "../core/pitch_range_analyzer.js";
-import { TMDSongTimingAnalyzer } from "../core/timing_analyzer.js";
-import { TMDSongTonalityAnalyzer } from "../core/tonality_analyzer.js";
+import { TMDSongHarmonyAnalyzer } from "./harmony_analyzer.js";
+import { TMDSongPitchRangeAnalyzer } from "./pitch_range_analyzer.js";
+import { TMDSongTimingAnalyzer } from "./timing_analyzer.js";
+import { TMDSongTonalityAnalyzer } from "./tonality_analyzer.js";
 
 /**
  * Pitch descriptor with MIDI note number, canonical note name (e.g. "C4", "A5"), and source section context.
