@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { TMDLocalizationKey, TMDLocalizer } from "../src/core/index.js";
+import { TMDLocalizationKey, TMDLocalizer } from "../src/core/localization.js";
 
 describe("TMD core localization", () => {
   it("matches the TmdSwift report strings and placeholder behavior", () => {

@@ -1,17 +1,6 @@
-import {
-  chordQualityIntervals,
-  ChordSymbol,
-  Entry,
-  MeasureEvent,
-  NotationDuration,
-  Note,
-  PitchMapping,
-  PlaybackDirectiveEvent,
-  Sheet,
-  SheetInstrumentHelper,
-  TMDMacroEvaluator,
-  TMDMeasureRenderer,
-} from "../core";
+import { MeasureEvent, NotationDuration, SheetInstrumentHelper, TMDMeasureRenderer } from "../domain/index.js";
+import { PlaybackDirectiveEvent, TMDMacroEvaluator } from "../playback/index.js";
+import { chordQualityIntervals, ChordSymbol, Entry, Note, PitchMapping, Sheet } from "../syntax/index.js";
 
 export class TMDLilyPondGenerator {
   public static generateLilyPond(rawSheet: Sheet): string {

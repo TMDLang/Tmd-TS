@@ -5,7 +5,6 @@ import * as path from 'node:path';
 import { describe, expect,it } from 'vitest';
 
 import { main } from '../src/cli.js';
-import { TmdParser } from '../src/core/index.js';
 import {
   TMDVSQGenerator,
   TMDVSQXGenerator,
@@ -13,6 +12,7 @@ import {
   VocaloidPhoneme,
 } from '../src/exporters/vocaloid.js';
 import { TmdMcpServer } from '../src/mcp/index.js';
+import { TmdParser } from '../src/syntax/index.js';
 
 describe('VocaloidPhoneme (Japanese to X-SAMPA)', () => {
   it('resolves basic vowels in Romaji, Hiragana, and Katakana', () => {

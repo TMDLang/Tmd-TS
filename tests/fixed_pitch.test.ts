@@ -1,10 +1,11 @@
 import { describe, expect,it } from "vitest";
 
-import { TmdParser, TMDPlaybackRenderer } from "../src/core/index.js";
 import { TMDABCGenerator } from "../src/exporters/abc.js";
 import { TMDLilyPondGenerator } from "../src/exporters/lilypond.js";
 import { TMDMIDIGenerator } from "../src/exporters/midi.js";
 import { TMDMusicXMLGenerator } from "../src/exporters/musicxml.js";
+import { TMDPlaybackRenderer } from "../src/playback/index.js";
+import { TmdParser } from "../src/syntax/index.js";
 
 describe("Fixed Pitch Entry Attribute", () => {
   it("rejects legacy inline fixed-pitch directives", () => {

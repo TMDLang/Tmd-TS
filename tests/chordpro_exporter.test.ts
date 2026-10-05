@@ -5,8 +5,8 @@ import * as path from 'node:path';
 import { describe, expect,it } from 'vitest';
 
 import { main } from '../src/cli.js';
-import { TmdParser } from '../src/core/index.js';
 import { TMDChordProGenerator } from '../src/exporters/chordpro.js';
+import { TmdParser } from '../src/syntax/index.js';
 
 describe('TMDChordProGenerator', () => {
   it('generates standard ChordPro metadata directives', () => {
