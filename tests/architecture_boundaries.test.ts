@@ -71,6 +71,12 @@ describe("core architecture boundaries", () => {
     expect(implementation.includes("export class TmdLSPPosition")).toBe(false);
   });
 
+  it("gives the LSP JSON-RPC codec an explicit source boundary", () => {
+    expect(existsSync(join(sourceRoot, "lsp", "codec.ts"))).toBe(true);
+    const implementation = readFileSync(join(sourceRoot, "lsp", "index.ts"), "utf8");
+    expect(implementation.includes("class TmdJSONRPCCodec")).toBe(false);
+  });
+
   it("keeps source formatting inside the syntax boundary", () => {
     expect(existsSync(join(sourceRoot, "syntax", "format.ts"))).toBe(true);
     expect(existsSync(join(sourceRoot, "formatting", "format.ts"))).toBe(false);
