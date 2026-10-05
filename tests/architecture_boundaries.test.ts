@@ -39,6 +39,12 @@ describe("core architecture boundaries", () => {
     }
   });
 
+  it("gives inspector profiles an explicit source boundary", () => {
+    expect(existsSync(join(sourceRoot, "analysis", "profiles.ts"))).toBe(true);
+    const inspector = readFileSync(join(sourceRoot, "analysis", "inspector.ts"), "utf8");
+    expect(inspector.includes("export interface TmdSongProfile")).toBe(false);
+  });
+
   it("keeps text I/O and source refactoring outside the syntax core", () => {
     expect(existsSync(join(sourceRoot, "io", "text_io.ts"))).toBe(true);
     expect(existsSync(join(sourceRoot, "refactoring", "refactor.ts"))).toBe(true);
