@@ -1,10 +1,7 @@
-import {
-  TMDMeasureChecker,
-  TMDOutlineGenerator,
-  TMDOutlineNode,
-  TmdParser,
-  TMDRefactor,
-} from "../core/index.js";
+import { TMDOutlineGenerator, TMDOutlineNode } from "../presentation/index.js";
+import { TMDRefactor } from "../refactoring/index.js";
+import { TmdParser } from "../syntax/index.js";
+import { TMDMeasureChecker } from "../validation/index.js";
 import { TMD_VERSION } from "../version.js";
 
 // MARK: - LSP Data Structures

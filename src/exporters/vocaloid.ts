@@ -1,9 +1,6 @@
-import {
-  PlaybackTimeline,
-  Sheet,
-  SheetInstrumentHelper,
-  TMDPlaybackRenderer,
-} from '../core/index.js';
+import { SheetInstrumentHelper } from "../domain/index.js";
+import { PlaybackTimeline, TMDPlaybackRenderer } from "../playback/index.js";
+import { Sheet } from "../syntax/index.js";
 import {
   MIDIEvent,
   TMDMIDIEncoder,

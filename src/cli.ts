@@ -3,6 +3,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 
+import { TMDSongInspector } from "./analysis/index.js";
 import { TMDWAVRenderer } from "./audio.js";
 import { handleCheckCommand } from "./commands/check.js";
 import { handleFormatCommand } from "./commands/format.js";
@@ -11,16 +12,6 @@ import { handleLSPCommand } from "./commands/lsp.js";
 import { runLSPServer } from "./commands/lsp.js";
 import { handleOutlineCommand } from "./commands/outline.js";
 import { handleRefactorCommand } from "./commands/refactor.js";
-import {
-  formatSummary,
-  TMDMeasureChecker,
-  TMDOutlineGenerator,
-  TMDOutlineNode,
-  TmdParser,
-  TMDRefactor,
-  TMDSongInspector,
-  TMDTonalityVisualizer,
-} from "./core/index.js";
 import {
   TMDABCGenerator,
   TMDChordProGenerator,
@@ -32,10 +23,15 @@ import {
   TMDVSQGenerator,
   TMDVSQXGenerator,
 } from "./exporters/index.js";
+import { formatSummary } from "./formatting/index.js";
 import { readUTF8, writeUTF8 } from "./io/text_io.js";
 import { TMDJSONRPCCodec,TMDLSPServer } from "./lsp/index.js";
 import { TmdMcpInstaller,TmdMcpServer } from "./mcp/index.js";
+import { TMDOutlineGenerator, TMDOutlineNode, TMDTonalityVisualizer } from "./presentation/index.js";
+import { TMDRefactor } from "./refactoring/index.js";
 import { TmdSkill } from "./skill.js";
+import { TmdParser } from "./syntax/index.js";
+import { TMDMeasureChecker } from "./validation/index.js";
 import { TMD_VERSION } from "./version.js";
 
 export function printHelp(): void {

@@ -1,5 +1,5 @@
-import { TMDOutlineGenerator, TMDOutlineNode } from "../core/index.js";
 import { readUTF8 } from "../io/text_io.js";
+import { TMDOutlineGenerator, TMDOutlineNode } from "../presentation/index.js";
 
 export function handleOutlineCommand(argv: string[]): number {
   let inputPath: string | undefined;

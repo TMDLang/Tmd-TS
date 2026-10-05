@@ -7,7 +7,6 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 
 import { TMDWAVRenderer } from "../audio.js";
-import { accidentalToSemitone, scaleDegreeLetter, TMDMeasureChecker,TmdParser } from "../core/index.js";
 import {
   TMDABCGenerator,
   TMDChordProGenerator,
@@ -19,6 +18,8 @@ import {
   TMDVSQXGenerator,
 } from "../exporters/index.js";
 import { TmdSkill } from "../skill.js";
+import { accidentalToSemitone, scaleDegreeLetter, TmdParser } from "../syntax/index.js";
+import { TMDMeasureChecker } from "../validation/index.js";
 import { TMD_VERSION } from "../version.js";
 
 const textContent = (text: string) => ({

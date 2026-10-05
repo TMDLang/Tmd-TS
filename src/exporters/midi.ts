@@ -1,17 +1,6 @@
-import {
-  Accidental,
-  Beat,
-  chordQualityIntervals,
-  ChordSymbol,
-  DEFAULT_INSTRUMENT,
-  Note,
-  noteToMIDIPitch,
-  PlaybackTimeline,
-  Sheet,
-  SheetInstrumentHelper,
-  TMDMacroEvaluator,
-  TMDPlaybackRenderer,
-} from '../core/index.js';
+import { SheetInstrumentHelper } from "../domain/index.js";
+import { PlaybackTimeline, TMDMacroEvaluator, TMDPlaybackRenderer } from "../playback/index.js";
+import { Accidental, Beat, chordQualityIntervals, ChordSymbol, DEFAULT_INSTRUMENT, Note, noteToMIDIPitch, Sheet } from "../syntax/index.js";
 import { type MIDIEvent, type MIDIMessage,TMDMIDIEncoder } from './midi_encoder.js';
 
 export enum MIDIInstrument {

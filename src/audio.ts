@@ -1,14 +1,6 @@
-import {
-  Accidental,
-  DEFAULT_INSTRUMENT,
-  Note,
-  PlaybackDirectiveEvent,
-  PlaybackEvent,
-  Sheet,
-  SheetInstrumentHelper,
-  TMDMacroEvaluator,
-  TMDPlaybackRenderer,
-} from "./core/index.js";
+import { SheetInstrumentHelper } from "./domain/index.js";
+import { PlaybackDirectiveEvent, PlaybackEvent, TMDMacroEvaluator, TMDPlaybackRenderer } from "./playback/index.js";
+import { Accidental, DEFAULT_INSTRUMENT, Note, Sheet } from "./syntax/index.js";
 
 export class TmdAudioError extends Error {}
 

@@ -1,7 +1,7 @@
 import * as path from "node:path";
 
-import { TMDRefactor } from "../core/index.js";
 import { readUTF8, writeUTF8 } from "../io/text_io.js";
+import { TMDRefactor } from "../refactoring/index.js";
 
 export function handleRefactorCommand(argv: string[]): number {
   const sub = argv[0];

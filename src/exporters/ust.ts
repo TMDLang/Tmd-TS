@@ -1,4 +1,6 @@
-import { Sheet, SheetInstrumentHelper,TMDPlaybackRenderer } from "../core/index.js";
+import { SheetInstrumentHelper } from "../domain/index.js";
+import { TMDPlaybackRenderer } from "../playback/index.js";
+import { Sheet } from "../syntax/index.js";
 import { TMDMIDIGenerator } from "./midi.js";
 
 /** Options for configuring UTAU .ust exports. */

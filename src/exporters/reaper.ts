@@ -1,12 +1,6 @@
-import {
-  Beat,
-  Playback,
-  PlaybackTimeline,
-  Sheet,
-  SheetInstrumentHelper,
-  TMDMacroEvaluator,
-  TMDPlaybackRenderer,
-} from '../core/index.js';
+import { SheetInstrumentHelper } from "../domain/index.js";
+import { PlaybackTimeline, TMDMacroEvaluator, TMDPlaybackRenderer } from "../playback/index.js";
+import { Beat, Playback, Sheet } from "../syntax/index.js";
 import {
   MIDIEvent,
   MIDIInstrument,

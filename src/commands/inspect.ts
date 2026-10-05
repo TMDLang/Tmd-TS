@@ -1,9 +1,7 @@
-import {
-  TmdParser,
-  TMDSongInspector,
-  TMDTonalityVisualizer,
-} from "../core/index.js";
+import { TMDSongInspector } from "../analysis/index.js";
 import { readUTF8 } from "../io/text_io.js";
+import { TMDTonalityVisualizer } from "../presentation/index.js";
+import { TmdParser } from "../syntax/index.js";
 
 export function handleInspectCommand(argv: string[]): number {
   let inputPath: string | undefined;

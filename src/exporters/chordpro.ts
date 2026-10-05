@@ -1,12 +1,6 @@
-import {
-  ChordSymbol,
-  KeySignature,
-  Playback,
-  Sheet,
-  SheetInstrumentHelper,
-  TMDMacroEvaluator,
-  TMDMeasureRenderer,
-} from '../core/index.js';
+import { SheetInstrumentHelper, TMDMeasureRenderer } from "../domain/index.js";
+import { TMDMacroEvaluator } from "../playback/index.js";
+import { ChordSymbol, KeySignature, Playback, Sheet } from "../syntax/index.js";
 
 export interface ChordProOptions {
   measuresPerLine?: number;

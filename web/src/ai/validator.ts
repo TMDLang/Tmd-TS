@@ -1,4 +1,4 @@
-import { Sheet,TMDParseError, TmdParser } from "../../../src/core/index.js";
+import { Sheet, TMDParseError, TmdParser } from "../../../src/syntax/index.js";
 
 export interface ValidationSuccess {
   valid: true;
