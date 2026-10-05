@@ -30,10 +30,14 @@ describe("core architecture boundaries", () => {
 
   it("moves source loading out of the syntax parser", () => {
     expect(existsSync(join(sourceRoot, "io", "parser_io.ts"))).toBe(true);
+    expect(existsSync(join(sourceRoot, "syntax", "parser_core.ts"))).toBe(true);
     const parser = readFileSync(join(sourceRoot, "syntax", "parser.ts"), "utf8");
     expect(parser.includes('from "node:fs"')).toBe(false);
     expect(parser.includes("TextEncodingDetector")).toBe(false);
     expect(parser.includes("FilePathNormalizer")).toBe(false);
+    expect(parser.includes('from "../io/parser_io.js"')).toBe(true);
+    const core = readFileSync(join(sourceRoot, "syntax", "parser_core.ts"), "utf8");
+    expect(core.includes('from "../io/parser_io.js"')).toBe(false);
   });
 
   it("keeps inspector analyzers inside the analysis boundary", () => {
