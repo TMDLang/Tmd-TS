@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { readUTF8, writeUTF8 } from "../src/core/text_io.js";
+import { readUTF8, writeUTF8 } from "../src/io/text_io.js";
 
 describe("shared CLI text I/O", () => {
   it("round-trips UTF-8 content", () => {

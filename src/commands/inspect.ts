@@ -3,7 +3,7 @@ import {
   TMDSongInspector,
   TMDTonalityVisualizer,
 } from "../core/index.js";
-import { readUTF8 } from "../core/text_io.js";
+import { readUTF8 } from "../io/text_io.js";
 
 export function handleInspectCommand(argv: string[]): number {
   let inputPath: string | undefined;

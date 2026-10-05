@@ -1,4 +1,4 @@
-import { TMDRefactor } from "../../../src/core/refactor.js";
+import { TMDRefactor } from "../../../src/refactoring/refactor.js";
 import type { TMDWebEditor } from "../editor.js";
 import { t } from "../i18n.js";
 

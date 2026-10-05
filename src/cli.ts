@@ -21,7 +21,6 @@ import {
   TMDSongInspector,
   TMDTonalityVisualizer,
 } from "./core/index.js";
-import { readUTF8, writeUTF8 } from "./core/text_io.js";
 import {
   TMDABCGenerator,
   TMDChordProGenerator,
@@ -33,6 +32,7 @@ import {
   TMDVSQGenerator,
   TMDVSQXGenerator,
 } from "./exporters/index.js";
+import { readUTF8, writeUTF8 } from "./io/text_io.js";
 import { TMDJSONRPCCodec,TMDLSPServer } from "./lsp/index.js";
 import { TmdMcpInstaller,TmdMcpServer } from "./mcp/index.js";
 import { TmdSkill } from "./skill.js";

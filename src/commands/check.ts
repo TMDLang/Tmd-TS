@@ -1,4 +1,4 @@
-import { readUTF8 } from "../core/text_io.js";
+import { readUTF8 } from "../io/text_io.js";
 import { TMDMeasureChecker } from "../validation/measure_check.js";
 
 export function handleCheckCommand(argv: string[]): number {

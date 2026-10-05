@@ -1,5 +1,5 @@
 import { TMDRefactor } from "../core/index.js";
-import { readUTF8, writeUTF8 } from "../core/text_io.js";
+import { readUTF8, writeUTF8 } from "../io/text_io.js";
 
 export function handleFormatCommand(argv: string[]): number {
   let inputPath: string | undefined;

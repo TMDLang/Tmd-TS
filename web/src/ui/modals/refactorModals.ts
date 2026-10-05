@@ -1,5 +1,5 @@
-import { TMDRefactor } from "../../../../src/core/refactor.js";
 import { Sheet } from "../../../../src/core/types.js";
+import { TMDRefactor } from "../../../../src/refactoring/refactor.js";
 import { TmdParser } from "../../../../src/syntax/parser.js";
 import type { TMDWebEditor } from "../../editor.js";
 import { escapeHtml } from "../../html.js";

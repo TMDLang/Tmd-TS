@@ -29,4 +29,9 @@ describe("core architecture boundaries", () => {
       expect(existsSync(join(sourceRoot, "analysis", file))).toBe(true);
     }
   });
+
+  it("keeps text I/O and source refactoring outside the syntax core", () => {
+    expect(existsSync(join(sourceRoot, "io", "text_io.ts"))).toBe(true);
+    expect(existsSync(join(sourceRoot, "refactoring", "refactor.ts"))).toBe(true);
+  });
 });
