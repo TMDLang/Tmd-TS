@@ -184,6 +184,14 @@ describe("core architecture boundaries", () => {
     expect(fallback.includes('from "../syntax/tokens.js"')).toBe(true);
   });
 
+  it("separates MCP server runtime from configuration installation", () => {
+    expect(existsSync(join(sourceRoot, "mcp", "server.ts"))).toBe(true);
+    expect(existsSync(join(sourceRoot, "mcp", "installer.ts"))).toBe(true);
+    const facade = readFileSync(join(sourceRoot, "mcp", "index.ts"), "utf8");
+    expect(facade.includes("export class TmdMCPServer")).toBe(false);
+    expect(facade.includes("export class TmdMCPInstaller")).toBe(false);
+  });
+
   it("keeps localization owned by the analysis boundary", () => {
     expect(existsSync(join(sourceRoot, "analysis", "localization.ts"))).toBe(true);
     expect(existsSync(join(sourceRoot, "core", "localization.ts"))).toBe(false);
