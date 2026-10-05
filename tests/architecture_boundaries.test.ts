@@ -40,4 +40,8 @@ describe("core architecture boundaries", () => {
     expect(existsSync(join(sourceRoot, "presentation", "outline.ts"))).toBe(true);
     expect(existsSync(join(sourceRoot, "presentation", "tonality_visualizer.ts"))).toBe(true);
   });
+
+  it("keeps macro expansion inside the playback boundary", () => {
+    expect(existsSync(join(sourceRoot, "playback", "macro.ts"))).toBe(true);
+  });
 });

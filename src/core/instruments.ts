@@ -1,4 +1,4 @@
-import { TMDMacroEvaluator } from './macro.js';
+import { TMDMacroEvaluator } from '../playback/macro.js';
 import { Sheet } from './types.js';
 
 /**

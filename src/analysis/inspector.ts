@@ -1,5 +1,4 @@
 import { SheetInstrumentHelper } from "../core/instruments.js";
-import { TMDMacroEvaluator } from "../core/macro.js";
 import {
   chordQualityIntervals,
   ChordSymbol,
@@ -12,6 +11,7 @@ import {
   scaleDegreeLetter,
   Sheet,
 } from "../core/types.js";
+import { TMDMacroEvaluator } from "../playback/macro.js";
 import { PlaybackDirectiveEvent,PlaybackEvent, PlaybackState, TMDPlaybackRenderer } from "../playback/playback.js";
 export type { TMDLocale } from "../core/localization.js";
 export { TMDLocalizationKey,TMDLocalizer } from "../core/localization.js";

@@ -1,4 +1,3 @@
-import { TMDPlaybackRenderer } from "../playback/playback.js";
 import {
   Accidental,
   Beat,
@@ -13,7 +12,8 @@ import {
   Sheet,
   Unit,
   UnitGroup,
-} from "./types.js";
+} from "../core/types.js";
+import { TMDPlaybackRenderer } from "./playback.js";
 
 export interface MacroExpansionResult {
   paragraphs: Entry[];

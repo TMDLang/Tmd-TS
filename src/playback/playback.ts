@@ -1,4 +1,3 @@
-import { TMDMacroEvaluator } from "../core/macro.js";
 import {
   Beat,
   ChordSymbol,
@@ -14,6 +13,7 @@ import {
   Sheet,
   Unit,
 } from "../core/types.js";
+import { TMDMacroEvaluator } from "./macro.js";
 
 export type PlaybackContent =
   | { type: "note"; note: Note }
