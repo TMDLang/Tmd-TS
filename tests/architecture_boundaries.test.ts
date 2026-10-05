@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
@@ -64,6 +64,12 @@ describe("core architecture boundaries", () => {
     expect(existsSync(join(sourceRoot, "playback", "measure.ts"))).toBe(true);
     expect(existsSync(join(sourceRoot, "domain", "measure.ts"))).toBe(false);
     expect(existsSync(join(sourceRoot, "core", "measure.ts"))).toBe(false);
+  });
+
+  it("separates AST measure checking from the lexer fallback", () => {
+    expect(existsSync(join(sourceRoot, "validation", "measure_lexer_fallback.ts"))).toBe(true);
+    const checker = readFileSync(join(sourceRoot, "validation", "measure_check.ts"), "utf8");
+    expect(checker.includes("private static checkWithLexer")).toBe(false);
   });
 
   it("keeps localization owned by the analysis boundary", () => {
