@@ -4,7 +4,7 @@ import * as path from "node:path";
 
 import { afterEach,beforeEach, describe, expect, it, vi } from "vitest";
 
-import { TmdMcpInstaller,TmdMcpServer } from "../src/mcp/index.js";
+import { TMDMCPInstaller,TMDMCPServer } from "../src/mcp/index.js";
 
 describe("TMD Node CLI MCP Server & Installer (TDD)", () => {
   let tmpDir: string;
@@ -30,13 +30,13 @@ intro:Piano@|0|{
 -> intro ->#
 `;
 
-  it("TmdMcpServer creates server instance with registered tools", () => {
-    const server = TmdMcpServer.createServer();
+  it("TMDMCPServer creates server instance with registered tools", () => {
+    const server = TMDMCPServer.createServer();
     expect(server).toBeDefined();
   });
 
-  it("TmdMcpServer tool handlers parse TMD correctly", async () => {
-    const result = await TmdMcpServer.handleParseTmd({ text: sampleTmd });
+  it("TMDMCPServer tool handlers parse TMD correctly", async () => {
+    const result = await TMDMCPServer.handleParseTmd({ text: sampleTmd });
     expect(result.content[0].type).toBe("text");
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed.valid).toBe(true);
@@ -45,8 +45,8 @@ intro:Piano@|0|{
     expect(parsed.tonic).toBe("C");
   });
 
-  it("TmdMcpServer tool handlers check TMD for measure and rhythm issues", async () => {
-    const goodResult = await TmdMcpServer.handleCheckTmd({ text: sampleTmd });
+  it("TMDMCPServer tool handlers check TMD for measure and rhythm issues", async () => {
+    const goodResult = await TMDMCPServer.handleCheckTmd({ text: sampleTmd });
     const goodParsed = JSON.parse(goodResult.content[0].text);
     expect(goodParsed.valid).toBe(true);
     expect(goodParsed.issues).toEqual([]);
@@ -63,7 +63,7 @@ verse:Piano@|0|{
 }
 -> verse ->#
 `;
-    const badResult = await TmdMcpServer.handleCheckTmd({ text: badTmd });
+    const badResult = await TMDMCPServer.handleCheckTmd({ text: badTmd });
     const badParsed = JSON.parse(badResult.content[0].text);
     expect(badParsed.valid).toBe(false);
     expect(badParsed.issueCount).toBe(1);
@@ -72,35 +72,35 @@ verse:Piano@|0|{
   });
 
 
-  it("TmdMcpServer tool handlers convert TMD to MIDI and other formats", async () => {
-    const midiRes = await TmdMcpServer.handleConvertTmd({ text: sampleTmd, format: "midi" });
+  it("TMDMCPServer tool handlers convert TMD to MIDI and other formats", async () => {
+    const midiRes = await TMDMCPServer.handleConvertTmd({ text: sampleTmd, format: "midi" });
     expect(midiRes.content[0].type).toBe("text");
     expect(midiRes.content[0].text.length).toBeGreaterThan(0);
 
-    const xmlRes = await TmdMcpServer.handleConvertTmd({ text: sampleTmd, format: "musicxml" });
+    const xmlRes = await TMDMCPServer.handleConvertTmd({ text: sampleTmd, format: "musicxml" });
     expect(xmlRes.content[0].text).toContain("<?xml");
 
-    const lyRes = await TmdMcpServer.handleConvertTmd({ text: sampleTmd, format: "lilypond" });
+    const lyRes = await TMDMCPServer.handleConvertTmd({ text: sampleTmd, format: "lilypond" });
     expect(lyRes.content[0].text).toContain("\\version");
 
-    const abcRes = await TmdMcpServer.handleConvertTmd({ text: sampleTmd, format: "abc" });
+    const abcRes = await TMDMCPServer.handleConvertTmd({ text: sampleTmd, format: "abc" });
     expect(abcRes.content[0].text).toContain("X:1");
 
-    const choRes = await TmdMcpServer.handleConvertTmd({ text: sampleTmd, format: "chordpro" });
+    const choRes = await TMDMCPServer.handleConvertTmd({ text: sampleTmd, format: "chordpro" });
     expect(choRes.content[0].text).toContain("{title: MCP Test Song}");
   });
 
-  it("TmdMcpServer getSkill returns TMD specification", async () => {
-    const res = await TmdMcpServer.handleGetSkill();
+  it("TMDMCPServer getSkill returns TMD specification", async () => {
+    const res = await TMDMCPServer.handleGetSkill();
     expect(res.content[0].text).toContain("Timebase Mark Down");
     expect(res.content[0].text).toContain("::SCORE::");
   });
 
-  it("TmdMcpInstaller installs mcpServers entry into target config JSON files", () => {
+  it("TMDMCPInstaller installs mcpServers entry into target config JSON files", () => {
     const fakeConfigPath = path.join(tmpDir, "claude_desktop_config.json");
     fs.writeFileSync(fakeConfigPath, JSON.stringify({ mcpServers: {} }, null, 2));
 
-    const results = TmdMcpInstaller.installToConfigPath(fakeConfigPath, {
+    const results = TMDMCPInstaller.installToConfigPath(fakeConfigPath, {
       command: "tmd",
       args: ["--mcp"],
     });
@@ -112,10 +112,10 @@ verse:Piano@|0|{
     expect(updated.mcpServers.tmd.args).toEqual(["--mcp"]);
   });
 
-  it("TmdMcpInstaller creates config file if it does not exist", () => {
+  it("TMDMCPInstaller creates config file if it does not exist", () => {
     const fakeConfigPath = path.join(tmpDir, "nested", "mcp_config.json");
 
-    const results = TmdMcpInstaller.installToConfigPath(fakeConfigPath, {
+    const results = TMDMCPInstaller.installToConfigPath(fakeConfigPath, {
       command: "tmd",
       args: ["--mcp"],
     });
@@ -126,8 +126,8 @@ verse:Piano@|0|{
     expect(updated.mcpServers.tmd.command).toBe("tmd");
   });
 
-  it("TmdMcpInstaller default paths include standard tool config locations", () => {
-    const paths = TmdMcpInstaller.defaultConfigPaths();
+  it("TMDMCPInstaller default paths include standard tool config locations", () => {
+    const paths = TMDMCPInstaller.defaultConfigPaths();
     expect(paths.length).toBeGreaterThan(0);
     expect(paths.some((p) => p.includes("Claude") || p.includes("claude"))).toBe(true);
     expect(paths.some((p) => p.includes("gemini") || p.includes("antigravity"))).toBe(true);
@@ -137,14 +137,14 @@ verse:Piano@|0|{
     const { main } = await import("../src/cli.js");
     const fakeConfigPath = path.join(tmpDir, "test_mcp.json");
     // Mock defaultConfigPaths to test install-mcp cleanly
-    const origPaths = TmdMcpInstaller.defaultConfigPaths;
-    TmdMcpInstaller.defaultConfigPaths = () => [fakeConfigPath];
+    const origPaths = TMDMCPInstaller.defaultConfigPaths;
+    TMDMCPInstaller.defaultConfigPaths = () => [fakeConfigPath];
     try {
       const code = main(["--install-mcp"]);
       expect(code).toBe(0);
       expect(fs.existsSync(fakeConfigPath)).toBe(true);
     } finally {
-      TmdMcpInstaller.defaultConfigPaths = origPaths;
+      TMDMCPInstaller.defaultConfigPaths = origPaths;
     }
   });
 });

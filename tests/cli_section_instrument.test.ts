@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { TMDWAVRenderer } from "../src/audio.js";
 import { main, printHelp } from "../src/cli.js";
 import { TMDMIDIGenerator } from "../src/exporters/midi.js";
-import { TmdMcpServer } from "../src/mcp/index.js";
+import { TMDMCPServer } from "../src/mcp/index.js";
 import { TMDParser } from "../src/syntax/parser.js";
 
 describe("CLI & Renderer --section and --instrument alignment (TDD)", () => {
@@ -201,7 +201,7 @@ verse:Piano@|0|{
 
   it("MCP tmd_convert supports section and instrument filtering for MIDI and WAV", async () => {
     // 1. MIDI with section & instrument
-    const midiRes = await TmdMcpServer.handleConvertTmd({
+    const midiRes = await TMDMCPServer.handleConvertTmd({
       text: multiSectionTmd,
       format: "midi",
       section: "intro",
@@ -213,7 +213,7 @@ verse:Piano@|0|{
     expect(tracks).toBe(2); // 1 conductor + Piano
 
     // 2. WAV with section & instrument
-    const wavRes = await TmdMcpServer.handleConvertTmd({
+    const wavRes = await TMDMCPServer.handleConvertTmd({
       text: multiSectionTmd,
       format: "wav",
       section: "intro",

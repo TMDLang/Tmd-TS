@@ -25,7 +25,7 @@ import {
 } from "./exporters/index.js";
 import { readUTF8, writeUTF8 } from "./io/text_io.js";
 import { TMDJSONRPCCodec,TMDLSPServer } from "./lsp/index.js";
-import { TmdMcpInstaller,TmdMcpServer } from "./mcp/index.js";
+import { TMDMCPInstaller,TMDMCPServer } from "./mcp/index.js";
 import { TMDOutlineGenerator, TMDOutlineNode, TMDTonalityVisualizer } from "./presentation/index.js";
 import { TMDRefactor } from "./refactoring/index.js";
 import { TMDSkill } from "./skill.js";
@@ -224,14 +224,14 @@ export function main(argv = process.argv.slice(2)): number {
     return runLSPServer();
   }
   if (runMcp) {
-    TmdMcpServer.run().catch((err) => {
+    TMDMCPServer.run().catch((err) => {
       console.error("Fatal error running TMD MCP Server:", err);
       process.exit(1);
     });
     return 0;
   }
   if (installMcp) {
-    const results = TmdMcpInstaller.installAll();
+    const results = TMDMCPInstaller.installAll();
     results.forEach((result) =>
       console.log(
         `${result.installed ? "Installed" : "Failed"} TMD MCP config: ${result.path}${

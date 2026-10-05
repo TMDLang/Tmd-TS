@@ -31,7 +31,7 @@ const textContent = (text: string) => ({
   ],
 });
 
-export class TmdMcpServer {
+export class TMDMCPServer {
   public static async handleGetSkill() {
     return textContent(TMDSkill.skillMarkdown);
   }
@@ -272,7 +272,7 @@ export class TmdMcpServer {
           "Get comprehensive TMD (Timebase Mark Down) language specification, prompt guidelines, and musical notation grammar.",
         inputSchema: z.object({}),
       },
-      async () => TmdMcpServer.handleGetSkill()
+      async () => TMDMCPServer.handleGetSkill()
     );
 
     server.registerTool(
@@ -285,7 +285,7 @@ export class TmdMcpServer {
           filePath: z.string().optional().describe("Path to .tmd file on filesystem"),
         }),
       },
-      async ({ text, filePath }) => TmdMcpServer.handleParseTmd({ text, filePath })
+      async ({ text, filePath }) => TMDMCPServer.handleParseTmd({ text, filePath })
     );
 
     server.registerTool(
@@ -298,7 +298,7 @@ export class TmdMcpServer {
           filePath: z.string().optional().describe("Path to .tmd file on filesystem"),
         }),
       },
-      async ({ text, filePath }) => TmdMcpServer.handleCheckTmd({ text, filePath })
+      async ({ text, filePath }) => TMDMCPServer.handleCheckTmd({ text, filePath })
     );
 
     server.registerTool(
@@ -327,14 +327,14 @@ export class TmdMcpServer {
         }),
       },
       async ({ text, filePath, format, outputPath, section, instrument }) =>
-        TmdMcpServer.handleConvertTmd({ text, filePath, format, outputPath, section, instrument })
+        TMDMCPServer.handleConvertTmd({ text, filePath, format, outputPath, section, instrument })
     );
 
     return server;
   }
 
   public static async run(): Promise<void> {
-    const server = TmdMcpServer.createServer();
+    const server = TMDMCPServer.createServer();
     const transport = new StdioServerTransport();
     await server.connect(transport);
   }
@@ -345,7 +345,7 @@ export interface McpServerConfigEntry {
   args: string[];
 }
 
-export class TmdMcpInstaller {
+export class TMDMCPInstaller {
   public static defaultConfigPaths(): string[] {
     const home = os.homedir();
     const isMac = process.platform === "darwin";
@@ -419,9 +419,9 @@ export class TmdMcpInstaller {
   }
 
   public static installAll(
-    paths: string[] = TmdMcpInstaller.defaultConfigPaths(),
+    paths: string[] = TMDMCPInstaller.defaultConfigPaths(),
     serverEntry?: McpServerConfigEntry
   ): { path: string; installed: boolean; error?: string }[] {
-    return paths.map((p) => TmdMcpInstaller.installToConfigPath(p, serverEntry));
+    return paths.map((p) => TMDMCPInstaller.installToConfigPath(p, serverEntry));
   }
 }

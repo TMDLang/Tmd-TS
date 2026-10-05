@@ -11,7 +11,7 @@ import {
   VocaloidExportOptions,
   VocaloidPhoneme,
 } from '../src/exporters/vocaloid.js';
-import { TmdMcpServer } from '../src/mcp/index.js';
+import { TMDMCPServer } from '../src/mcp/index.js';
 import { TMDParser } from '../src/syntax/index.js';
 
 describe('VocaloidPhoneme (Japanese to X-SAMPA)', () => {
@@ -275,7 +275,7 @@ Intro:Vocal@|0|{
 }
 `;
     // Base64 VSQ
-    const resVsq = await TmdMcpServer.handleConvertTmd({
+    const resVsq = await TMDMCPServer.handleConvertTmd({
       text: score,
       format: 'vsq' as any,
     });
@@ -284,7 +284,7 @@ Intro:Vocal@|0|{
     expect(vsqBuffer.slice(0, 4).toString('ascii')).toBe('MThd');
 
     // XML VSQX
-    const resVsqx = await TmdMcpServer.handleConvertTmd({
+    const resVsqx = await TMDMCPServer.handleConvertTmd({
       text: score,
       format: 'vsqx' as any,
     });
