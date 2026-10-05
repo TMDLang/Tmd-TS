@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.3] - 2026-10-05
+
+### Changed
+- **Modular Architecture Refactoring**:
+  - Restructured monolithic core into dedicated, single-responsibility subsystems: `syntax`, `playback`, `analysis`, `refactor`, `mcp`, and `lsp`.
+  - Decoupled lexer fallback from parser and measure checkers.
+  - Consolidated canonical pitch logic and timeline event ordering.
+  - Normalized public class and type names to standard camel-cased `Tmd*` / `Mcp*` conventions (e.g. `TmdParser`, `TmdSkill`, `TmdVersion`, `TmdMCPServer`).
+  - Aligned internal terminology and architecture parity with TmdSwift.
+
+### Added
+- **CLI Flags Alignment**:
+  - Added `-s, --section` and `-i, --instrument` command-line flags to align with TmdSwift CLI behavior.
+- **Web Studio & LSP Enhancements**:
+  - Support loading Gist scores directly via URL query parameter (`?gist=<gist_id>`).
+  - Added chord completion support for common secondary dominants and modal interchange chords in LSP.
+
+### Fixed
+- **Core Timeline and Playback Correctness**:
+  - Preserved directives, grid semantics, and entry metadata in `TmdRefactor.inlineOrders`.
+  - Fixed fixed-pitch state propagation to trailing directives in `TmdPlaybackRenderer`.
+  - Preserved per-event playback states when `TmdMeasureRenderer` pads rests and summarizes measures.
+  - Made inspector report strings fully localizable.
+
 ## [0.2.2] - 2026-10-01
 
 ### Changed

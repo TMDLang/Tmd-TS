@@ -13,7 +13,7 @@ describe("canonical Tmd public names", () => {
   it("exposes acronym-consistent names across modules", () => {
     expect(TmdParser).toBeDefined();
     expect(TmdSkill.skillName).toBe("tmd");
-    expect(TmdVersion.current).toBe("0.2.2");
+    expect(TmdVersion.current).toBe("0.2.3");
     expect(new TmdAudioError("audio")).toBeInstanceOf(Error);
     expect(TmdMCPServer).toBeDefined();
     expect(TmdMCPInstaller).toBeDefined();

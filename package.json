@@ -1,6 +1,6 @@
 {
   "name": "tmdlang",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "TypeScript parser, AST, CLI, and multi-format music generator for TMD (Timebase Mark Down)",
   "author": "zonble",
   "license": "MIT",
