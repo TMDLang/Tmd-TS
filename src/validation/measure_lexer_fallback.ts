@@ -1,6 +1,7 @@
 import { LexedToken, Lexer, Token } from "../syntax/parser.js";
 import { Beat } from "../syntax/types.js";
-import type { TmdMeasureIssue } from "./measure_check.js";
+import type { TmdMeasureIssue } from "./measure_issue.js";
+import { formatMeasureIssueDescription } from "./measure_issue.js";
 
 interface ParagraphSpanInfo {
   paragraphName: string;
@@ -17,28 +18,6 @@ function intValueOfToken(token: Token): number | undefined {
   if (token.type === "number" || token.type === "positiveNumber") return token.value as number;
   if (token.type === "note") return token.value.degree as number;
   return undefined;
-}
-
-function formatIssueDescription(issue: Omit<TmdMeasureIssue, "description">): string {
-  if (issue.instrument === "Order") {
-    if (issue.paragraphName) {
-      return `Playback (line ${issue.lineNumber}): Undefined section '${issue.paragraphName}' in playback (${issue.snippet})`;
-    }
-    return `Playback (line ${issue.lineNumber}): ${issue.snippet}`;
-  }
-  if (issue.snippet.startsWith("Unclosed entry")) {
-    return `${issue.paragraphName}:${issue.instrument} (line ${issue.lineNumber}): ${issue.snippet}`;
-  }
-  if (issue.snippet.includes("explicit barlines")) {
-    return `${issue.paragraphName}:${issue.instrument} (line ${issue.lineNumber}): ${issue.snippet}`;
-  }
-  const diffStr = issue.deltaUnits > 0 ? `+${issue.deltaUnits}` : `${issue.deltaUnits}`;
-  if (issue.measureIndex === 0) {
-    return `${issue.paragraphName}:${issue.instrument} (line ${issue.lineNumber}): Expected ${issue.expectedUnits} measures (${issue.snippet}), found ${issue.actualUnits} measures (${diffStr} measures)`;
-  }
-  let desc = `${issue.paragraphName}:${issue.instrument} (line ${issue.lineNumber}, measure ${issue.measureIndex}): Expected ${issue.expectedUnits} units (${issue.beat.count}/${issue.beat.noteValue} at <${issue.noteLength}*>), found ${issue.actualUnits} units (${diffStr} units)`;
-  if (issue.snippet) desc += `\n  --> | ${issue.snippet} |`;
-  return desc;
 }
 
 /** Validates malformed TMD source using the shared canonical lexer. */
@@ -246,7 +225,7 @@ export class TmdMeasureLexerFallback {
                 };
                 issues.push({
                   ...issueObj,
-                  description: formatIssueDescription(issueObj),
+                  description: formatMeasureIssueDescription(issueObj),
                 });
               }
               currentMeasureUnits = 0;
@@ -301,7 +280,7 @@ export class TmdMeasureLexerFallback {
                   beat: currentBeat,
                   snippet: `Time signature directive must occur at a measure boundary: <${timeSignature.count}/${timeSignature.noteValue}>`,
                 };
-                issues.push({ ...issueObj, description: formatIssueDescription(issueObj) });
+          issues.push({ ...issueObj, description: formatMeasureIssueDescription(issueObj) });
               } else {
                 currentBeat = timeSignature;
               }
@@ -420,7 +399,7 @@ export class TmdMeasureLexerFallback {
           };
           issues.push({
             ...issueObj,
-            description: formatIssueDescription(issueObj),
+            description: formatMeasureIssueDescription(issueObj),
           });
         }
 
@@ -517,7 +496,7 @@ export class TmdMeasureLexerFallback {
       };
       issues.push({
         ...issueObj,
-        description: formatIssueDescription(issueObj),
+        description: formatMeasureIssueDescription(issueObj),
       });
     } else if (!terminatedWithHash) {
       const issueObj = {
@@ -534,7 +513,7 @@ export class TmdMeasureLexerFallback {
       };
       issues.push({
         ...issueObj,
-        description: formatIssueDescription(issueObj),
+        description: formatMeasureIssueDescription(issueObj),
       });
     }
 
@@ -559,7 +538,7 @@ export class TmdMeasureLexerFallback {
         };
         issues.push({
           ...issueObj,
-          description: formatIssueDescription(issueObj),
+          description: formatMeasureIssueDescription(issueObj),
         });
       }
     }

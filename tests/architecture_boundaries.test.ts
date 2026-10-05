@@ -90,6 +90,14 @@ describe("core architecture boundaries", () => {
     expect(generator.includes("PENTATONIC_BASS_PATTERNS = {")).toBe(false);
   });
 
+  it("gives measure issue descriptions a single validation boundary", () => {
+    expect(existsSync(join(sourceRoot, "validation", "measure_issue.ts"))).toBe(true);
+    const checker = readFileSync(join(sourceRoot, "validation", "measure_check.ts"), "utf8");
+    const fallback = readFileSync(join(sourceRoot, "validation", "measure_lexer_fallback.ts"), "utf8");
+    expect(checker.includes("function formatIssueDescription")).toBe(false);
+    expect(fallback.includes("function formatIssueDescription")).toBe(false);
+  });
+
   it("keeps presentation consumers outside the syntax core", () => {
     expect(existsSync(join(sourceRoot, "presentation", "outline.ts"))).toBe(true);
     expect(existsSync(join(sourceRoot, "presentation", "tonality_visualizer.ts"))).toBe(true);
