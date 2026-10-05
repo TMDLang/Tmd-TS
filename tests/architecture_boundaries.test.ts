@@ -78,6 +78,12 @@ describe("core architecture boundaries", () => {
     expect(midi.includes("export enum MIDIInstrument")).toBe(false);
   });
 
+  it("gives macro transformations an explicit playback boundary", () => {
+    expect(existsSync(join(sourceRoot, "playback", "macro_transformations.ts"))).toBe(true);
+    const evaluator = readFileSync(join(sourceRoot, "playback", "macro.ts"), "utf8");
+    expect(evaluator.includes("function transposeSections")).toBe(false);
+  });
+
   it("keeps presentation consumers outside the syntax core", () => {
     expect(existsSync(join(sourceRoot, "presentation", "outline.ts"))).toBe(true);
     expect(existsSync(join(sourceRoot, "presentation", "tonality_visualizer.ts"))).toBe(true);
