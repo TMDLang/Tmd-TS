@@ -72,6 +72,12 @@ describe("core architecture boundaries", () => {
     expect(facade.includes("const clonedSections = orig.sections.map")).toBe(false);
   });
 
+  it("gives MIDI instrument mapping an explicit exporter boundary", () => {
+    expect(existsSync(join(sourceRoot, "exporters", "midi_instrument.ts"))).toBe(true);
+    const midi = readFileSync(join(sourceRoot, "exporters", "midi.ts"), "utf8");
+    expect(midi.includes("export enum MIDIInstrument")).toBe(false);
+  });
+
   it("keeps presentation consumers outside the syntax core", () => {
     expect(existsSync(join(sourceRoot, "presentation", "outline.ts"))).toBe(true);
     expect(existsSync(join(sourceRoot, "presentation", "tonality_visualizer.ts"))).toBe(true);
