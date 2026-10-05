@@ -258,19 +258,19 @@ Import `tmdlang` into your application:
 import {
   TmdParser,
   formatSummary,
-  TMDMIDIGenerator,
-  TMDReaperGenerator,
-  TMDMusicXMLGenerator,
-  TMDLilyPondGenerator,
-  TMDABCGenerator,
-  TMDChordProGenerator,
-  TMDVSQGenerator,
-  TMDVSQXGenerator,
-  TMDUSTGenerator,
-  TMDSongInspector,
-  TMDMeasureChecker,
-  TMDRefactor,
-  TMDWAVRenderer,
+  TmdMIDIGenerator,
+  TmdReaperGenerator,
+  TmdMusicXMLGenerator,
+  TmdLilyPondGenerator,
+  TmdABCGenerator,
+  TmdChordProGenerator,
+  TmdVSQGenerator,
+  TmdVSQXGenerator,
+  TmdUSTGenerator,
+  TmdSongInspector,
+  TmdMeasureChecker,
+  TmdRefactor,
+  TmdWAVRenderer,
 } from "tmdlang";
 
 const scoreText = `
@@ -295,22 +295,22 @@ if (!sheet) {
 
 // 2. Summary & Diagnostics
 console.log(formatSummary(sheet));
-const profile = TMDSongInspector.inspect(sheet);
+const profile = TmdSongInspector.inspect(sheet);
 console.log(`Vocal range: ${profile.lowestNote?.name} to ${profile.highestNote?.name}`);
 
-const issues = TMDMeasureChecker.check(scoreText);
+const issues = TmdMeasureChecker.check(scoreText);
 console.log(`Measure issues: ${issues.length}`);
 
 // 3. Exporters
-const midiBytes: Uint8Array = TMDMIDIGenerator.generateMIDI(sheet);
-const rppProject: string = TMDReaperGenerator.generateRPP(sheet);
-const musicXML: string = TMDMusicXMLGenerator.generateMusicXML(sheet);
-const lilyPond: string = TMDLilyPondGenerator.generateLilyPond(sheet);
-const abcScore: string = TMDABCGenerator.generateABC(sheet);
-const chordPro: string = TMDChordProGenerator.generateChordPro(sheet);
-const vsqXml: string = TMDVSQXGenerator.generateVSQX(sheet);
-const ustText: string = TMDUSTGenerator.generateUST(sheet);
-const wavBytes: Uint8Array = TMDWAVRenderer.renderWAV(sheet);
+const midiBytes: Uint8Array = TmdMIDIGenerator.generateMIDI(sheet);
+const rppProject: string = TmdReaperGenerator.generateRPP(sheet);
+const musicXML: string = TmdMusicXMLGenerator.generateMusicXML(sheet);
+const lilyPond: string = TmdLilyPondGenerator.generateLilyPond(sheet);
+const abcScore: string = TmdABCGenerator.generateABC(sheet);
+const chordPro: string = TmdChordProGenerator.generateChordPro(sheet);
+const vsqXml: string = TmdVSQXGenerator.generateVSQX(sheet);
+const ustText: string = TmdUSTGenerator.generateUST(sheet);
+const wavBytes: Uint8Array = TmdWAVRenderer.renderWAV(sheet);
 ```
 
 ## The Tmd-TS Implementation
