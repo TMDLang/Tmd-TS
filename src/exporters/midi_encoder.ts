@@ -1,4 +1,4 @@
-import { Beat } from '../core/types.js';
+import { Beat } from '../syntax/types.js';
 
 export type MIDIMessage =
   | { type: 'trackName'; name: string }

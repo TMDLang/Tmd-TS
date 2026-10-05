@@ -1,6 +1,6 @@
-import { Sheet } from "../../src/core/types.js";
 import { TMDRefactor } from "../../src/refactoring/refactor.js";
 import { TmdParser } from "../../src/syntax/parser.js";
+import { Sheet } from "../../src/syntax/types.js";
 import { AIProviderType } from "./ai/index.js";
 import { createTmdEditor, TMDWebEditor } from "./editor.js";
 import {

@@ -12,7 +12,7 @@ import {
   SectionDirectiveKind,
   Sheet,
   Unit,
-} from "../core/types.js";
+} from "../syntax/types.js";
 import { TMDMacroEvaluator } from "./macro.js";
 
 export type PlaybackContent =

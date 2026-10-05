@@ -1,5 +1,5 @@
 import { TMDMacroEvaluator } from '../playback/macro.js';
-import { Sheet } from './types.js';
+import { Sheet } from '../syntax/types.js';
 
 /**
  * Common helper functions for querying and resolving instruments from a TMD Sheet.

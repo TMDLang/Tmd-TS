@@ -1,4 +1,3 @@
-import { accidentalToSemitone,scaleDegreeLetter, Sheet } from "../../../src/core/types.js";
 import {
   TMDABCGenerator,
   TMDChordProGenerator,
@@ -9,6 +8,7 @@ import {
 } from "../../../src/exporters/index.js";
 import { TmdSkill } from "../../../src/skill.js";
 import { TmdParser } from "../../../src/syntax/parser.js";
+import { accidentalToSemitone,scaleDegreeLetter, Sheet } from "../../../src/syntax/types.js";
 import { TMDMeasureChecker } from "../../../src/validation/measure_check.js";
 
 export interface TmdWebMcpContext {

@@ -1,4 +1,4 @@
-import { KeySignature } from "../../../src/core/types.js";
+import { KeySignature } from "../../../src/syntax/types.js";
 
 export interface VirtualKeyInfo {
   midi: number;

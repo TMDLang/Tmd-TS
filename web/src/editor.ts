@@ -47,7 +47,7 @@ import {
   Tooltip,
 } from "@codemirror/view";
 
-import { DEFAULT_INSTRUMENT } from "../../src/core/types.js";
+import { DEFAULT_INSTRUMENT } from "../../src/syntax/types.js";
 import type { TMDMeasureIssue } from "../../src/validation/measure_check.js";
 import { t } from "./i18n.js";
 import { TMDWebLSPClient } from "./lsp/client.js";

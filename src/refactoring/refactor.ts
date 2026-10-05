@@ -1,3 +1,5 @@
+import { formatParagraph,formatSheet } from "../formatting/format.js";
+import { Lexer, TmdParser } from "../syntax/parser.js";
 import {
   Entry,
   KeySignature,
@@ -6,9 +8,7 @@ import {
   scaleDegreeSemitoneOffset,
   Sheet,
   UnitGroup,
-} from "../core/types.js";
-import { formatParagraph,formatSheet } from "../formatting/format.js";
-import { Lexer, TmdParser } from "../syntax/parser.js";
+} from "../syntax/types.js";
 
 export class TMDRefactorError extends Error {
   constructor(message: string) {

@@ -12,7 +12,7 @@ import {
   Sheet,
   Unit,
   UnitGroup,
-} from "../core/types.js";
+} from "../syntax/types.js";
 import { TMDPlaybackRenderer } from "./playback.js";
 
 export interface MacroExpansionResult {

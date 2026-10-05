@@ -44,4 +44,8 @@ describe("core architecture boundaries", () => {
   it("keeps macro expansion inside the playback boundary", () => {
     expect(existsSync(join(sourceRoot, "playback", "macro.ts"))).toBe(true);
   });
+
+  it("keeps the canonical source model inside the syntax boundary", () => {
+    expect(existsSync(join(sourceRoot, "syntax", "types.ts"))).toBe(true);
+  });
 });

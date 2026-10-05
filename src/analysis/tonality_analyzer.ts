@@ -15,8 +15,8 @@ import type {
 import { SheetInstrumentHelper } from "../core/instruments.js";
 import type { TMDLocale } from "../core/localization.js";
 import { TMDLocalizationKey, TMDLocalizer } from "../core/localization.js";
-import { chordQualityIntervals, ChordSymbol, noteToMIDIPitch, Sheet } from "../core/types.js";
 import { PlaybackEvent, TMDPlaybackRenderer } from "../playback/playback.js";
+import { chordQualityIntervals, ChordSymbol, noteToMIDIPitch, Sheet } from "../syntax/types.js";
 
 export class TMDSongTonalityAnalyzer {
 private static readonly KS_MAJOR_PROFILE: number[] = [

@@ -1,5 +1,5 @@
-import { Beat } from "../core/types.js";
 import { LexedToken, Lexer, TmdParser,Token } from "../syntax/parser.js";
+import { Beat } from "../syntax/types.js";
 
 export interface TMDMeasureIssue {
   paragraphName: string;
@@ -75,7 +75,7 @@ function formatIssueDescription(issue: {
 
 export class TMDMeasureChecker {
   /** Checks parser-valid structural invariants directly from the canonical AST. */
-  public static checkSheet(sheet: import("../core/types.js").Sheet): TMDMeasureIssue[] {
+  public static checkSheet(sheet: import("../syntax/types.js").Sheet): TMDMeasureIssue[] {
     const measureDuration = (Math.max(1, sheet.beat.count) * 4) / Math.max(1, sheet.beat.noteValue);
     const issues: TMDMeasureIssue[] = [];
     for (const entry of sheet.entries ?? []) {

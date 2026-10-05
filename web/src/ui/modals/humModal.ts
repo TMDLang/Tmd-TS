@@ -1,4 +1,4 @@
-import { Sheet } from "../../../../src/core/types.js";
+import { Sheet } from "../../../../src/syntax/types.js";
 import {
   detectTonicAndScale,
   quantizeNoteEventsToTmdSection,

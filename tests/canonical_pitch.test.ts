@@ -6,7 +6,7 @@ import {
   noteToMIDIPitch,
   PitchMapping,
   ScaleDegree,
-} from "../src/core/types.js";
+} from "../src/syntax/types.js";
 
 describe("canonical pitch domain helpers", () => {
   it("calculates MIDI pitch and chromatic mappings from one domain source", () => {

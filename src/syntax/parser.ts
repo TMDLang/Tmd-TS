@@ -1,5 +1,6 @@
 import * as fs from "node:fs";
 
+import { FilePathNormalizer, TextEncodingDetector } from "../utils/index.js";
 import {
   Accidental,
   Beat,
@@ -16,8 +17,7 @@ import {
   Sheet,
   Unit,
   UnitGroup
-} from "../core/types.js";
-import { FilePathNormalizer, TextEncodingDetector } from "../utils/index.js";
+} from "./types.js";
 
 export type TokenType =
   | "scoreHeader"
@@ -1221,7 +1221,7 @@ export class TmdParser {
       const mark = String(this.current.value).toLowerCase();
       if (["ppp", "pp", "p", "mp", "mf", "f", "ff", "fff"].includes(mark)) {
         this.advance();
-        result = { position, kind: { type: "dynamics", mark: mark as import("../core/types.js").DynamicMark } };
+        result = { position, kind: { type: "dynamics", mark: mark as import("./types.js").DynamicMark } };
       }
     } else if ((this.current.type as string) === "openAngle") {
       this.advance();

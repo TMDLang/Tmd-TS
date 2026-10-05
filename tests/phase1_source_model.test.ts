@@ -5,7 +5,7 @@ import { TmdParser } from "../src/syntax/parser.js";
 
 describe("Phase 1 canonical source model", () => {
   it("exposes only canonical source-model fields", () => {
-    const entry: import("../src/core/types.js").Entry = {
+    const entry: import("../src/syntax/types.js").Entry = {
       name: "Theme",
       assignment: undefined,
       isPrototype: true,
