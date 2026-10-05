@@ -54,6 +54,12 @@ describe("core architecture boundaries", () => {
     expect(existsSync(join(sourceRoot, "refactoring", "format_helpers.ts"))).toBe(true);
   });
 
+  it("gives refactoring transposition an explicit responsibility boundary", () => {
+    expect(existsSync(join(sourceRoot, "refactoring", "transpose.ts"))).toBe(true);
+    const facade = readFileSync(join(sourceRoot, "refactoring", "refactor.ts"), "utf8");
+    expect(facade.includes("const semitones = options.semitones")).toBe(false);
+  });
+
   it("keeps presentation consumers outside the syntax core", () => {
     expect(existsSync(join(sourceRoot, "presentation", "outline.ts"))).toBe(true);
     expect(existsSync(join(sourceRoot, "presentation", "tonality_visualizer.ts"))).toBe(true);
