@@ -1,5 +1,5 @@
-import { SheetInstrumentHelper, TMDMeasureRenderer } from "../domain/index.js";
-import { PlaybackDirectiveEvent, TMDMacroEvaluator, TMDPlaybackRenderer } from "../playback/index.js";
+import { SheetInstrumentHelper } from "../domain/index.js";
+import { PlaybackDirectiveEvent, TMDMacroEvaluator, TMDMeasureRenderer, TMDPlaybackRenderer } from "../playback/index.js";
 import { ChordSymbol, Note, PitchMapping, Sheet } from "../syntax/index.js";
 
 export class TMDMusicXMLGenerator {

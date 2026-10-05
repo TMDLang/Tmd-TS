@@ -1,5 +1,5 @@
-import { MeasureEvent, SheetInstrumentHelper, TMDMeasureRenderer } from "../domain/index.js";
-import { PlaybackDirectiveEvent, TMDMacroEvaluator } from "../playback/index.js";
+import { SheetInstrumentHelper } from "../domain/index.js";
+import { MeasureEvent, PlaybackDirectiveEvent, TMDMacroEvaluator, TMDMeasureRenderer } from "../playback/index.js";
 import { Entry, KeySignature, Note, Sheet } from "../syntax/index.js";
 
 interface ABCKeyInfo {

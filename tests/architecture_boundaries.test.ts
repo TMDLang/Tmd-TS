@@ -50,10 +50,16 @@ describe("core architecture boundaries", () => {
   });
 
   it("keeps domain models and generators outside the legacy core directory", () => {
-    for (const file of ["canon_gen.ts", "instruments.ts", "measure.ts"]) {
+    for (const file of ["canon_gen.ts", "instruments.ts"]) {
       expect(existsSync(join(sourceRoot, "domain", file))).toBe(true);
       expect(existsSync(join(sourceRoot, "core", file))).toBe(false);
     }
+  });
+
+  it("keeps measure rendering inside the playback boundary", () => {
+    expect(existsSync(join(sourceRoot, "playback", "measure.ts"))).toBe(true);
+    expect(existsSync(join(sourceRoot, "domain", "measure.ts"))).toBe(false);
+    expect(existsSync(join(sourceRoot, "core", "measure.ts"))).toBe(false);
   });
 
   it("keeps localization owned by the analysis boundary", () => {
