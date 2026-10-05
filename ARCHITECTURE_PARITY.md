@@ -5,12 +5,12 @@ the Swift and TypeScript implementations.
 
 | Responsibility | TmdSwift | Tmd-TS | Status |
 | --- | --- | --- | --- |
-| Syntax lexer, parser, AST/source model | `Sources/TmdSwift/Syntax/Parser.swift`, `Types.swift` | `src/syntax/parser.ts`, `types.ts` | Aligned |
-| Measure validation and diagnostics | `Sources/TmdSwift/Validation/MeasureCheck.swift` | `src/validation/measure_check.ts` | Aligned |
+| Syntax lexer, parser, AST/source model | `Sources/TmdSwift/Syntax/TmdParser.swift`, `Types.swift` | `src/syntax/parser.ts`, `types.ts` | Aligned |
+| Measure validation and diagnostics | `Sources/TmdSwift/Validation/TmdMeasureChecker.swift` | `src/validation/measure_check.ts` | Aligned |
 | Inspector facade, profiles, analyzers, localization | `Sources/TmdSwift/Analysis/` | `src/analysis/` | Aligned |
 | Playback timeline and measure rendering | `Sources/TmdSwift/Playback/` | `src/playback/` | Aligned |
-| Source refactoring | `Sources/TmdSwift/Refactoring/Refactor.swift` | `src/refactoring/refactor.ts` | Aligned |
-| Text I/O | `Sources/TmdSwift/IO/TMDTextIO.swift` | `src/io/text_io.ts` | Aligned |
+| Source refactoring | `Sources/TmdSwift/Refactoring/TmdRefactor.swift` | `src/refactoring/refactor.ts` | Aligned |
+| Text I/O | `Sources/TmdSwift/IO/TmdTextIO.swift` | `src/io/text_io.ts` | Aligned |
 | Source formatting | `Sources/TmdSwift/Syntax/Format.swift` | `src/syntax/format.ts` | Aligned |
 | Outline and visual presentation | `Sources/TmdSwift/Presentation/` | `src/presentation/` | Aligned |
 | Public responsibility entrypoints | SwiftPM target exports symbols directly | `src/*/index.ts` plus `src/index.ts` | Intentional language difference |
@@ -21,8 +21,9 @@ the Swift and TypeScript implementations.
   These are domain capabilities without a current Swift counterpart; they are
   not placed in either implementation's syntax core.
 - Swift keeps package/module names such as `TmdSwift` and `TmdSkill` for source
-  and distribution compatibility. Canonical public symbols use the `TMD`
-  acronym; migrated deprecated aliases have been removed.
+  and distribution compatibility. Canonical public symbols use the `Tmd`
+  prefix; migrated deprecated aliases have been removed. Tmd-TS still uses its
+  legacy `TMD` public symbols while issue #33 tracks the coordinated migration.
 - Swift currently uses directories inside one SwiftPM target. Splitting them
   into separate targets is intentionally deferred until dependency rules are
   stable.
