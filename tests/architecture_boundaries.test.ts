@@ -44,6 +44,10 @@ describe("core architecture boundaries", () => {
     expect(existsSync(join(sourceRoot, "refactoring", "refactor.ts"))).toBe(true);
   });
 
+  it("gives refactoring formatting helpers an explicit responsibility boundary", () => {
+    expect(existsSync(join(sourceRoot, "refactoring", "format_helpers.ts"))).toBe(true);
+  });
+
   it("keeps presentation consumers outside the syntax core", () => {
     expect(existsSync(join(sourceRoot, "presentation", "outline.ts"))).toBe(true);
     expect(existsSync(join(sourceRoot, "presentation", "tonality_visualizer.ts"))).toBe(true);
