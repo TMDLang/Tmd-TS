@@ -84,6 +84,12 @@ describe("core architecture boundaries", () => {
     expect(evaluator.includes("function transposeSections")).toBe(false);
   });
 
+  it("gives canon presets an explicit domain boundary", () => {
+    expect(existsSync(join(sourceRoot, "domain", "canon_presets.ts"))).toBe(true);
+    const generator = readFileSync(join(sourceRoot, "domain", "canon_gen.ts"), "utf8");
+    expect(generator.includes("PENTATONIC_BASS_PATTERNS = {")).toBe(false);
+  });
+
   it("keeps presentation consumers outside the syntax core", () => {
     expect(existsSync(join(sourceRoot, "presentation", "outline.ts"))).toBe(true);
     expect(existsSync(join(sourceRoot, "presentation", "tonality_visualizer.ts"))).toBe(true);

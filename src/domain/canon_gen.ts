@@ -52,6 +52,19 @@
  * --------------------------------------------------------------------------------
  */
 
+import {
+  DIATONIC_MAJOR_SCALE,
+  DIATONIC_MINOR_SCALE,
+  MAJOR_PENTATONIC_SCALE,
+  MINOR_PENTATONIC_SCALE,
+  PENTATONIC_BASS_PATTERNS,
+  PENTATONIC_CHORD_TONES_MAJOR,
+  PENTATONIC_CHORD_TONES_MINOR,
+  TONAL_BASS_PATTERNS,
+  TONAL_CHORD_TONES_MAJOR,
+  TONAL_CHORD_TONES_MINOR,
+} from "./canon_presets.js";
+
 export interface CanonGeneratorOptions {
   title?: string;
   tempo?: number;
@@ -73,118 +86,17 @@ export class TmdCanonGenerator {
   public static readonly MAX_VARIATIONS = 4096;
   public static readonly MAX_OFFSET_BARS = 64;
 
-  public static readonly MAJOR_PENTATONIC_SCALE = [
-    "1_", "2_", "3_", "5_", "6_",
-    "1", "2", "3", "5", "6",
-    "1^", "2^", "3^", "5^", "6^",
-    "1^^"
-  ];
 
-  public static readonly MINOR_PENTATONIC_SCALE = [
-    "6__", "1_", "2_", "3_", "5_",
-    "6_", "1", "2", "3", "5",
-    "6", "1^", "2^", "3^", "5^",
-    "6^"
-  ];
-
-  public static readonly PENTATONIC_BASS_PATTERNS = {
-    minor: [
-      ["6__", "1_", "2_", "3_", "5_", "3_", "2_", "1_"],
-      ["6__", "5__", "3__", "2__", "1__", "2__", "3__", "5__"],
-      ["6__", "2__", "3__", "6__"],
-      ["6__", "1_", "5__", "6__"],
-    ],
-    major: [
-      ["1_", "5__", "6__", "3__", "2__", "1__", "5__", "1_"],
-      ["1_", "2_", "3_", "5_", "6_", "5_", "3_", "2_"],
-      ["1_", "6__", "5__", "1_"],
-      ["1_", "3_", "5_", "2_"],
-    ]
-  };
-
-  public static readonly PENTATONIC_CHORD_TONES_MAJOR: Record<string, string[]> = {
-    "1_": ["1", "3", "5", "1^"],
-    "2_": ["2", "5", "6", "2^"],
-    "3_": ["3", "5", "1^", "3^"],
-    "5_": ["5", "2^", "5^", "1^"],
-    "6_": ["6", "1^", "3^", "6^"],
-    "1__": ["1_", "3_", "5_", "1"],
-    "2__": ["2_", "5_", "6_", "2"],
-    "3__": ["3_", "5_", "1", "3"],
-    "5__": ["5_", "2", "5", "1"],
-    "6__": ["6_", "1", "3", "6"],
-  };
-
-  public static readonly PENTATONIC_CHORD_TONES_MINOR: Record<string, string[]> = {
-    "6__": ["6_", "1", "3", "6"],
-    "1_": ["1", "3", "5", "1^"],
-    "2_": ["2", "5", "6", "2^"],
-    "3_": ["3", "5", "1^", "3^"],
-    "5_": ["5", "1^", "3^", "5^"],
-    "1__": ["1_", "3_", "5_", "1"],
-    "2__": ["2_", "5_", "6_", "2"],
-    "3__": ["3_", "5_", "1", "3"],
-    "5__": ["5_", "1", "3", "5"],
-  };
-
-  public static readonly DIATONIC_MAJOR_SCALE = [
-    "1_", "2_", "3_", "4_", "5_", "6_", "7_",
-    "1", "2", "3", "4", "5", "6", "7",
-    "1^", "2^", "3^", "4^", "5^", "6^", "7^",
-    "1^^"
-  ];
-
-  public static readonly DIATONIC_MINOR_SCALE = [
-    "6__", "7__", "1_", "2_", "3_", "4_", "5_",
-    "6_", "7_", "1", "2", "3", "4", "5",
-    "6", "7", "1^", "2^", "3^", "4^", "5^",
-    "6^"
-  ];
-
-  public static readonly TONAL_BASS_PATTERNS = {
-    major: [
-      ["1_", "5__", "6__", "3__", "4__", "1__", "4__", "5__"],
-      ["1_", "4__", "5__", "1_"],
-      ["1_", "6__", "4__", "5__"],
-      ["4__", "5__", "3__", "6__"],
-    ],
-    minor: [
-      ["6__", "3__", "4__", "1_", "2__", "6__", "2__", "3__"],
-      ["6__", "5__", "4__", "3__"],
-      ["6__", "2__", "3__", "6__"],
-    ]
-  };
-
-  public static readonly TONAL_CHORD_TONES_MAJOR: Record<string, string[]> = {
-    "1_": ["1", "3", "5", "1^"],
-    "1__": ["1_", "3_", "5_", "1"],
-    "5_": ["5", "7", "2^", "5^"],
-    "5__": ["5_", "7_", "2", "5"],
-    "6_": ["6", "1^", "3^", "6^"],
-    "6__": ["6_", "1", "3", "6"],
-    "3_": ["3", "5", "7", "3^"],
-    "3__": ["3_", "5_", "7_", "3"],
-    "4_": ["4", "6", "1^", "4^"],
-    "4__": ["4_", "6_", "1", "4"],
-    "2_": ["2", "4", "6", "2^"],
-    "2__": ["2_", "4_", "6_", "2"],
-  };
-
-  public static readonly TONAL_CHORD_TONES_MINOR: Record<string, string[]> = {
-    "6__": ["6_", "1", "3", "6"],
-    "6_": ["6", "1^", "3^", "6^"],
-    "3__": ["3_", "5_", "7_", "3"],
-    "3_": ["3", "5", "7", "3^"],
-    "4__": ["4_", "6_", "1", "4"],
-    "4_": ["4", "6", "1^", "4^"],
-    "1_": ["1", "3", "5", "1^"],
-    "1__": ["1_", "3_", "5_", "1"],
-    "2__": ["2_", "4_", "6_", "2"],
-    "2_": ["2", "4", "6", "2^"],
-    "5__": ["5_", "7_", "2", "5"],
-    "5_": ["5", "7", "2^", "5^"],
-  };
-
+  public static readonly MAJOR_PENTATONIC_SCALE = MAJOR_PENTATONIC_SCALE;
+  public static readonly MINOR_PENTATONIC_SCALE = MINOR_PENTATONIC_SCALE;
+  public static readonly PENTATONIC_BASS_PATTERNS = PENTATONIC_BASS_PATTERNS;
+  public static readonly PENTATONIC_CHORD_TONES_MAJOR = PENTATONIC_CHORD_TONES_MAJOR;
+  public static readonly PENTATONIC_CHORD_TONES_MINOR = PENTATONIC_CHORD_TONES_MINOR;
+  public static readonly DIATONIC_MAJOR_SCALE = DIATONIC_MAJOR_SCALE;
+  public static readonly DIATONIC_MINOR_SCALE = DIATONIC_MINOR_SCALE;
+  public static readonly TONAL_BASS_PATTERNS = TONAL_BASS_PATTERNS;
+  public static readonly TONAL_CHORD_TONES_MAJOR = TONAL_CHORD_TONES_MAJOR;
+  public static readonly TONAL_CHORD_TONES_MINOR = TONAL_CHORD_TONES_MINOR;
   private title: string;
   private tempo: number;
   private key: string;
