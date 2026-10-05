@@ -6,9 +6,9 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { TMDWAVRenderer } from "../src/audio.js";
 import { main, printHelp } from "../src/cli.js";
-import { TmdParser } from "../src/core/parser.js";
 import { TMDMIDIGenerator } from "../src/exporters/midi.js";
 import { TmdMcpServer } from "../src/mcp/index.js";
+import { TmdParser } from "../src/syntax/parser.js";
 
 describe("CLI & Renderer --section and --instrument alignment (TDD)", () => {
   let tmpDir: string;

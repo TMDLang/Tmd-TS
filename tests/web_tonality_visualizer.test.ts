@@ -3,8 +3,8 @@ import * as path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { TMDSongInspector } from "../src/core/inspector.js";
-import { TmdParser } from "../src/core/parser.js";
+import { TMDSongInspector } from "../src/analysis/inspector.js";
+import { TmdParser } from "../src/syntax/parser.js";
 import { renderTonalityProfileHtml } from "../web/src/ui/tonality.js";
 
 
@@ -112,4 +112,3 @@ verse:Piano@|0|{
     expect(htmlZh).toContain("Bm");
   });
 });
-

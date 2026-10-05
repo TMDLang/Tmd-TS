@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import { formatSheet } from "../src/core/format.js";
-import { TmdParser } from "../src/core/parser.js";
-import { TMDPlaybackRenderer } from "../src/core/playback.js";
+import { TMDPlaybackRenderer } from "../src/playback/playback.js";
+import { TmdParser } from "../src/syntax/parser.js";
 
 const canonicalPlaybackFixture = `::SCORE::
 ** Canonical Playback Fixture **

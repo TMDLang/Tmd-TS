@@ -1,9 +1,9 @@
 import { describe, expect,it } from "vitest";
 
 import { TMDCanonGenerator } from "../src/core/canon_gen.js";
-import { TMDMeasureChecker } from "../src/core/measure_check.js";
-import { TmdParser } from "../src/core/parser.js";
-import { TMDPlaybackRenderer } from "../src/core/playback.js";
+import { TMDPlaybackRenderer } from "../src/playback/playback.js";
+import { TmdParser } from "../src/syntax/parser.js";
+import { TMDMeasureChecker } from "../src/validation/measure_check.js";
 
 describe("TMDCanonGenerator (TDD port from canon_gen.py)", () => {
   it("rejects canon dimensions beyond the generation limits", () => {

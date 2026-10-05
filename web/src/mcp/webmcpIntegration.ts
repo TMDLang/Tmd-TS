@@ -1,5 +1,3 @@
-import { TMDMeasureChecker } from "../../../src/core/measure_check.js";
-import { TmdParser } from "../../../src/core/parser.js";
 import { accidentalToSemitone,scaleDegreeLetter, Sheet } from "../../../src/core/types.js";
 import {
   TMDABCGenerator,
@@ -10,6 +8,8 @@ import {
   TMDReaperGenerator,
 } from "../../../src/exporters/index.js";
 import { TmdSkill } from "../../../src/skill.js";
+import { TmdParser } from "../../../src/syntax/parser.js";
+import { TMDMeasureChecker } from "../../../src/validation/measure_check.js";
 
 export interface TmdWebMcpContext {
   getCurrentScore: () => string;

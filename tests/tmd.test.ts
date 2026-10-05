@@ -4,7 +4,6 @@ import { join, normalize } from 'node:path';
 
 import { describe, expect,it } from 'vitest';
 
-import { Lexer } from '../src/core/parser.js';
 import {
   Accidental,
   ChordRoot,
@@ -25,6 +24,7 @@ import {
   TmdSkill,
   TMDWAVRenderer,
 } from '../src/index.js';
+import { Lexer } from '../src/syntax/parser.js';
 
 const sampleTMD = `
 ::SCORE::

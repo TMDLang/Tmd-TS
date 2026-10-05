@@ -86,7 +86,7 @@ export function validateTmdCode(tmd: string): ValidationResult {
   }
 }
 
-import { TMDMeasureChecker, TMDMeasureIssue } from "../../../src/core/measure_check.js";
+import { TMDMeasureChecker, TMDMeasureIssue } from "../../../src/validation/measure_check.js";
 
 export interface ComprehensiveValidationResult {
   syntaxValid: boolean;
@@ -123,4 +123,3 @@ export function validateTmdCodeWithIssues(tmd: string): ComprehensiveValidationR
     allValid: measureIssues.length === 0,
   };
 }
-

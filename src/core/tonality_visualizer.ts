@@ -1,4 +1,4 @@
-import { TMDSongInspector,TMDSongProfile, TMDTonalityProfile } from "./inspector.js";
+import { TMDSongInspector,TMDSongProfile, TMDTonalityProfile } from "../analysis/inspector.js";
 import type { TMDLocale } from "./localization.js";
 import { TMDLocalizationKey, TMDLocalizer } from "./localization.js";
 

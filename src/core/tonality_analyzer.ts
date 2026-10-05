@@ -11,11 +11,11 @@ import type {
   TMDTonalityMood,
   TMDTonalityNarrative,
   TMDTonalityProfile,
-} from "./inspector.js";
+} from "../analysis/inspector.js";
+import { PlaybackEvent, TMDPlaybackRenderer } from "../playback/playback.js";
 import { SheetInstrumentHelper } from "./instruments.js";
 import type { TMDLocale } from "./localization.js";
 import { TMDLocalizationKey, TMDLocalizer } from "./localization.js";
-import { PlaybackEvent, TMDPlaybackRenderer } from "./playback.js";
 import { chordQualityIntervals, ChordSymbol, noteToMIDIPitch, Sheet } from "./types.js";
 
 export class TMDSongTonalityAnalyzer {

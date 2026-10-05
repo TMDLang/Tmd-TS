@@ -1,5 +1,5 @@
-import type { TMDTimingProfile } from "./inspector.js";
-import { PlaybackDirectiveEvent, PlaybackState,TMDPlaybackRenderer } from "./playback.js";
+import type { TMDTimingProfile } from "../analysis/inspector.js";
+import { PlaybackDirectiveEvent, PlaybackState,TMDPlaybackRenderer } from "../playback/playback.js";
 import { DEFAULT_TEMPO_BPM, KeySignature, Playback, Sheet } from "./types.js";
 
 /** Computes score timing independently from the Inspector facade. */

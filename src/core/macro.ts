@@ -1,4 +1,4 @@
-import { TMDPlaybackRenderer } from "./playback.js";
+import { TMDPlaybackRenderer } from "../playback/playback.js";
 import {
   Accidental,
   Beat,

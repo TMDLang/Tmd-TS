@@ -1,4 +1,4 @@
-import type { TMDHarmonyProfile } from "./inspector.js";
+import type { TMDHarmonyProfile } from "../analysis/inspector.js";
 import type { Sheet } from "./types.js";
 
 /** Extracts harmonic content and playback key changes from a parsed score. */

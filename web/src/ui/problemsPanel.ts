@@ -1,5 +1,5 @@
-import { TMDMeasureChecker, TMDMeasureIssue } from "../../../src/core/measure_check.js";
-import { TmdParser } from "../../../src/core/parser.js";
+import { TmdParser } from "../../../src/syntax/parser.js";
+import { TMDMeasureChecker, TMDMeasureIssue } from "../../../src/validation/measure_check.js";
 import type { TMDWebEditor } from "../editor.js";
 import { escapeHtml } from "../html.js";
 import { t } from "../i18n.js";

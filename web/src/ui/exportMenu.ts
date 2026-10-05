@@ -1,7 +1,6 @@
 import JSZip from "jszip";
 
 import { TMDWAVRenderer } from "../../../src/audio.js";
-import { TmdParser } from "../../../src/core/parser.js";
 import {
   TMDABCGenerator,
   TMDChordProGenerator,
@@ -13,6 +12,7 @@ import {
   TMDVSQXGenerator,
 } from "../../../src/exporters/index.js";
 import { TmdSkill } from "../../../src/skill.js";
+import { TmdParser } from "../../../src/syntax/parser.js";
 import type { TMDWebEditor } from "../editor.js";
 import { t } from "../i18n.js";
 import { encodeShareHash } from "../share.js";

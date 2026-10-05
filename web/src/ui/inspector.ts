@@ -1,9 +1,9 @@
-import { TMDSongInspector, TMDSongProfile } from "../../../src/core/inspector.js";
+import { TMDSongInspector, TMDSongProfile } from "../../../src/analysis/inspector.js";
 import { SheetInstrumentHelper } from "../../../src/core/instruments.js";
 import { TMDOutlineGenerator } from "../../../src/core/outline.js";
-import { TmdParser } from "../../../src/core/parser.js";
 import { TMDTonalityVisualizer } from "../../../src/core/tonality_visualizer.js";
 import { accidentalToSemitone, DEFAULT_INSTRUMENT,scaleDegreeLetter, Sheet } from "../../../src/core/types.js";
+import { TmdParser } from "../../../src/syntax/parser.js";
 import { escapeHtml } from "../html.js";
 import { getCurrentLocale,t } from "../i18n.js";
 import { renderTonalityProfileHtml } from "./tonality.js";

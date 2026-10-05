@@ -1,6 +1,6 @@
-import { TmdParser } from "../../../../src/core/parser.js";
 import { TMDRefactor } from "../../../../src/core/refactor.js";
 import { Sheet } from "../../../../src/core/types.js";
+import { TmdParser } from "../../../../src/syntax/parser.js";
 import type { TMDWebEditor } from "../../editor.js";
 import { escapeHtml } from "../../html.js";
 import { t } from "../../i18n.js";

@@ -1,5 +1,5 @@
-import { TMDMeasureChecker } from "../core/measure_check.js";
 import { readUTF8 } from "../core/text_io.js";
+import { TMDMeasureChecker } from "../validation/measure_check.js";
 
 export function handleCheckCommand(argv: string[]): number {
   let inputPath: string | undefined;

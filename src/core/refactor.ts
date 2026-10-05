@@ -1,5 +1,5 @@
+import { Lexer, TmdParser } from "../syntax/parser.js";
 import { formatParagraph,formatSheet } from "./format.js";
-import { Lexer, TmdParser } from "./parser.js";
 import {
   Entry,
   KeySignature,

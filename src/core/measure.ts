@@ -1,4 +1,4 @@
-import { PlaybackContent, PlaybackDirectiveEvent, PlaybackEvent, PlaybackState, TMDPlaybackRenderer } from './playback.js';
+import { PlaybackContent, PlaybackDirectiveEvent, PlaybackEvent, PlaybackState, TMDPlaybackRenderer } from '../playback/playback.js';
 import { Beat, DEFAULT_TEMPO_BPM, Sheet } from './types.js';
 
 export interface NotationDurationAtom {

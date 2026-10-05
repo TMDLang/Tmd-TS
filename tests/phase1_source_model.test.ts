@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { formatSheet } from "../src/core/format.js";
-import { TmdParser } from "../src/core/parser.js";
+import { TmdParser } from "../src/syntax/parser.js";
 
 describe("Phase 1 canonical source model", () => {
   it("exposes only canonical source-model fields", () => {
@@ -63,7 +63,7 @@ Theme:Piano@|0|{
     }`);
     const entry = sheet.entries[0];
     entry.assignment = "Guitar";
-    const { TMDPlaybackRenderer } = await import("../src/core/playback");
+    const { TMDPlaybackRenderer } = await import("../src/playback/playback.js");
     expect(TMDPlaybackRenderer.render(sheet, "Guitar").assignment).toBe("Guitar");
   });
 

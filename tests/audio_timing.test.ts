@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { TMDWAVRenderer } from "../src/audio.js";
-import { TmdParser } from "../src/core/parser.js";
+import { TmdParser } from "../src/syntax/parser.js";
 
 function wavDurationSeconds(wav: Uint8Array, sampleRate: number): number {
   const dataBytes = new DataView(wav.buffer).getUint32(40, true);
