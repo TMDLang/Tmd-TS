@@ -28,6 +28,14 @@ describe("core architecture boundaries", () => {
     expect(parser.includes("export class TmdParseError")).toBe(false);
   });
 
+  it("moves source loading out of the syntax parser", () => {
+    expect(existsSync(join(sourceRoot, "io", "parser_io.ts"))).toBe(true);
+    const parser = readFileSync(join(sourceRoot, "syntax", "parser.ts"), "utf8");
+    expect(parser.includes('from "node:fs"')).toBe(false);
+    expect(parser.includes("TextEncodingDetector")).toBe(false);
+    expect(parser.includes("FilePathNormalizer")).toBe(false);
+  });
+
   it("keeps inspector analyzers inside the analysis boundary", () => {
     for (const file of [
       "harmony_analyzer.ts",

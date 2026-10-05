@@ -1,6 +1,4 @@
-import * as fs from "node:fs";
-
-import { FilePathNormalizer, TextEncodingDetector } from "../utils/index.js";
+import { TmdParserIO } from "../io/parser_io.js";
 import { Lexer } from "./lexer.js";
 import { TmdParseError } from "./parse_diagnostics.js";
 import { type LexedToken, type Token, tokenExpectedDescription, type TokenType } from "./tokens.js";
@@ -79,16 +77,16 @@ export class TmdParser {
     return sheet;
   }
 
-  public static parseData(data: Uint8Array): Sheet {
-    const result = TextEncodingDetector.detectAndDecode(data);
-    if (!result) throw new Error("Could not decode TMD input");
-    return this.parseThrowing(result.content);
-  }
+  /** @deprecated Prefer TmdParserIO.parseData for source-loading concerns. */
+  public static parseData(data: Uint8Array): Sheet { return TmdParserIO.parseData(data); }
+
+  /** @deprecated Prefer TmdParserIO.parseFile for source-loading concerns. */
   public static parseFile(filePathOrURL: string): Sheet {
-    const location = FilePathNormalizer.parseLocation(filePathOrURL);
-    return this.parseData(fs.readFileSync(location.filePath));
+    return TmdParserIO.parseFile(filePathOrURL);
   }
-  public static parseURL(fileURL: string): Sheet { return this.parseFile(fileURL); }
+
+  /** @deprecated Prefer TmdParserIO.parseURL for source-loading concerns. */
+  public static parseURL(fileURL: string): Sheet { return TmdParserIO.parseURL(fileURL); }
 
   private currentToken(): Token {
     return this.pos < this.tokens.length ? this.tokens[this.pos] : { type: "eof", text: "", line: 0, column: 0 };

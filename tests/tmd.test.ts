@@ -20,6 +20,7 @@ import {
   TmdMIDIGenerator,
   TmdMusicXMLGenerator,
   TmdParser,
+  TmdParserIO,
   TmdPlaybackRenderer,
   TmdSkill,
   TmdWAVRenderer,
@@ -178,11 +179,11 @@ describe('Input utilities and platform features', () => {
 
   it('parses data and files, and reports token ranges', () => {
     const input = '::SCORE::\n** File **\n->#';
-    expect(TmdParser.parseData(new TextEncoder().encode(input)).name).toBe('File');
+    expect(TmdParserIO.parseData(new TextEncoder().encode(input)).name).toBe('File');
     const dir = mkdtempSync(join(tmpdir(), 'tmd-ts-'));
     const file = join(dir, 'score.tmd');
     writeFileSync(file, input);
-    expect(TmdParser.parseFile(file).name).toBe('File');
+    expect(TmdParserIO.parseFile(file).name).toBe('File');
     expect(new Lexer(input).tokenizeWithRanges()[0].range.start.line).toBe(1);
     rmSync(dir, { recursive: true, force: true });
   });
