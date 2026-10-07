@@ -20,6 +20,8 @@ OPTIONS:
     }
     if (arg === "-i" || arg === "--in-place") { inPlace = true; continue; }
     if (arg === "-o" || arg === "--output") { outputPath = argv[++i]; continue; }
+    if (arg.startsWith("-o=")) { outputPath = arg.slice("-o=".length); continue; }
+    if (arg.startsWith("--output=")) { outputPath = arg.slice("--output=".length); continue; }
     if (!arg.startsWith("-")) inputPath = arg;
     else { console.error(`Unknown option: ${arg}`); return 2; }
   }

@@ -1406,6 +1406,90 @@ describe("TMD CLI subcommands check, format, and refactor (TDD)", () => {
     }
   });
 
+  it("supports --key=value and -k=value syntax in refactor CLI commands (e.g. --semitones=-2)", async () => {
+    const { main } = await import("../src/cli.js");
+    const { tmpdir } = await import("node:os");
+    const { join } = await import("node:path");
+    const { mkdtempSync, writeFileSync, readFileSync, rmSync } = await import("node:fs");
+
+    const tempDir = mkdtempSync(join(tmpdir(), "tmd-cli-refactor-equal-test-"));
+    try {
+      const file = join(tempDir, "score.tmd");
+      const score = `::SCORE::
+** Song **
+!= 120
+?= C
+<4/4>
+verse:Violin@|0|{
+<4*>
+1 2 3 4
+}
+verse:Cello@|0|{
+<4*>
+1_ - - -
+}
+-> verse ->#
+`;
+      writeFileSync(file, score);
+
+      // 1. transpose with --semitones=-2 and -k
+      const outDown = join(tempDir, "down2.tmd");
+      expect(main(["refactor", "transpose", file, "--semitones=-2", "-k", `-o=${outDown}`])).toBe(0);
+      const downContent = readFileSync(outDown, "utf-8");
+      expect(downContent).toContain("?= B,");
+
+      // 2. transpose with -s=-2
+      const outShort = join(tempDir, "short_s.tmd");
+      expect(main(["refactor", "transpose", file, "-s=-2", "-k", `--output=${outShort}`])).toBe(0);
+      const shortContent = readFileSync(outShort, "utf-8");
+      expect(shortContent).toContain("?= B,");
+
+      // 3. transpose with --diatonic=1
+      const outDiatonic = join(tempDir, "diatonic.tmd");
+      expect(main(["refactor", "transpose", file, "--diatonic=1", `-o=${outDiatonic}`])).toBe(0);
+      const diatonicContent = readFileSync(outDiatonic, "utf-8");
+      expect(diatonicContent).toContain("2 3 4 5");
+
+      // 4. rename-instrument with --from=... --to=...
+      expect(main(["refactor", "rename-instrument", file, "--from=Violin", "--to=Fiddle", "-i"])).toBe(0);
+      let content = readFileSync(file, "utf-8");
+      expect(content).toContain("verse:Fiddle@|0|{");
+      expect(content).not.toContain("verse:Violin@");
+
+      // 5. rename-section with --from=... --to=...
+      expect(main(["refactor", "rename-section", file, "--from=verse", "--to=Chorus", "-i"])).toBe(0);
+      content = readFileSync(file, "utf-8");
+      expect(content).toContain("Chorus:Fiddle@|0|{");
+
+      // 6. extract-instrument with --instrument=...
+      const outExtract = join(tempDir, "extracted.tmd");
+      expect(main(["refactor", "extract-instrument", file, "--instrument=Cello", `-o=${outExtract}`])).toBe(0);
+      const extracted = readFileSync(outExtract, "utf-8");
+      expect(extracted).toContain("Chorus:Cello@|0|{");
+      expect(extracted).not.toContain("Fiddle");
+
+      // 7. duplicate-track with --source=... --target=... --octave=...
+      expect(main(["refactor", "duplicate-track", file, "--source=Fiddle", "--target=Viola", "--octave=-1", "-i"])).toBe(0);
+      content = readFileSync(file, "utf-8");
+      expect(content).toContain("Chorus:Viola@|0|{");
+      expect(content).toContain("1_ 2_ 3_ 4_");
+
+      // 8. generate-harmony with --source=... --target=... --interval=...
+      expect(main(["refactor", "generate-harmony", file, "--source=Fiddle", "--target=Harmony3rd", "--interval=2", "-i"])).toBe(0);
+      content = readFileSync(file, "utf-8");
+      expect(content).toContain("Chorus:Harmony3rd@|0|{");
+      expect(content).toContain("3 4 5 6");
+
+      // 9. format with --output=...
+      const outFormatted = join(tempDir, "formatted.tmd");
+      expect(main(["format", file, `--output=${outFormatted}`])).toBe(0);
+      const formattedContent = readFileSync(outFormatted, "utf-8");
+      expect(formattedContent).toContain("Chorus:Fiddle@|0|{");
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
   it("accurately computes token line numbers when comments contain token text", () => {
     const code = `/* comment containing v1 inside */
 v1:Piano@|0|{
