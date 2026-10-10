@@ -23,7 +23,7 @@ export interface AiToolDeclarations {
  * Tools like checkTmd, parseTmd, and getCurrentScore are exposed.
  */
 export function getAgentAvailableTools(ctx: TmdWebMcpContext): WebMcpTool[] {
-  const allTools = buildTmdWebMcpTools(ctx);
+  const allTools = buildTmdWebMcpTools(ctx, { autoLoadSkill: false });
   const allowed = ["checkTmd", "getCurrentScore", "parseTmd"];
   return allTools.filter((t) => allowed.includes(t.name));
 }
@@ -67,7 +67,7 @@ export async function executeAiTool(
   args: Record<string, any>,
   ctx: TmdWebMcpContext
 ): Promise<string> {
-  const tools = buildTmdWebMcpTools(ctx);
+  const tools = buildTmdWebMcpTools(ctx, { autoLoadSkill: false });
   const targetTool = tools.find((t) => t.name === toolName);
   if (!targetTool) {
     return JSON.stringify({ error: `Tool ${toolName} not found` });

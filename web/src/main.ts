@@ -685,7 +685,7 @@ async function init() {
       getCurrentScore: () => editor.getContent(),
       loadScoreToEditor: (text: string) => {
         editor.setContent(text);
-        updateInspector(text);
+        handleScoreUpdated(text);
       },
       startPlayback: () => {
         playerController?.startPlayback(editor.getContent());
