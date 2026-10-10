@@ -2,9 +2,9 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 
-import { afterEach,beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { TmdMCPInstaller,TmdMCPServer } from "../src/mcp/index.js";
+import { TmdMcpCore, TmdMCPInstaller, TmdMCPServer } from "../src/mcp/index.js";
 
 describe("TMD Node CLI MCP Server & Installer (TDD)", () => {
   let tmpDir: string;
@@ -198,6 +198,33 @@ unused:Piano@|0|{
       expect(fs.existsSync(fakeConfigPath)).toBe(true);
     } finally {
       TmdMCPInstaller.defaultConfigPaths = origPaths;
+    }
+  });
+
+  it("TmdMcpCore provides shared environment-agnostic handlers for Node MCP and WebMCP (#52)", () => {
+    const parsed = TmdMcpCore.parseTmdText(sampleTmd);
+    expect(parsed.valid).toBe(true);
+    if (parsed.valid) {
+      expect(parsed.name).toBe("MCP Test Song");
+      expect(parsed.tonic).toBe("C");
+      expect(parsed.entryCount).toBe(1);
+    }
+
+    const checked = TmdMcpCore.checkTmdText(sampleTmd, { includeSyntaxCheck: true });
+    expect(checked.valid).toBe(true);
+    expect(checked.syntaxValid).toBe(true);
+    expect(checked.issueCount).toBe(0);
+
+    const midiOut = TmdMcpCore.convertTmdText(sampleTmd, { format: "midi" });
+    expect(midiOut.kind).toBe("binary");
+    if (midiOut.kind === "binary") {
+      expect(midiOut.base64.length).toBeGreaterThan(0);
+    }
+
+    const choOut = TmdMcpCore.convertTmdText(sampleTmd, { format: "chordpro" });
+    expect(choOut.kind).toBe("text");
+    if (choOut.kind === "text") {
+      expect(choOut.text).toContain("{title: MCP Test Song}");
     }
   });
 });
