@@ -4,7 +4,7 @@ import { Sheet } from "../../../../src/syntax/types.js";
 import type { TmdWebEditor } from "../../editor.js";
 import { escapeHtml } from "../../html.js";
 import { t } from "../../i18n.js";
-import { extractTmdTitle, SavedScore,TmdStorage } from "../../storage/db.js";
+import { extractTmdTitle, SavedScore, TmdStorage } from "../../storage/db.js";
 
 export interface RefactorModalsElements {
   // Rename Instrument
@@ -76,6 +76,75 @@ export interface RefactorModalsElements {
   showToast: (message: string, type?: "success" | "error") => void;
   onScoreUpdated: (newText: string) => void;
   loadScoreIntoEditor: (score: SavedScore) => void;
+}
+
+function parseEditorSheet(editor: TmdWebEditor): Sheet | null {
+  try {
+    return TmdParser.parse(editor.getContent());
+  } catch {
+    return null;
+  }
+}
+
+function populateSelectOptions(
+  selectEl: HTMLSelectElement,
+  values: string[],
+  selectedValue?: string
+): void {
+  selectEl.innerHTML = values
+    .map(
+      (val) =>
+        `<option value="${escapeHtml(val)}" ${val === selectedValue ? "selected" : ""}>${escapeHtml(val)}</option>`
+    )
+    .join("");
+}
+
+function getSheetInstruments(editor: TmdWebEditor): string[] {
+  const sheet = parseEditorSheet(editor);
+  return Array.from(
+    new Set(sheet?.entries.map((p) => p.assignment).filter((p): p is string => Boolean(p)) || [])
+  );
+}
+
+function getSheetSections(editor: TmdWebEditor): string[] {
+  const sheet = parseEditorSheet(editor);
+  return Array.from(new Set(sheet?.entries.map((p) => p.name) || []));
+}
+
+function configureSectionScopeControls(
+  initialSection: string | undefined,
+  scopeGroup: HTMLElement,
+  scopeSection: HTMLInputElement,
+  scopeGlobal: HTMLInputElement,
+  scopeSectionLabel: HTMLElement
+): void {
+  if (initialSection) {
+    scopeGroup.style.display = "block";
+    scopeSection.checked = true;
+    scopeSectionLabel.textContent = t("scopeSectionOnly").replace("{section}", initialSection);
+  } else {
+    scopeGroup.style.display = "none";
+    scopeGlobal.checked = true;
+  }
+}
+
+function applyEditorRefactor(
+  editor: TmdWebEditor,
+  onScoreUpdated: (newText: string) => void,
+  showToast: (message: string, type?: "success" | "error") => void,
+  toastMessage: string,
+  modal: HTMLDialogElement | null,
+  transform: (text: string) => string
+): void {
+  try {
+    const refactored = transform(editor.getContent());
+    editor.setContent(refactored);
+    onScoreUpdated(refactored);
+    modal?.close();
+    showToast(toastMessage);
+  } catch (err: any) {
+    showToast(t("errorRefactor").replace("{error}", err.message || String(err)), "error");
+  }
 }
 
 export function setupRefactorModals(
@@ -152,17 +221,7 @@ export function setupRefactorModals(
   // Rename Instrument Modal
   toolRenameInstrument?.addEventListener("click", () => {
     toolsDropdown?.classList.remove("open");
-    const text = editor.getContent();
-    let sheet: Sheet | null = null;
-    try {
-      sheet = TmdParser.parse(text);
-    } catch {
-      // ignore
-    }
-    const instruments = Array.from(new Set(sheet?.entries.map((p) => p.assignment).filter((p): p is string => Boolean(p)) || []));
-    refactorOldInst.innerHTML = instruments
-      .map((inst) => `<option value="${escapeHtml(inst)}">${escapeHtml(inst)}</option>`)
-      .join("");
+    populateSelectOptions(refactorOldInst, getSheetInstruments(editor));
     refactorNewInst.value = "";
     refactorInstrumentModal.showModal();
   });
@@ -176,32 +235,20 @@ export function setupRefactorModals(
     const oldInst = refactorOldInst.value;
     const newInst = refactorNewInst.value.trim();
     if (!oldInst || !newInst) return;
-    try {
-      const text = editor.getContent();
-      const refactored = TmdRefactor.renameInstrument(text, oldInst, newInst);
-      editor.setContent(refactored);
-      onScoreUpdated(refactored);
-      refactorInstrumentModal.close();
-      showToast(t("toastRenamedInstrument"));
-    } catch (err: any) {
-      showToast(t("errorRefactor").replace("{error}", err.message || String(err)), "error");
-    }
+    applyEditorRefactor(
+      editor,
+      onScoreUpdated,
+      showToast,
+      t("toastRenamedInstrument"),
+      refactorInstrumentModal,
+      (text) => TmdRefactor.renameInstrument(text, oldInst, newInst)
+    );
   });
 
   // Rename Section Modal
   toolRenameSection?.addEventListener("click", () => {
     toolsDropdown?.classList.remove("open");
-    const text = editor.getContent();
-    let sheet: Sheet | null = null;
-    try {
-      sheet = TmdParser.parse(text);
-    } catch {
-      // ignore
-    }
-    const sections = Array.from(new Set(sheet?.entries.map((p) => p.name) || []));
-    refactorOldSec.innerHTML = sections
-      .map((sec) => `<option value="${escapeHtml(sec)}">${escapeHtml(sec)}</option>`)
-      .join("");
+    populateSelectOptions(refactorOldSec, getSheetSections(editor));
     refactorNewSec.value = "";
     refactorSectionModal.showModal();
   });
@@ -215,32 +262,20 @@ export function setupRefactorModals(
     const oldSec = refactorOldSec.value;
     const newSec = refactorNewSec.value.trim();
     if (!oldSec || !newSec) return;
-    try {
-      const text = editor.getContent();
-      const refactored = TmdRefactor.renameSection(text, oldSec, newSec);
-      editor.setContent(refactored);
-      onScoreUpdated(refactored);
-      refactorSectionModal.close();
-      showToast(t("toastRenamedSection"));
-    } catch (err: any) {
-      showToast(t("errorRefactor").replace("{error}", err.message || String(err)), "error");
-    }
+    applyEditorRefactor(
+      editor,
+      onScoreUpdated,
+      showToast,
+      t("toastRenamedSection"),
+      refactorSectionModal,
+      (text) => TmdRefactor.renameSection(text, oldSec, newSec)
+    );
   });
 
   // Extract Instrument Modal
   toolExtractInstrument?.addEventListener("click", () => {
     toolsDropdown?.classList.remove("open");
-    const text = editor.getContent();
-    let sheet: Sheet | null = null;
-    try {
-      sheet = TmdParser.parse(text);
-    } catch {
-      // ignore
-    }
-    const instruments = Array.from(new Set(sheet?.entries.map((p) => p.assignment).filter((p): p is string => Boolean(p)) || []));
-    refactorExtractInst.innerHTML = instruments
-      .map((inst) => `<option value="${escapeHtml(inst)}">${escapeHtml(inst)}</option>`)
-      .join("");
+    populateSelectOptions(refactorExtractInst, getSheetInstruments(editor));
     refactorExtractModal.showModal();
   });
 
@@ -274,60 +309,36 @@ export function setupRefactorModals(
   const openDuplicateModal = (initialSection?: string, initialInstrument?: string) => {
     toolsDropdown?.classList.remove("open");
     closeContextMenu();
-    const text = editor.getContent();
-    let sheet: Sheet | null = null;
-    try {
-      sheet = TmdParser.parse(text);
-    } catch {
-      // ignore
-    }
-    const instruments = Array.from(new Set(sheet?.entries.map((p) => p.assignment).filter((p): p is string => Boolean(p)) || []));
-    refactorDupSource.innerHTML = instruments
-      .map((inst) => `<option value="${escapeHtml(inst)}" ${inst === initialInstrument ? "selected" : ""}>${escapeHtml(inst)}</option>`)
-      .join("");
+    populateSelectOptions(refactorDupSource, getSheetInstruments(editor), initialInstrument);
     refactorDupTarget.value = "";
     refactorDupOctave.value = "0";
 
     activeContextSection = initialSection;
-    if (initialSection) {
-      refactorDupScopeGroup.style.display = "block";
-      refactorDupScopeSection.checked = true;
-      refactorDupScopeSectionLabel.textContent = t("scopeSectionOnly").replace("{section}", initialSection);
-    } else {
-      refactorDupScopeGroup.style.display = "none";
-      refactorDupScopeGlobal.checked = true;
-    }
-
+    configureSectionScopeControls(
+      initialSection,
+      refactorDupScopeGroup,
+      refactorDupScopeSection,
+      refactorDupScopeGlobal,
+      refactorDupScopeSectionLabel
+    );
     refactorDuplicateModal.showModal();
   };
 
   const openHarmonyModal = (initialSection?: string, initialInstrument?: string) => {
     toolsDropdown?.classList.remove("open");
     closeContextMenu();
-    const text = editor.getContent();
-    let sheet: Sheet | null = null;
-    try {
-      sheet = TmdParser.parse(text);
-    } catch {
-      // ignore
-    }
-    const instruments = Array.from(new Set(sheet?.entries.map((p) => p.assignment).filter((p): p is string => Boolean(p)) || []));
-    refactorHarmSource.innerHTML = instruments
-      .map((inst) => `<option value="${escapeHtml(inst)}" ${inst === initialInstrument ? "selected" : ""}>${escapeHtml(inst)}</option>`)
-      .join("");
+    populateSelectOptions(refactorHarmSource, getSheetInstruments(editor), initialInstrument);
     refactorHarmTarget.value = "";
     refactorHarmInterval.value = "2";
 
     activeContextSection = initialSection;
-    if (initialSection) {
-      refactorHarmScopeGroup.style.display = "block";
-      refactorHarmScopeSection.checked = true;
-      refactorHarmScopeSectionLabel.textContent = t("scopeSectionOnly").replace("{section}", initialSection);
-    } else {
-      refactorHarmScopeGroup.style.display = "none";
-      refactorHarmScopeGlobal.checked = true;
-    }
-
+    configureSectionScopeControls(
+      initialSection,
+      refactorHarmScopeGroup,
+      refactorHarmScopeSection,
+      refactorHarmScopeGlobal,
+      refactorHarmScopeSectionLabel
+    );
     refactorHarmonyModal.showModal();
   };
 
@@ -348,16 +359,14 @@ export function setupRefactorModals(
     const section = isSectionOnly ? activeContextSection : undefined;
 
     if (!source || !target) return;
-    try {
-      const text = editor.getContent();
-      const refactored = TmdRefactor.duplicateTrack(text, source, target, { section, octaveShift });
-      editor.setContent(refactored);
-      onScoreUpdated(refactored);
-      refactorDuplicateModal.close();
-      showToast(t("toastDuplicatedTrack"));
-    } catch (err: any) {
-      showToast(t("errorRefactor").replace("{error}", err.message || String(err)), "error");
-    }
+    applyEditorRefactor(
+      editor,
+      onScoreUpdated,
+      showToast,
+      t("toastDuplicatedTrack"),
+      refactorDuplicateModal,
+      (text) => TmdRefactor.duplicateTrack(text, source, target, { section, octaveShift })
+    );
   });
 
   toolGenerateHarmony?.addEventListener("click", () => {
@@ -377,16 +386,14 @@ export function setupRefactorModals(
     const section = isSectionOnly ? activeContextSection : undefined;
 
     if (!source || !target) return;
-    try {
-      const text = editor.getContent();
-      const refactored = TmdRefactor.generateHarmony(text, source, target, { section, intervalSteps });
-      editor.setContent(refactored);
-      onScoreUpdated(refactored);
-      refactorHarmonyModal.close();
-      showToast(t("toastGeneratedHarmony"));
-    } catch (err: any) {
-      showToast(t("errorRefactor").replace("{error}", err.message || String(err)), "error");
-    }
+    applyEditorRefactor(
+      editor,
+      onScoreUpdated,
+      showToast,
+      t("toastGeneratedHarmony"),
+      refactorHarmonyModal,
+      (text) => TmdRefactor.generateHarmony(text, source, target, { section, intervalSteps })
+    );
   });
 
   const openTransposeModal = () => {
@@ -443,15 +450,14 @@ export function setupRefactorModals(
   toolInlineOrders?.addEventListener("click", () => {
     toolsDropdown?.classList.remove("open");
     if (!confirm(t("confirmInlineOrders"))) return;
-    try {
-      const text = editor.getContent();
-      const inlined = TmdRefactor.inlineOrders(text);
-      editor.setContent(inlined);
-      onScoreUpdated(inlined);
-      showToast(t("toastInlinedOrders"));
-    } catch (err: any) {
-      showToast(t("errorRefactor").replace("{error}", err.message || String(err)), "error");
-    }
+    applyEditorRefactor(
+      editor,
+      onScoreUpdated,
+      showToast,
+      t("toastInlinedOrders"),
+      null,
+      (text) => TmdRefactor.inlineOrders(text)
+    );
   });
 
   return {

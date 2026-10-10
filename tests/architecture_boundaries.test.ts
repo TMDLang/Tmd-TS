@@ -243,4 +243,22 @@ describe("core architecture boundaries", () => {
     expect(pagesYaml).toContain("cache: 'npm'");
     expect(pagesYaml).toContain("web/package-lock.json");
   });
+
+  it("shares CLI file I/O runner and Web UI export/refactor helpers (#53)", () => {
+    const repoRoot = join(import.meta.dirname, "..");
+    const refactorCli = readFileSync(join(sourceRoot, "commands", "refactor.ts"), "utf8");
+    expect(refactorCli).toContain("export function executeCliFileTransform(");
+    expect(refactorCli.match(/readUTF8\(/g)).toHaveLength(1);
+
+    const exportMenu = readFileSync(join(repoRoot, "web", "src", "ui", "exportMenu.ts"), "utf8");
+    expect(exportMenu).toContain("function bindSheetExportButton(");
+    expect(exportMenu.match(/alert\(t\("alertCannotExport"\)\)/g)).toHaveLength(1);
+
+    const refactorModals = readFileSync(
+      join(repoRoot, "web", "src", "ui", "modals", "refactorModals.ts"),
+      "utf8"
+    );
+    expect(refactorModals).toContain("function populateSelectOptions(");
+    expect(refactorModals).toContain("function applyEditorRefactor(");
+  });
 });

@@ -14,6 +14,7 @@ import {
 } from "../../../src/exporters/index.js";
 import { TmdSkill } from "../../../src/skill.js";
 import { TmdParser } from "../../../src/syntax/parser.js";
+import type { Sheet } from "../../../src/syntax/types.js";
 import type { TmdWebEditor } from "../editor.js";
 import { t } from "../i18n.js";
 import { encodeShareHash } from "../share.js";
@@ -43,9 +44,10 @@ export interface ExportMenuElements {
 }
 
 export function getSafeFilename(title?: string, ext: string = "mid"): string {
-  const safe = (title || "untitled")
-    .replace(/[^\w\u4e00-\u9fa5-_]+/g, "_")
-    .replace(/^_+|_+$/g, "") || "score";
+  const safe =
+    (title || "untitled")
+      .replace(/[^\w\u4e00-\u9fa5-_]+/g, "_")
+      .replace(/^_+|_+$/g, "") || "score";
   return `${safe}.${ext}`;
 }
 
@@ -61,7 +63,10 @@ export function downloadBlob(filename: string, blob: Blob): void {
 }
 
 export function downloadSkillFile(): void {
-  downloadBlob("SKILL.md", new Blob([TmdSkill.skillMarkdown], { type: "text/markdown;charset=utf-8" }));
+  downloadBlob(
+    "SKILL.md",
+    new Blob([TmdSkill.skillMarkdown], { type: "text/markdown;charset=utf-8" })
+  );
 }
 
 export async function exportAllScoresZip(): Promise<void> {
@@ -75,8 +80,8 @@ export async function exportAllScoresZip(): Promise<void> {
     const usedFilenames = new Map<string, number>();
 
     scores.forEach((s) => {
-      let baseName = s.title.replace(/[\\/:*?"<>|]/g, "_").trim() || "score";
-      let count = usedFilenames.get(baseName) || 0;
+      const baseName = s.title.replace(/[\\/:*?"<>|]/g, "_").trim() || "score";
+      const count = usedFilenames.get(baseName) || 0;
       let filename = `${baseName}.tmd`;
       if (count > 0) {
         filename = `${baseName}_(${count}).tmd`;
@@ -92,6 +97,23 @@ export async function exportAllScoresZip(): Promise<void> {
     console.error("Backup ZIP failed:", e);
     alert(`備份失敗: ${e.message || String(e)}`);
   }
+}
+
+function bindSheetExportButton(
+  button: HTMLButtonElement | null | undefined,
+  exportDropdown: HTMLElement,
+  getEditor: () => TmdWebEditor,
+  ext: string,
+  mimeType: string,
+  generate: (sheet: Sheet) => BlobPart
+): void {
+  button?.addEventListener("click", () => {
+    exportDropdown.classList.remove("open");
+    const sheet = TmdParser.parse(getEditor().getContent());
+    if (!sheet) return alert(t("alertCannotExport"));
+    const payload = generate(sheet);
+    downloadBlob(getSafeFilename(sheet.name, ext), new Blob([payload], { type: mimeType }));
+  });
 }
 
 export function setupExportMenu(
@@ -143,110 +165,85 @@ export function setupExportMenu(
     downloadBlob(filename, new Blob([text], { type: "text/plain;charset=utf-8" }));
   });
 
-  btnExportMidi.addEventListener("click", () => {
-    exportDropdown.classList.remove("open");
-    const editor = getEditor();
-    const text = editor.getContent();
-    const sheet = TmdParser.parse(text);
-    if (!sheet) return alert(t("alertCannotExport"));
-    const midi = TmdMIDIGenerator.generateMIDI(sheet);
-    downloadBlob(getSafeFilename(sheet.name, "mid"), new Blob([midi as any], { type: "audio/midi" }));
-  });
+  bindSheetExportButton(btnExportMidi, exportDropdown, getEditor, "mid", "audio/midi", (sheet) =>
+    TmdMIDIGenerator.generateMIDI(sheet) as any
+  );
 
-  btnExportReaper.addEventListener("click", () => {
-    exportDropdown.classList.remove("open");
-    const editor = getEditor();
-    const text = editor.getContent();
-    const sheet = TmdParser.parse(text);
-    if (!sheet) return alert(t("alertCannotExport"));
-    const rpp = TmdReaperGenerator.generateRPP(sheet);
-    downloadBlob(getSafeFilename(sheet.name, "rpp"), new Blob([rpp], { type: "text/plain;charset=utf-8" }));
-  });
+  bindSheetExportButton(
+    btnExportReaper,
+    exportDropdown,
+    getEditor,
+    "rpp",
+    "text/plain;charset=utf-8",
+    (sheet) => TmdReaperGenerator.generateRPP(sheet)
+  );
 
-  btnExportMusicXML.addEventListener("click", () => {
-    exportDropdown.classList.remove("open");
-    const editor = getEditor();
-    const text = editor.getContent();
-    const sheet = TmdParser.parse(text);
-    if (!sheet) return alert(t("alertCannotExport"));
-    const xml = TmdMusicXMLGenerator.generateMusicXML(sheet);
-    downloadBlob(getSafeFilename(sheet.name, "musicxml"), new Blob([xml], { type: "application/vnd.recordare.musicxml+xml;charset=utf-8" }));
-  });
+  bindSheetExportButton(
+    btnExportMusicXML,
+    exportDropdown,
+    getEditor,
+    "musicxml",
+    "application/vnd.recordare.musicxml+xml;charset=utf-8",
+    (sheet) => TmdMusicXMLGenerator.generateMusicXML(sheet)
+  );
 
-  btnExportLilyPond.addEventListener("click", () => {
-    exportDropdown.classList.remove("open");
-    const editor = getEditor();
-    const text = editor.getContent();
-    const sheet = TmdParser.parse(text);
-    if (!sheet) return alert(t("alertCannotExport"));
-    const ly = TmdLilyPondGenerator.generateLilyPond(sheet);
-    downloadBlob(getSafeFilename(sheet.name, "ly"), new Blob([ly], { type: "text/plain;charset=utf-8" }));
-  });
+  bindSheetExportButton(
+    btnExportLilyPond,
+    exportDropdown,
+    getEditor,
+    "ly",
+    "text/plain;charset=utf-8",
+    (sheet) => TmdLilyPondGenerator.generateLilyPond(sheet)
+  );
 
-  btnExportABC.addEventListener("click", () => {
-    exportDropdown.classList.remove("open");
-    const editor = getEditor();
-    const text = editor.getContent();
-    const sheet = TmdParser.parse(text);
-    if (!sheet) return alert(t("alertCannotExport"));
-    const abc = TmdABCGenerator.generateABC(sheet);
-    downloadBlob(getSafeFilename(sheet.name, "abc"), new Blob([abc], { type: "text/vnd.abc;charset=utf-8" }));
-  });
+  bindSheetExportButton(
+    btnExportABC,
+    exportDropdown,
+    getEditor,
+    "abc",
+    "text/vnd.abc;charset=utf-8",
+    (sheet) => TmdABCGenerator.generateABC(sheet)
+  );
 
-  btnExportChordPro?.addEventListener("click", () => {
-    exportDropdown.classList.remove("open");
-    const editor = getEditor();
-    const text = editor.getContent();
-    const sheet = TmdParser.parse(text);
-    if (!sheet) return alert(t("alertCannotExport"));
-    const cho = TmdChordProGenerator.generateChordPro(sheet);
-    downloadBlob(getSafeFilename(sheet.name, "cho"), new Blob([cho], { type: "text/plain;charset=utf-8" }));
-  });
+  bindSheetExportButton(
+    btnExportChordPro,
+    exportDropdown,
+    getEditor,
+    "cho",
+    "text/plain;charset=utf-8",
+    (sheet) => TmdChordProGenerator.generateChordPro(sheet)
+  );
 
-  btnExportBraille?.addEventListener("click", () => {
-    exportDropdown.classList.remove("open");
-    const editor = getEditor();
-    const text = editor.getContent();
-    const sheet = TmdParser.parse(text);
-    if (!sheet) return alert(t("alertCannotExport"));
-    const brl = TmdBrailleGenerator.generateBraille(sheet, { encoding: "unicode", layout: "partByPart" });
-    downloadBlob(getSafeFilename(sheet.name, "brl"), new Blob([brl], { type: "text/plain;charset=utf-8" }));
-  });
+  bindSheetExportButton(
+    btnExportBraille,
+    exportDropdown,
+    getEditor,
+    "brl",
+    "text/plain;charset=utf-8",
+    (sheet) => TmdBrailleGenerator.generateBraille(sheet, { encoding: "unicode", layout: "partByPart" })
+  );
 
   btnPreviewBraille?.addEventListener("click", () => {
     exportDropdown.classList.remove("open");
     onOpenBraillePreview?.();
   });
 
-  btnExportVsq?.addEventListener("click", () => {
-    exportDropdown.classList.remove("open");
-    const editor = getEditor();
-    const text = editor.getContent();
-    const sheet = TmdParser.parse(text);
-    if (!sheet) return alert(t("alertCannotExport"));
-    const vsq = TmdVSQGenerator.generateVSQ(sheet);
-    downloadBlob(getSafeFilename(sheet.name, "vsq"), new Blob([vsq as any], { type: "audio/x-vsq" }));
-  });
+  bindSheetExportButton(btnExportVsq, exportDropdown, getEditor, "vsq", "audio/x-vsq", (sheet) =>
+    TmdVSQGenerator.generateVSQ(sheet) as any
+  );
 
-  btnExportVsqx?.addEventListener("click", () => {
-    exportDropdown.classList.remove("open");
-    const editor = getEditor();
-    const text = editor.getContent();
-    const sheet = TmdParser.parse(text);
-    if (!sheet) return alert(t("alertCannotExport"));
-    const vsqx = TmdVSQXGenerator.generateVSQX(sheet);
-    downloadBlob(getSafeFilename(sheet.name, "vsqx"), new Blob([vsqx], { type: "application/xml;charset=utf-8" }));
-  });
+  bindSheetExportButton(
+    btnExportVsqx,
+    exportDropdown,
+    getEditor,
+    "vsqx",
+    "application/xml;charset=utf-8",
+    (sheet) => TmdVSQXGenerator.generateVSQX(sheet)
+  );
 
-  btnExportWAV.addEventListener("click", () => {
-    exportDropdown.classList.remove("open");
-    const editor = getEditor();
-    const text = editor.getContent();
-    const sheet = TmdParser.parse(text);
-    if (!sheet) return alert(t("alertCannotExport"));
-    const wav = TmdWAVRenderer.renderWAV(sheet);
-    downloadBlob(getSafeFilename(sheet.name, "wav"), new Blob([wav as any], { type: "audio/wav" }));
-  });
+  bindSheetExportButton(btnExportWAV, exportDropdown, getEditor, "wav", "audio/wav", (sheet) =>
+    TmdWAVRenderer.renderWAV(sheet) as any
+  );
 
   btnExportSkill.addEventListener("click", () => {
     exportDropdown.classList.remove("open");
@@ -257,7 +254,10 @@ export function setupExportMenu(
     const editor = getEditor();
     let url: string;
     try {
-      url = window.location.origin + window.location.pathname + (await encodeShareHash(editor.getContent()));
+      url =
+        window.location.origin +
+        window.location.pathname +
+        (await encodeShareHash(editor.getContent()));
     } catch (err) {
       console.warn("Could not create a share link:", err);
       alert(t("shareCreateFailed"));
