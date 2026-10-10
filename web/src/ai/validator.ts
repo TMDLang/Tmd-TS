@@ -87,6 +87,10 @@ export function validateTmdCode(tmd: string): ValidationResult {
 }
 
 import { TmdMeasureChecker, TmdMeasureIssue } from "../../../src/validation/measure_check.js";
+import {
+  TmdScoreDiagnostic,
+  TmdScoreValidator,
+} from "../../../src/validation/score_validator.js";
 
 export interface ComprehensiveValidationResult {
   syntaxValid: boolean;
@@ -97,11 +101,13 @@ export interface ComprehensiveValidationResult {
     snippet: string;
   };
   measureIssues: TmdMeasureIssue[];
+  diagnostics: TmdScoreDiagnostic[];
   allValid: boolean;
 }
 
 export function validateTmdCodeWithIssues(tmd: string): ComprehensiveValidationResult {
   const syntax = validateTmdCode(tmd);
+  const diagnostics = tmd && tmd.trim() ? TmdScoreValidator.validate(tmd) : [];
   if (!syntax.valid) {
     return {
       syntaxValid: false,
@@ -112,14 +118,17 @@ export function validateTmdCodeWithIssues(tmd: string): ComprehensiveValidationR
         snippet: syntax.snippet,
       },
       measureIssues: [],
+      diagnostics,
       allValid: false,
     };
   }
 
   const measureIssues = TmdMeasureChecker.check(tmd);
+  const hasErrors = diagnostics.some((d) => d.severity === "error");
   return {
     syntaxValid: true,
     measureIssues,
-    allValid: measureIssues.length === 0,
+    diagnostics,
+    allValid: measureIssues.length === 0 && !hasErrors,
   };
 }

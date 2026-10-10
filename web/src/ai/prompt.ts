@@ -103,6 +103,14 @@ export interface ProblemsFixOptions {
     description?: string;
     snippet?: string;
   }>;
+  diagnostics?: Array<{
+    rule: string;
+    severity: string;
+    line: number;
+    column?: number;
+    message: string;
+    suggestion?: string;
+  }>;
   syntaxError?: {
     message: string;
     line?: number;
@@ -130,6 +138,17 @@ export function buildProblemsFixPrompt(options: ProblemsFixOptions): string {
         issuesList.push(`  Measure Snippet: ${issue.snippet}`);
       }
     });
+  }
+
+  if (options.diagnostics && options.diagnostics.length > 0) {
+    options.diagnostics
+      .filter((d) => d.rule !== "E-MEASURE-BEAT")
+      .forEach((diag) => {
+        issuesList.push(`- [${diag.rule}] Line ${diag.line}: ${diag.message}`);
+        if (diag.suggestion) {
+          issuesList.push(`  Suggestion: ${diag.suggestion}`);
+        }
+      });
   }
 
   return `The current TMD musical score has reported issues in the Studio Problems Panel. Please analyze the score and studio problem diagnostics below, fix all discrepancies, and return the complete corrected score.
