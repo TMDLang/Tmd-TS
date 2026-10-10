@@ -63,6 +63,8 @@ export interface AppDOMElements {
   btnExportLilyPond: HTMLButtonElement;
   btnExportABC: HTMLButtonElement;
   btnExportChordPro: HTMLButtonElement;
+  btnExportBraille: HTMLButtonElement;
+  btnPreviewBraille: HTMLButtonElement;
   btnExportVsq: HTMLButtonElement;
   btnExportVsqx: HTMLButtonElement;
   btnExportWAV: HTMLButtonElement;
@@ -268,6 +270,20 @@ export interface AppDOMElements {
   humBtnPlayPreview: HTMLButtonElement;
   humBtnApply: HTMLButtonElement;
 
+  // Music Braille Preview Modal
+  braillePreviewModal: HTMLDialogElement;
+  btnCloseBrailleModal: HTMLButtonElement;
+  btnDismissBrailleModal: HTMLButtonElement;
+  brailleSelectLayout: HTMLSelectElement;
+  brailleSelectEncoding: HTMLSelectElement;
+  brailleSelectInstrument: HTMLSelectElement;
+  brailleOutputTextarea: HTMLTextAreaElement;
+  brailleSightedContainer: HTMLElement;
+  btnBrailleCopy: HTMLButtonElement;
+  btnBrailleCopyText: HTMLElement;
+  btnBrailleDownloadBrl: HTMLButtonElement;
+  btnBrailleDownloadBrf: HTMLButtonElement;
+
   // Player Bar
   tmdPlayerBar: HTMLElement;
   playerTitle: HTMLElement;
@@ -326,6 +342,8 @@ export function initAppDOMElements(): AppDOMElements {
     btnExportLilyPond: getElement("export-lilypond"),
     btnExportABC: getElement("export-abc"),
     btnExportChordPro: getElement("export-chordpro"),
+    btnExportBraille: getElement("export-braille"),
+    btnPreviewBraille: getElement("preview-braille"),
     btnExportVsq: getElement("export-vsq"),
     btnExportVsqx: getElement("export-vsqx"),
     btnExportWAV: getElement("export-wav"),
@@ -517,6 +535,19 @@ export function initAppDOMElements(): AppDOMElements {
     humResultCode: getElement("hum-result-code"),
     humBtnPlayPreview: getElement("hum-btn-play-preview"),
     humBtnApply: getElement("hum-btn-apply"),
+
+    braillePreviewModal: getElement("braille-preview-modal"),
+    btnCloseBrailleModal: getElement("btn-close-braille-modal"),
+    btnDismissBrailleModal: getElement("btn-dismiss-braille-modal"),
+    brailleSelectLayout: getElement("braille-select-layout"),
+    brailleSelectEncoding: getElement("braille-select-encoding"),
+    brailleSelectInstrument: getElement("braille-select-instrument"),
+    brailleOutputTextarea: getElement("braille-output-textarea"),
+    brailleSightedContainer: getElement("braille-sighted-container"),
+    btnBrailleCopy: getElement("btn-braille-copy"),
+    btnBrailleCopyText: getElement("btn-braille-copy-text"),
+    btnBrailleDownloadBrl: getElement("btn-braille-download-brl"),
+    btnBrailleDownloadBrf: getElement("btn-braille-download-brf"),
 
     tmdPlayerBar: getElement("tmd-player-bar"),
     playerTitle: getElement("player-title"),

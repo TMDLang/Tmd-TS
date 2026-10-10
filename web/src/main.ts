@@ -21,6 +21,7 @@ import { AppDOMElements,initAppDOMElements } from "./ui/dom.js";
 import { setupExportMenu } from "./ui/exportMenu.js";
 import { renderInspectorView, setupInspectorPanelEvents } from "./ui/inspector.js";
 import { TmdLibraryDrawerController } from "./ui/libraryDrawer.js";
+import { setupBrailleModal } from "./ui/modals/brailleModal.js";
 import { setupHumModal, tryReloadOnChunkError } from "./ui/modals/humModal.js";
 import { setupInsertSectionModal } from "./ui/modals/insertSectionModal.js";
 import { setupRefactorModals } from "./ui/modals/refactorModals.js";
@@ -285,7 +286,26 @@ function initEvents() {
     }
   );
 
-  // 6. Export Menu
+  // 6. Export Menu & Music Braille Preview Modal
+  const { openBrailleModal } = setupBrailleModal(
+    {
+      braillePreviewModal: dom.braillePreviewModal,
+      btnCloseBrailleModal: dom.btnCloseBrailleModal,
+      btnDismissBrailleModal: dom.btnDismissBrailleModal,
+      brailleSelectLayout: dom.brailleSelectLayout,
+      brailleSelectEncoding: dom.brailleSelectEncoding,
+      brailleSelectInstrument: dom.brailleSelectInstrument,
+      brailleOutputTextarea: dom.brailleOutputTextarea,
+      brailleSightedContainer: dom.brailleSightedContainer,
+      btnBrailleCopy: dom.btnBrailleCopy,
+      btnBrailleCopyText: dom.btnBrailleCopyText,
+      btnBrailleDownloadBrl: dom.btnBrailleDownloadBrl,
+      btnBrailleDownloadBrf: dom.btnBrailleDownloadBrf,
+      showToast,
+    },
+    () => editor
+  );
+
   setupExportMenu(
     {
       exportDropdown: dom.exportDropdown,
@@ -297,6 +317,8 @@ function initEvents() {
       btnExportLilyPond: dom.btnExportLilyPond,
       btnExportABC: dom.btnExportABC,
       btnExportChordPro: dom.btnExportChordPro,
+      btnExportBraille: dom.btnExportBraille,
+      btnPreviewBraille: dom.btnPreviewBraille,
       btnExportVsq: dom.btnExportVsq,
       btnExportVsqx: dom.btnExportVsqx,
       btnExportWAV: dom.btnExportWAV,
@@ -305,6 +327,7 @@ function initEvents() {
       btnBackupZip: dom.btnBackupZip,
       btnShare: dom.btnShare,
       toolsDropdown: dom.toolsDropdown,
+      onOpenBraillePreview: () => openBrailleModal(),
     },
     () => editor
   );

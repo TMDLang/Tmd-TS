@@ -14,6 +14,8 @@ import { handleOutlineCommand } from "./commands/outline.js";
 import { handleRefactorCommand } from "./commands/refactor.js";
 import {
   TmdABCGenerator,
+  TmdBrailleGenerator,
+  TmdBrailleLayout,
   TmdChordProGenerator,
   TmdLilyPondGenerator,
   TmdMIDIGenerator,
@@ -58,6 +60,10 @@ OPTIONS:
       --rpp-output PATH   Export REAPER project (.rpp).
   -c, --chordpro-output PATH Export ChordPro lead sheet (.cho/.chordpro).
       --cho-output PATH   Export ChordPro lead sheet (.cho/.chordpro).
+  -b, --braille-output PATH Export Music Braille (.brl Unicode or .brf ASCII).
+      --brl-output PATH   Export Music Braille (.brl Unicode or .brf ASCII).
+      --brf-output PATH   Export North American Braille ASCII (.brf).
+      --braille-layout LAYOUT Music Braille layout: part-by-part (default) or bar-over-bar.
       --vsq-output PATH   Export vocal track to VOCALOID2 (.vsq) file.
       --vsqx-output PATH  Export vocal track to VOCALOID3/4 (.vsqx) XML file.
   -u, --ust-output PATH   Export vocal track to UTAU / OpenUtau (.ust) file.
@@ -113,7 +119,8 @@ export function main(argv = process.argv.slice(2)): number {
     singer = "Miku",
     soundfont: string | undefined,
     section: string | undefined,
-    instrument: string | undefined;
+    instrument: string | undefined,
+    brailleLayout: TmdBrailleLayout = "partByPart";
   const outputs: Record<string, string | undefined> = {};
 
   for (let i = 0; i < argv.length; i++) {
@@ -186,6 +193,16 @@ export function main(argv = process.argv.slice(2)): number {
       instrument = arg.slice("--instrument=".length);
       continue;
     }
+    if (arg === "--braille-layout") {
+      const val = (argv[++i] || "").toLowerCase();
+      brailleLayout = val === "bar-over-bar" || val === "baroverbar" ? "barOverBar" : "partByPart";
+      continue;
+    }
+    if (arg.startsWith("--braille-layout=")) {
+      const val = arg.slice("--braille-layout=".length).toLowerCase();
+      brailleLayout = val === "bar-over-bar" || val === "baroverbar" ? "barOverBar" : "partByPart";
+      continue;
+    }
     const option: Record<string, string> = {
       "-m": "midi",
       "--midi-output": "midi",
@@ -201,6 +218,10 @@ export function main(argv = process.argv.slice(2)): number {
       "-c": "chordpro",
       "--chordpro-output": "chordpro",
       "--cho-output": "chordpro",
+      "-b": "braille",
+      "--braille-output": "braille",
+      "--brl-output": "braille",
+      "--brf-output": "brf",
       "--vsq-output": "vsq",
       "--vsqx-output": "vsqx",
       "-u": "ust",
@@ -333,6 +354,29 @@ export function main(argv = process.argv.slice(2)): number {
       writeUTF8(outputs.reaper, TmdReaperGenerator.generateRPP(sheet));
     if (outputs.chordpro)
       writeUTF8(outputs.chordpro, TmdChordProGenerator.generateChordPro(sheet));
+    if (outputs.braille) {
+      const encoding = outputs.braille.toLowerCase().endsWith(".brf") ? "ascii" : "unicode";
+      writeUTF8(
+        outputs.braille,
+        TmdBrailleGenerator.generateBraille(sheet, {
+          encoding,
+          layout: brailleLayout,
+          targetSection: section,
+          targetInstrument: instrument,
+        })
+      );
+    }
+    if (outputs.brf) {
+      writeUTF8(
+        outputs.brf,
+        TmdBrailleGenerator.generateBraille(sheet, {
+          encoding: "ascii",
+          layout: brailleLayout,
+          targetSection: section,
+          targetInstrument: instrument,
+        })
+      );
+    }
     if (outputs.vsq)
       fs.writeFileSync(outputs.vsq, TmdVSQGenerator.generateVSQ(sheet, { singerName: singer }));
     if (outputs.vsqx)

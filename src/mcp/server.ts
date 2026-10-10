@@ -7,6 +7,9 @@ import { z } from "zod";
 import { TmdWAVRenderer } from "../audio.js";
 import {
   TmdABCGenerator,
+  TmdBrailleEncoding,
+  TmdBrailleGenerator,
+  TmdBrailleLayout,
   TmdChordProGenerator,
   TmdLilyPondGenerator,
   TmdMIDIGenerator,
@@ -150,7 +153,21 @@ export class TmdMCPServer {
   }: {
     text?: string;
     filePath?: string;
-    format: "midi" | "musicxml" | "lilypond" | "abc" | "wav" | "reaper" | "rpp" | "vsq" | "vsqx" | "chordpro" | "cho";
+    format:
+      | "midi"
+      | "musicxml"
+      | "lilypond"
+      | "abc"
+      | "wav"
+      | "reaper"
+      | "rpp"
+      | "vsq"
+      | "vsqx"
+      | "chordpro"
+      | "cho"
+      | "braille"
+      | "brl"
+      | "brf";
     outputPath?: string;
     section?: string;
     instrument?: string;
@@ -250,9 +267,74 @@ export class TmdMCPServer {
         }
         return textContent(cho);
       }
+      case "braille":
+      case "brl":
+      case "brf": {
+        const encoding: TmdBrailleEncoding =
+          fmt === "brf" || (outputPath && outputPath.toLowerCase().endsWith(".brf"))
+            ? "ascii"
+            : "unicode";
+        const braille = TmdBrailleGenerator.generateBraille(sheet, {
+          encoding,
+          targetSection: section,
+          targetInstrument: instrument,
+        });
+        if (outputPath) {
+          fs.writeFileSync(outputPath, braille, "utf-8");
+          return textContent(`Music Braille successfully written to ${outputPath}`);
+        }
+        return textContent(braille);
+      }
       default:
         throw new Error(`Unsupported format: ${format}`);
     }
+  }
+
+  public static async handleExportBraille({
+    text,
+    tmdCode,
+    filePath,
+    encoding,
+    layout,
+    outputPath,
+    section,
+    instrument,
+  }: {
+    text?: string;
+    tmdCode?: string;
+    filePath?: string;
+    encoding?: TmdBrailleEncoding;
+    layout?: TmdBrailleLayout;
+    outputPath?: string;
+    section?: string;
+    instrument?: string;
+  }) {
+    let content = text || tmdCode;
+    if (!content && filePath) {
+      content = fs.readFileSync(filePath, "utf-8");
+    }
+    if (!content) {
+      throw new Error("Either 'text', 'tmdCode', or 'filePath' must be provided");
+    }
+
+    const sheet = TmdParser.parse(content);
+    if (!sheet) {
+      throw new Error("Invalid TMD score content");
+    }
+
+    const resolvedEncoding: TmdBrailleEncoding =
+      encoding || (outputPath && outputPath.toLowerCase().endsWith(".brf") ? "ascii" : "unicode");
+    const braille = TmdBrailleGenerator.generateBraille(sheet, {
+      encoding: resolvedEncoding,
+      layout: layout || "partByPart",
+      targetSection: section,
+      targetInstrument: instrument,
+    });
+    if (outputPath) {
+      fs.writeFileSync(outputPath, braille, "utf-8");
+      return textContent(`Music Braille successfully written to ${outputPath}`);
+    }
+    return textContent(braille);
   }
 
   public static createServer(): McpServer {
@@ -302,12 +384,27 @@ export class TmdMCPServer {
       "convert_tmd",
       {
         description:
-          "Convert TMD score to target format: midi (base64 or file), musicxml, lilypond, abc, wav audio, reaper project, vsq (VOCALOID2), vsqx (VOCALOID3/4), or chordpro (.cho).",
+          "Convert TMD score to target format: midi (base64 or file), musicxml, lilypond, abc, wav audio, reaper project, vsq (VOCALOID2), vsqx (VOCALOID3/4), chordpro (.cho), or braille (.brl/.brf).",
         inputSchema: z.object({
           text: z.string().optional().describe("TMD score code text"),
           filePath: z.string().optional().describe("Path to .tmd file on filesystem"),
           format: z
-            .enum(["midi", "musicxml", "lilypond", "abc", "wav", "reaper", "rpp", "vsq", "vsqx", "chordpro", "cho"])
+            .enum([
+              "midi",
+              "musicxml",
+              "lilypond",
+              "abc",
+              "wav",
+              "reaper",
+              "rpp",
+              "vsq",
+              "vsqx",
+              "chordpro",
+              "cho",
+              "braille",
+              "brl",
+              "brf",
+            ])
             .describe("Target format"),
           outputPath: z
             .string()
@@ -316,15 +413,53 @@ export class TmdMCPServer {
           section: z
             .string()
             .optional()
-            .describe("Optional section filter for MIDI or WAV export"),
+            .describe("Optional section filter for MIDI, WAV, or Braille export"),
           instrument: z
             .string()
             .optional()
-            .describe("Optional instrument filter for MIDI or WAV export"),
+            .describe("Optional instrument filter for MIDI, WAV, or Braille export"),
         }),
       },
       async ({ text, filePath, format, outputPath, section, instrument }) =>
         TmdMCPServer.handleConvertTmd({ text, filePath, format, outputPath, section, instrument })
+    );
+
+    server.registerTool(
+      "tmd_export_braille",
+      {
+        description:
+          "Export TMD score to International Music Braille (.brl Unicode or .brf North American Braille ASCII) in Part-by-Part or Bar-over-Bar layout.",
+        inputSchema: z.object({
+          text: z.string().optional().describe("TMD score code text"),
+          tmdCode: z.string().optional().describe("Alias for TMD score code text"),
+          filePath: z.string().optional().describe("Path to .tmd file on filesystem"),
+          encoding: z
+            .enum(["unicode", "ascii"])
+            .optional()
+            .describe("Braille encoding: unicode (.brl, default) or ascii (.brf)"),
+          layout: z
+            .enum(["partByPart", "barOverBar"])
+            .optional()
+            .describe("Score layout: partByPart (default) or barOverBar"),
+          outputPath: z
+            .string()
+            .optional()
+            .describe("Optional filesystem destination path to write output"),
+          section: z.string().optional().describe("Optional section filter"),
+          instrument: z.string().optional().describe("Optional instrument filter"),
+        }),
+      },
+      async ({ text, tmdCode, filePath, encoding, layout, outputPath, section, instrument }) =>
+        TmdMCPServer.handleExportBraille({
+          text,
+          tmdCode,
+          filePath,
+          encoding,
+          layout,
+          outputPath,
+          section,
+          instrument,
+        })
     );
 
     return server;

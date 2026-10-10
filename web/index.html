@@ -170,6 +170,12 @@
               <button class="dropdown-item" id="export-chordpro">
                 <span>🎸</span> <span data-i18n="exportChordPro">ChordPro Lead Sheet (.cho)</span>
               </button>
+              <button class="dropdown-item" id="export-braille">
+                <span>⠿</span> <span data-i18n="exportBraille">Music Braille (.brl)</span>
+              </button>
+              <button class="dropdown-item" id="preview-braille">
+                <span>🦯</span> <span data-i18n="previewBraille">Music Braille Preview (.brl / .brf)...</span>
+              </button>
               <button class="dropdown-item" id="export-vsq">
                 <span>🎤</span> <span data-i18n="exportVsq">VOCALOID2 Project (.vsq)</span>
               </button>
@@ -1206,6 +1212,79 @@ verse:Lead@|0|{
           <div style="display: flex; gap: 8px;">
             <button id="hum-btn-apply" class="btn btn-primary" data-i18n="humBtnApply" disabled>Insert Section into Editor</button>
             <button class="btn btn-close-modal" data-i18n="humBtnClose">Close</button>
+          </div>
+        </div>
+      </dialog>
+
+      <!-- Music Braille Preview & Export Dialog -->
+      <dialog id="braille-preview-modal" class="modal modal-lg" role="dialog" aria-modal="true" aria-labelledby="braille-modal-title">
+        <div class="modal-header">
+          <div class="modal-title" id="braille-modal-title" data-i18n="brailleModalTitle">⠿ Music Braille Preview &amp; Export (1996 International Manual)</div>
+          <button id="btn-close-braille-modal" class="btn-close-modal" aria-label="Close">×</button>
+        </div>
+        <div class="modal-body">
+          <p class="modal-desc" data-i18n="brailleModalDesc">6-dot International Music Braille Code (1996 WBU Manual / BANA 2015) optimized for single-line refreshable Braille displays (.brl Unicode U+2800–U+28FF) and Braille embossers (.brf North American Braille ASCII).</p>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-bottom: 14px;">
+            <div class="form-group">
+              <label for="braille-select-layout" data-i18n="brailleLabelLayout">Score Layout:</label>
+              <select id="braille-select-layout" class="text-control">
+                <option value="partByPart" selected data-i18n="brailleLayoutPartByPart">Part-by-Part (Single-Line Braille Display, Recommended)</option>
+                <option value="barOverBar" data-i18n="brailleLayoutBarOverBar">Bar-over-Bar (Parallel Multi-Track Score)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="braille-select-encoding" data-i18n="brailleLabelEncoding">Braille Encoding:</label>
+              <select id="braille-select-encoding" class="text-control">
+                <option value="unicode" selected data-i18n="brailleEncodingUnicode">Unicode 6-Dot Braille (.brl, U+2800–U+28FF)</option>
+                <option value="ascii" data-i18n="brailleEncodingAscii">North American Braille ASCII (.brf)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="braille-select-instrument" data-i18n="brailleLabelInstrument">Instrument Filter:</label>
+              <select id="braille-select-instrument" class="text-control">
+                <option value="" selected data-i18n="brailleAllInstruments">All Instruments</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 14px;">
+            <label for="braille-output-textarea" data-i18n="brailleOutputLabel">Refreshable Braille Display Output (Screen-Reader Live Region):</label>
+            <textarea
+              id="braille-output-textarea"
+              class="text-control"
+              rows="6"
+              readonly
+              aria-live="polite"
+              aria-label="Music Braille Output"
+              style="font-family: 'Apple Braille', 'Segoe UI Symbol', 'DejaVu Sans', var(--font-mono); font-size: 16px; line-height: 1.65; letter-spacing: 0.04em; white-space: pre;"
+            ></textarea>
+          </div>
+
+          <div class="form-group">
+            <label data-i18n="brailleSightedTitle">Synchronized Sighted Measure-by-Measure Breakdown:</label>
+            <div
+              id="braille-sighted-container"
+              role="region"
+              aria-label="Sighted Measure-by-Measure Braille Breakdown"
+              style="max-height: 240px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 6px; padding: 10px; background: var(--bg-secondary);"
+            ></div>
+          </div>
+        </div>
+        <div class="modal-footer" style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <button id="btn-braille-copy" class="btn">
+              <span class="btn-icon">📋</span> <span id="btn-braille-copy-text" data-i18n="brailleBtnCopy">Copy Braille</span>
+            </button>
+            <button id="btn-braille-download-brl" class="btn btn-primary">
+              <span class="btn-icon">📥</span> <span data-i18n="brailleBtnDownloadBrl">Download .brl (Unicode)</span>
+            </button>
+            <button id="btn-braille-download-brf" class="btn">
+              <span class="btn-icon">📄</span> <span data-i18n="brailleBtnDownloadBrf">Download .brf (ASCII)</span>
+            </button>
+          </div>
+          <div>
+            <button id="btn-dismiss-braille-modal" class="btn btn-close-modal" data-i18n="humBtnClose">Close</button>
           </div>
         </div>
       </dialog>

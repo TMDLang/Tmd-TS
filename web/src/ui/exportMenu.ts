@@ -3,6 +3,7 @@ import JSZip from "jszip";
 import { TmdWAVRenderer } from "../../../src/audio.js";
 import {
   TmdABCGenerator,
+  TmdBrailleGenerator,
   TmdChordProGenerator,
   TmdLilyPondGenerator,
   TmdMIDIGenerator,
@@ -28,6 +29,8 @@ export interface ExportMenuElements {
   btnExportLilyPond: HTMLButtonElement;
   btnExportABC: HTMLButtonElement;
   btnExportChordPro?: HTMLButtonElement | null;
+  btnExportBraille?: HTMLButtonElement | null;
+  btnPreviewBraille?: HTMLButtonElement | null;
   btnExportVsq?: HTMLButtonElement | null;
   btnExportVsqx?: HTMLButtonElement | null;
   btnExportWAV: HTMLButtonElement;
@@ -36,6 +39,7 @@ export interface ExportMenuElements {
   btnBackupZip?: HTMLButtonElement | null;
   btnShare: HTMLButtonElement;
   toolsDropdown?: HTMLElement | null;
+  onOpenBraillePreview?: () => void;
 }
 
 export function getSafeFilename(title?: string, ext: string = "mid"): string {
@@ -104,6 +108,8 @@ export function setupExportMenu(
     btnExportLilyPond,
     btnExportABC,
     btnExportChordPro,
+    btnExportBraille,
+    btnPreviewBraille,
     btnExportVsq,
     btnExportVsqx,
     btnExportWAV,
@@ -112,6 +118,7 @@ export function setupExportMenu(
     btnBackupZip,
     btnShare,
     toolsDropdown,
+    onOpenBraillePreview,
   } = elements;
 
   btnExportMenu.addEventListener("click", (e) => {
@@ -194,6 +201,21 @@ export function setupExportMenu(
     if (!sheet) return alert(t("alertCannotExport"));
     const cho = TmdChordProGenerator.generateChordPro(sheet);
     downloadBlob(getSafeFilename(sheet.name, "cho"), new Blob([cho], { type: "text/plain;charset=utf-8" }));
+  });
+
+  btnExportBraille?.addEventListener("click", () => {
+    exportDropdown.classList.remove("open");
+    const editor = getEditor();
+    const text = editor.getContent();
+    const sheet = TmdParser.parse(text);
+    if (!sheet) return alert(t("alertCannotExport"));
+    const brl = TmdBrailleGenerator.generateBraille(sheet, { encoding: "unicode", layout: "partByPart" });
+    downloadBlob(getSafeFilename(sheet.name, "brl"), new Blob([brl], { type: "text/plain;charset=utf-8" }));
+  });
+
+  btnPreviewBraille?.addEventListener("click", () => {
+    exportDropdown.classList.remove("open");
+    onOpenBraillePreview?.();
   });
 
   btnExportVsq?.addEventListener("click", () => {
