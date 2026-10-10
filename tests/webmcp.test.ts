@@ -208,4 +208,178 @@ verse:Piano@|0|{
     expect(res.nativeRegistered).toBe(true);
     expect(registerToolMock).toHaveBeenCalledTimes(6);
   });
+
+  it('embeds mandatory getTmdSkill prerequisite and core syntax summary in tool descriptions', () => {
+    const mockContext = {
+      getCurrentScore: () => sampleTmd,
+      loadScoreToEditor: vi.fn(),
+      startPlayback: vi.fn(),
+    };
+
+    const tools = buildTmdWebMcpTools(mockContext);
+    const skillTool = tools.find((t) => t.name === 'getTmdSkill')!;
+    expect(skillTool.description).toMatch(/FIRST|IMPORTANT/i);
+    expect(skillTool.description).toContain('::SCORE::');
+
+    const otherTools = tools.filter((t) => t.name !== 'getTmdSkill');
+    for (const tool of otherTools) {
+      expect(tool.description).toContain('getTmdSkill');
+    }
+  });
+
+  it('auto-piggybacks TMD skill on the first tool invocation if getTmdSkill was not called first', async () => {
+    const mockContext = {
+      getCurrentScore: () => sampleTmd,
+      loadScoreToEditor: vi.fn(),
+      startPlayback: vi.fn(),
+    };
+
+    const tools = buildTmdWebMcpTools(mockContext);
+    const getScoreTool = tools.find((t) => t.name === 'getCurrentScore')!;
+    const checkTool = tools.find((t) => t.name === 'checkTmd')!;
+
+    // First call without calling getTmdSkill -> should piggyback skill in content[1]
+    const firstRes = await getScoreTool.handler({});
+    expect(firstRes.content.length).toBe(2);
+    expect(firstRes.content[0].text).toBe(sampleTmd);
+    expect(firstRes.content[1].text).toContain('Timebase Mark Down');
+    expect(firstRes.content[1].text).toContain('::SCORE::');
+
+    // Second call in same session -> skill already loaded, only 1 content block
+    const secondRes = await checkTool.handler({ text: sampleTmd });
+    expect(secondRes.content.length).toBe(1);
+    const parsed = JSON.parse(secondRes.content[0].text);
+    expect(parsed.valid).toBe(true);
+  });
+
+  it('does not piggyback duplicate TMD skill if getTmdSkill was already called first', async () => {
+    const mockContext = {
+      getCurrentScore: () => sampleTmd,
+      loadScoreToEditor: vi.fn(),
+      startPlayback: vi.fn(),
+    };
+
+    const tools = buildTmdWebMcpTools(mockContext);
+    const skillTool = tools.find((t) => t.name === 'getTmdSkill')!;
+    const getScoreTool = tools.find((t) => t.name === 'getCurrentScore')!;
+
+    const skillRes = await skillTool.handler({});
+    expect(skillRes.content.length).toBe(1);
+
+    const scoreRes = await getScoreTool.handler({});
+    expect(scoreRes.content.length).toBe(1);
+    expect(scoreRes.content[0].text).toBe(sampleTmd);
+  });
+
+  it('checkTmd reports syntaxError and valid=false when syntax fails even if measure lexer has no beat mismatch', async () => {
+    const mockContext = {
+      getCurrentScore: () => '',
+      loadScoreToEditor: vi.fn(),
+      startPlayback: vi.fn(),
+    };
+
+    const tools = buildTmdWebMcpTools(mockContext);
+    const checkTool = tools.find((t) => t.name === 'checkTmd')!;
+
+    // Missing ::SCORE:: header, though measure beat count and order exist
+    const headerlessTmd = `** No Header **
+!= 120
+?= C
+<4/4>
+verse:Piano@|0|{
+  <4*>
+  | 1 2 3 4 |
+}
+-> verse ->#
+`;
+    const res = await checkTool.handler({ text: headerlessTmd });
+    const parsed = JSON.parse(res.content[0].text);
+    expect(parsed.valid).toBe(false);
+    expect(parsed.syntaxValid).toBe(false);
+    expect(parsed.syntaxError).toBeDefined();
+    expect(parsed.syntaxError.line).toBeGreaterThanOrEqual(1);
+  });
+
+  it('parseTmd includes structured line, column, snippet, and expectedTokens on syntax error', async () => {
+    const mockContext = {
+      getCurrentScore: () => '',
+      loadScoreToEditor: vi.fn(),
+      startPlayback: vi.fn(),
+    };
+
+    const tools = buildTmdWebMcpTools(mockContext);
+    const parseTool = tools.find((t) => t.name === 'parseTmd')!;
+
+    const brokenTmd = `::SCORE::
+** Broken **
+!= 120
+?= C
+<4/4>
+verse:Piano@|0|{
+  <4*>
+  | 1 2 ??? 4 |
+}
+-> verse ->#`;
+
+    const res = await parseTool.handler({ text: brokenTmd });
+    const parsed = JSON.parse(res.content[0].text);
+    expect(parsed.valid).toBe(false);
+    expect(parsed.line).toBe(8);
+    expect(parsed.column).toBeGreaterThanOrEqual(1);
+    expect(parsed.snippet).toContain('???');
+    expect(Array.isArray(parsed.expectedTokens)).toBe(true);
+  });
+
+  it('registers full inputSchema, MCP resources (tmd://skill, tmd://score/current), and prompts on Bridge WebMCP', async () => {
+    const mockContext = {
+      getCurrentScore: () => sampleTmd,
+      loadScoreToEditor: vi.fn(),
+      startPlayback: vi.fn(),
+    };
+
+    const registerTool = vi.fn();
+    const registerResource = vi.fn();
+    const registerPrompt = vi.fn();
+
+    class FakeWebMCP {
+      registerTool = registerTool;
+      registerResource = registerResource;
+      registerPrompt = registerPrompt;
+    }
+
+    const fakeScope: any = {
+      WebMCP: FakeWebMCP,
+    };
+
+    const res = initTmdWebMcp(fakeScope, mockContext);
+    expect(res.bridgeRegistered).toBe(true);
+    expect(registerTool).toHaveBeenCalledTimes(6);
+
+    // Verify full inputSchema (including type: "object" and required) is passed to registerTool
+    const parseCall = registerTool.mock.calls.find((c: any[]) => c[0] === 'parseTmd')!;
+    expect(parseCall[2]).toEqual({
+      type: 'object',
+      properties: expect.any(Object),
+      required: ['text'],
+    });
+
+    // Verify resources and prompts are registered so connecting clients can load skill & current score
+    expect(registerResource).toHaveBeenCalledTimes(2);
+    const skillResourceCall = registerResource.mock.calls.find((c: any[]) => c[0] === 'tmd-skill')!;
+    expect(skillResourceCall[2].uri).toBe('tmd://skill');
+    const providedSkill = await skillResourceCall[3]('tmd://skill');
+    expect(providedSkill.contents[0].text).toContain('Timebase Mark Down');
+
+    const scoreResourceCall = registerResource.mock.calls.find((c: any[]) => c[0] === 'tmd-current-score')!;
+    expect(scoreResourceCall[2].uri).toBe('tmd://score/current');
+    const providedScore = await scoreResourceCall[3]('tmd://score/current');
+    expect(providedScore.contents[0].text).toBe(sampleTmd);
+
+    expect(registerPrompt).toHaveBeenCalledTimes(1);
+    const promptCall = registerPrompt.mock.calls[0];
+    expect(promptCall[0]).toBe('tmd-composer');
+    const promptResult = await promptCall[3]({});
+    expect(promptResult.messages[0].content.text).toContain('Timebase Mark Down');
+    expect(promptResult.messages[0].content.text).toContain('MCP Test');
+  });
 });
