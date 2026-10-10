@@ -1,5 +1,4 @@
-import { TmdParser } from "../syntax/index.js";
-import { TmdMeasureChecker } from "../validation/index.js";
+import { TmdScoreValidator } from "../validation/index.js";
 import {
   TmdLSPDiagnostic,
   TmdLSPPosition,
@@ -8,59 +7,43 @@ import {
 
 export class TmdLSPDiagnosticEngine {
   public static diagnose(source: string): TmdLSPDiagnostic[] {
-    const diagnostics: TmdLSPDiagnostic[] = [];
+    const scoreDiagnostics = TmdScoreValidator.validate(source);
+    const lines = source.split("\n");
 
-    // 1. Measure consistency check
-    try {
-      const issues = TmdMeasureChecker.check(source);
-      for (const issue of issues) {
-        const line = Math.max(0, issue.lineNumber - 1);
-        const range = new TmdLSPRange(
-          new TmdLSPPosition(line, 0),
-          new TmdLSPPosition(line, 80)
-        );
-        diagnostics.push({
-          range,
-          severity: 1, // Error
-          source: "tmd-measure-checker",
-          message: issue.description,
-        });
+    return scoreDiagnostics.map((diag) => {
+      const startLine = Math.max(0, diag.line - 1);
+      const startCol = Math.max(0, diag.column - 1);
+      const endLine = Math.max(startLine, diag.endLine - 1);
+      const defaultEndCol = startLine < lines.length ? lines[startLine].length : 80;
+      const endCol =
+        diag.endColumn > diag.column
+          ? Math.max(startCol + 1, diag.endColumn - 1)
+          : Math.max(startCol + 1, defaultEndCol);
+
+      const range = new TmdLSPRange(
+        new TmdLSPPosition(startLine, startCol),
+        new TmdLSPPosition(endLine, endCol)
+      );
+      const severity = diag.severity === "error" ? 1 : 2;
+      let msg = diag.message;
+      if (diag.suggestion && !msg.includes(diag.suggestion)) {
+        msg += ` (${diag.suggestion})`;
       }
-    } catch (_) {}
-
-    // 2. Syntax / Parser check
-    try {
-      TmdParser.parseThrowing(source);
-    } catch (err: any) {
-      if (err?.range) {
-        const line = Math.max(0, (err.range.start?.line ?? 1) - 1);
-        const col = Math.max(0, (err.range.start?.column ?? 1) - 1);
-        const len = Math.max(1, err.range.length ?? 1);
-        diagnostics.push({
-          range: new TmdLSPRange(
-            new TmdLSPPosition(line, col),
-            new TmdLSPPosition(line, col + len)
-          ),
-          severity: 1,
-          source: "tmd-parser",
-          message: err.message || "Parse error",
-        });
-      } else {
-        diagnostics.push({
-          range: new TmdLSPRange(
-            new TmdLSPPosition(0, 0),
-            new TmdLSPPosition(0, 80)
-          ),
-          severity: 1,
-          source: "tmd-parser",
-          message: err?.message || "Parse error",
-        });
+      let sourceName = "tmd-validator";
+      if (diag.rule === "E-MEASURE-BEAT") {
+        sourceName = "tmd-measure-checker";
+      } else if (diag.rule === "E-SYNTAX") {
+        sourceName = "tmd-parser";
       }
-    }
 
-    return diagnostics;
+      return {
+        range,
+        severity,
+        source: sourceName,
+        message: msg,
+      };
+    });
   }
 }
 
 // MARK: - LSP Server Handler & Event Loop
-
