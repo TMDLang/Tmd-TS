@@ -1,10 +1,10 @@
 import { SheetInstrumentHelper } from "../domain/index.js";
-import { MeasureEvent, NotationDuration, PlaybackDirectiveEvent, TmdMacroEvaluator, TmdMeasureRenderer } from "../playback/index.js";
-import { chordQualityIntervals, ChordSymbol, Entry, Note, PitchMapping, Sheet } from "../syntax/index.js";
+import { MeasureEvent, NotationDuration, PlaybackDirectiveEvent, TmdMeasureRenderer } from "../playback/index.js";
+import { ChordSymbol, Note, PercussionStroke, PitchMapping, Sheet } from "../syntax/index.js";
 
 export class TmdLilyPondGenerator {
   public static generateLilyPond(rawSheet: Sheet): string {
-    const sheet = TmdMacroEvaluator.expandThrowing(rawSheet);
+    const { sheet, instruments } = SheetInstrumentHelper.preparedForExport(rawSheet);
     const composer = sheet.metadata["composer"] || "TMD";
     let ly = `\\version "2.24.0"\n\n`;
     ly += `\\header {\n`;
@@ -19,8 +19,6 @@ export class TmdLilyPondGenerator {
     ly += `  ${TmdLilyPondGenerator.resolveTempo(sheet.beat, sheet.speed > 0 ? sheet.speed : 120)}\n`;
     ly += `  \\key ${TmdLilyPondGenerator.lilyPondKey(sheet.declaredKey || sheet.keySignature.toString())}\n`;
     ly += `}\n\n`;
-
-    const instruments = SheetInstrumentHelper.distinctInstruments(sheet, false);
 
     const identifierMap = new Map<string, string>();
     const usedNames = new Set<string>();
@@ -38,7 +36,7 @@ export class TmdLilyPondGenerator {
 
     instruments.forEach((inst) => {
       const varName = identifierMap.get(inst) || "Track";
-      const isDrum = TmdLilyPondGenerator.paragraphsContainPercussion(sheet.entries, inst);
+      const isDrum = SheetInstrumentHelper.containsPercussionUnits(sheet, inst);
       ly += `${varName} = ${isDrum ? "\\drummode " : ""}{\n  \\global\n`;
       ly += TmdLilyPondGenerator.generateTrackMusic(inst, sheet, isDrum);
       ly += `}\n\n`;
@@ -47,7 +45,7 @@ export class TmdLilyPondGenerator {
     ly += `\\score {\n  <<\n`;
     instruments.forEach((inst) => {
       const varName = identifierMap.get(inst) || "Track";
-      const isDrum = TmdLilyPondGenerator.paragraphsContainPercussion(sheet.entries, inst);
+      const isDrum = SheetInstrumentHelper.containsPercussionUnits(sheet, inst);
       const staffType = isDrum ? "DrumStaff" : "Staff";
       ly += `    \\new ${staffType} = "${TmdLilyPondGenerator.escapeLilyPond(inst)}" \\with {\n`;
       ly += `      instrumentName = "${TmdLilyPondGenerator.escapeLilyPond(inst)}"\n`;
@@ -187,17 +185,7 @@ export class TmdLilyPondGenerator {
       case "rest":
         return decomposed.map((d) => `r${d.baseDenominator}${d.isDotted ? "." : ""}`).join(" ");
       case "percussion": {
-        const pattern = event.content.pattern;
-        const mapping: Record<string, string> = {
-          X: "hh", x: "hh",
-          O: "hho", o: "hho",
-          T: "toml", t: "toml",
-          S: "sn", s: "sn",
-          D: "bd", d: "bd",
-          B: "bd", b: "bd",
-          C: "cymc", c: "cymc"
-        };
-        const names = Array.from(pattern).map((c) => mapping[c]).filter(Boolean);
+        const names = PercussionStroke.parse(event.content.pattern).map((s) => s.lilyPondDrumName);
         if (names.length === 0) {
           return decomposed.map((d) => `r${d.baseDenominator}${d.isDotted ? "." : ""}`).join(" ");
         }
@@ -251,15 +239,5 @@ export class TmdLilyPondGenerator {
 
   private static escapeLilyPond(str: string): string {
     return str.replace(/"/g, '\\"');
-  }
-
-  private static paragraphsContainPercussion(paragraphs: Entry[], instrument: string): boolean {
-    return paragraphs
-      .filter((p) => p.assignment?.toLocaleLowerCase() === instrument.toLocaleLowerCase())
-      .some((p) =>
-        p.sections.some((s) =>
-          s.unitGroups.some((g) => g.units.some((u) => u.type === "percussion"))
-        )
-      );
   }
 }

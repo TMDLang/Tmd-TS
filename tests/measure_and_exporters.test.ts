@@ -662,4 +662,120 @@ A:Piano@|0|{
       expect(braillePreview.tracks[0].measures[0].sightedSummary).toContain('D4+F4');
     });
   });
+
+  describe('PercussionStroke, SheetInstrumentHelper, and Refactor Scanning SSOT (Issue #48)', () => {
+    it('resolves all TMD percussion pattern characters through PercussionStroke SSOT', async () => {
+      const { PercussionStroke } = await import('../src/index.js');
+      expect(PercussionStroke).toBeDefined();
+
+      const strokes = PercussionStroke.parse('DbSxOtCcZ');
+      expect(strokes.map((s: { kind: string }) => s.kind)).toEqual([
+        'kick',
+        'kick',
+        'snare',
+        'closedHiHat',
+        'openHiHat',
+        'tom',
+        'crashCymbal',
+        'crashCymbal',
+      ]);
+
+      expect(PercussionStroke.fromCharacter('D')?.midiPitch).toBe(36);
+      expect(PercussionStroke.fromCharacter('D')?.defaultVelocity).toBe(118);
+      expect(PercussionStroke.fromCharacter('D')?.unpitchedDisplayPosition).toEqual({
+        stepIndex: 3,
+        step: 'F',
+        octave: 4,
+      });
+      expect(PercussionStroke.fromCharacter('D')?.lilyPondDrumName).toBe('bd');
+      expect(PercussionStroke.fromCharacter('D')?.abcPitch).toBeUndefined();
+
+      expect(PercussionStroke.fromCharacter('S')?.midiPitch).toBe(38);
+      expect(PercussionStroke.fromCharacter('S')?.defaultVelocity).toBe(105);
+      expect(PercussionStroke.fromCharacter('S')?.unpitchedDisplayPosition).toEqual({
+        stepIndex: 1,
+        step: 'D',
+        octave: 5,
+      });
+      expect(PercussionStroke.fromCharacter('S')?.lilyPondDrumName).toBe('sn');
+      expect(PercussionStroke.fromCharacter('S')?.abcPitch).toBe('D');
+
+      expect(PercussionStroke.fromCharacter('X')?.midiPitch).toBe(42);
+      expect(PercussionStroke.fromCharacter('X')?.defaultVelocity).toBe(78);
+      expect(PercussionStroke.fromCharacter('X')?.lilyPondDrumName).toBe('hh');
+      expect(PercussionStroke.fromCharacter('X')?.abcPitch).toBe('^F');
+
+      expect(PercussionStroke.fromCharacter('O')?.midiPitch).toBe(46);
+      expect(PercussionStroke.fromCharacter('O')?.defaultVelocity).toBe(90);
+      expect(PercussionStroke.fromCharacter('O')?.lilyPondDrumName).toBe('hho');
+
+      expect(PercussionStroke.fromCharacter('T')?.midiPitch).toBe(45);
+      expect(PercussionStroke.fromCharacter('T')?.defaultVelocity).toBe(100);
+      expect(PercussionStroke.fromCharacter('T')?.lilyPondDrumName).toBe('toml');
+      expect(PercussionStroke.fromCharacter('T')?.abcPitch).toBe('A');
+
+      expect(PercussionStroke.fromCharacter('C')?.midiPitch).toBe(49);
+      expect(PercussionStroke.fromCharacter('C')?.defaultVelocity).toBe(115);
+      expect(PercussionStroke.fromCharacter('C')?.lilyPondDrumName).toBe('cymc');
+    });
+
+    it('centralizes instrument track metadata and preparedForExport on SheetInstrumentHelper', async () => {
+      const { SheetInstrumentHelper } = await import('../src/index.js');
+      const sheet = TmdParser.parse(`::SCORE::
+** SSOT Instrument Metadata **
+!= 120
+?= C
+<4/4>
+
+Theme {
+  <4*>
+  1 2 3 4
+}
+
+A:CustomGrooveTrack@|0|{
+  <4*>
+  D S X O
+}
+
+A:Cello@|0|{
+  <4*>
+  1_ 2_ 3_ 4_
+}
+
+-> (play Theme Violin) -> A ->#
+`)!;
+
+      const { sheet: prepared, instruments } = SheetInstrumentHelper.preparedForExport(sheet);
+      expect(instruments).toEqual(['Cello', 'CustomGrooveTrack', 'Violin']);
+      expect(SheetInstrumentHelper.containsPercussionUnits(prepared, 'customgroovetrack')).toBe(true);
+      expect(SheetInstrumentHelper.containsPercussionUnits(prepared, 'Cello')).toBe(false);
+      expect(SheetInstrumentHelper.isPercussionTrack(prepared, 'Cajon')).toBe(true);
+      expect(SheetInstrumentHelper.isPercussionTrack(prepared, 'CustomGrooveTrack')).toBe(true);
+      expect(SheetInstrumentHelper.isPercussionTrack(prepared, 'Violin')).toBe(false);
+      expect(SheetInstrumentHelper.isBassClefInstrument('Cello')).toBe(true);
+      expect(SheetInstrumentHelper.isBassClefInstrument('Violin')).toBe(false);
+      expect(SheetInstrumentHelper.isChordSymbolTrack('CHORDS')).toBe(true);
+      expect(SheetInstrumentHelper.isChordSymbolTrack('Piano')).toBe(false);
+    });
+
+    it('shares paragraph header and grid subdivision scanning helpers across refactoring modules', async () => {
+      const {
+        parseParagraphHeaderLine,
+        parseGridSubdivisionLine,
+        matchesRefactorTarget,
+      } = await import('../src/refactoring/format_helpers.js');
+
+      expect(parseParagraphHeaderLine('verse:Piano@|0|{')).toEqual({
+        section: 'verse',
+        instrument: 'Piano',
+      });
+      expect(parseParagraphHeaderLine('1 2 3 4')).toBeUndefined();
+      expect(parseGridSubdivisionLine('<8*>')).toBe(8);
+      expect(parseGridSubdivisionLine('<4/4>')).toBeUndefined();
+      expect(matchesRefactorTarget({ section: 'verse' }, 'verse', 'Piano')).toBe(true);
+      expect(matchesRefactorTarget({ section: 'chorus' }, 'verse', 'Piano')).toBe(false);
+      expect(matchesRefactorTarget({ instrument: 'Piano' }, 'verse', 'Piano')).toBe(true);
+      expect(matchesRefactorTarget({ instrument: 'Bass' }, 'verse', 'Piano')).toBe(false);
+    });
+  });
 });

@@ -2,6 +2,39 @@ export function escapeRegex(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+const PARAGRAPH_HEADER_REGEX =
+  /^([a-zA-Z0-9_\u4e00-\u9fa5-]+)\s*:\s*([a-zA-Z0-9_\u4e00-\u9fa5-]+)(@[^{]*)?\s*\{/;
+const GRID_SUBDIVISION_REGEX = /^<(\d+)\*>/;
+
+export function parseParagraphHeaderLine(
+  trimmedLine: string
+): { section: string; instrument: string } | undefined {
+  const match = trimmedLine.match(PARAGRAPH_HEADER_REGEX);
+  if (!match) return undefined;
+  return {
+    section: match[1],
+    instrument: match[2],
+  };
+}
+
+export function parseGridSubdivisionLine(trimmedLine: string): number | undefined {
+  const match = trimmedLine.match(GRID_SUBDIVISION_REGEX);
+  if (!match) return undefined;
+  const parsed = parseInt(match[1], 10);
+  return Number.isNaN(parsed) ? undefined : parsed;
+}
+
+export function matchesRefactorTarget(
+  target: { section?: string; instrument?: string } | undefined,
+  section: string,
+  instrument: string
+): boolean {
+  if (!target) return true;
+  if (target.section && target.section !== section) return false;
+  if (target.instrument && target.instrument !== instrument) return false;
+  return true;
+}
+
 export function formatMusicalUnits(text: string): string {
   let output = "";
   const chars = Array.from(text);

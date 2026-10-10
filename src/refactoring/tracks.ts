@@ -6,7 +6,7 @@ import {
   Sheet,
 } from "../syntax/types.js";
 import { TmdRefactorError } from "./errors.js";
-import { escapeRegex } from "./format_helpers.js";
+import { escapeRegex, parseParagraphHeaderLine } from "./format_helpers.js";
 
 export interface TmdDuplicateTrackOptions {
   section?: string;
@@ -77,13 +77,10 @@ export function extractInstrument(
     for (const rawLine of rawLines) {
       const trimmed = rawLine.trim();
 
-      const paraMatch = trimmed.match(
-        /^([a-zA-Z0-9_\u4e00-\u9fa5-]+)\s*:\s*([a-zA-Z0-9_\u4e00-\u9fa5-]+)(@[^{]*)?\s*\{/
-      );
-      if (paraMatch) {
+      const header = parseParagraphHeaderLine(trimmed);
+      if (header) {
         insideParagraph = true;
-        const pInst = paraMatch[2];
-        keepParagraph = pInst === instrument;
+        keepParagraph = header.instrument === instrument;
         if (keepParagraph) {
           resultLines.push(rawLine);
         }

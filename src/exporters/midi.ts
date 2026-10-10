@@ -1,6 +1,6 @@
 import { SheetInstrumentHelper } from "../domain/index.js";
 import { PlaybackTimeline, TmdMacroEvaluator, TmdPlaybackRenderer } from "../playback/index.js";
-import { Accidental, Beat, chordQualityIntervals, ChordSymbol, DEFAULT_INSTRUMENT, Note, noteToMIDIPitch, Sheet } from "../syntax/index.js";
+import { Accidental, Beat, chordQualityIntervals, ChordSymbol, DEFAULT_INSTRUMENT, Note, noteToMIDIPitch, PercussionStroke, Sheet } from "../syntax/index.js";
 import { type MIDIEvent, type MIDIMessage,TmdMIDIEncoder } from './midi_encoder.js';
 import type { MIDIInstrumentValue } from './midi_instrument.js';
 import { MIDIInstrument } from './midi_instrument.js';
@@ -222,39 +222,10 @@ export class TmdMIDIGenerator {
           const pattern = event.content.pattern;
           const step = Math.max(1, Math.floor(duration / Math.max(1, pattern.length)));
           for (let index = 0; index < pattern.length; index++) {
-            const char = pattern[index];
-            const pitch = this.percussionMIDIPitch(char);
-            if (pitch !== undefined) {
-              let velocity = 78;
-              switch (char) {
-                case 'D':
-                case 'd':
-                case 'B':
-                case 'b':
-                  velocity = 118;
-                  break;
-                case 'C':
-                case 'c':
-                  velocity = 115;
-                  break;
-                case 'S':
-                case 's':
-                  velocity = 105;
-                  break;
-                case 'T':
-                case 't':
-                  velocity = 100;
-                  break;
-                case 'O':
-                case 'o':
-                  velocity = 90;
-                  break;
-                default:
-                  velocity = 78;
-                  break;
-              }
+            const stroke = PercussionStroke.fromCharacter(pattern[index]);
+            if (stroke !== undefined) {
               const noteStart = start + index * step;
-              this.appendNote(events, noteStart, step, 9, pitch, velocity);
+              this.appendNote(events, noteStart, step, 9, stroke.midiPitch, stroke.defaultVelocity);
             }
           }
           break;
@@ -313,26 +284,6 @@ export class TmdMIDIGenerator {
 
   public static noteToMIDIPitch(note: Note, keyOffset: number): number {
     return noteToMIDIPitch(note, keyOffset);
-  }
-
-  private static percussionMIDIPitch(char: string): number | undefined {
-    const map: Record<string, number> = {
-      D: 36,
-      d: 36,
-      B: 36,
-      b: 36,
-      S: 38,
-      s: 38,
-      X: 42,
-      x: 42,
-      O: 46,
-      o: 46,
-      T: 45,
-      t: 45,
-      C: 49,
-      c: 49,
-    };
-    return map[char];
   }
 
   public static chordToMIDIPitches(

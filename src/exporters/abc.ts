@@ -1,10 +1,10 @@
 import { SheetInstrumentHelper } from "../domain/index.js";
-import { MeasureEvent, PlaybackDirectiveEvent, TmdMacroEvaluator, TmdMeasureRenderer } from "../playback/index.js";
-import { Entry, KeySignature, Note, PitchMapping, Sheet } from "../syntax/index.js";
+import { MeasureEvent, PlaybackDirectiveEvent, TmdMeasureRenderer } from "../playback/index.js";
+import { KeySignature, Note, PercussionStroke, PitchMapping, Sheet } from "../syntax/index.js";
 
 export class TmdABCGenerator {
   public static generateABC(rawSheet: Sheet): string {
-    const sheet = TmdMacroEvaluator.expandThrowing(rawSheet);
+    const { sheet, instruments } = SheetInstrumentHelper.preparedForExport(rawSheet);
     let abc = "";
 
     abc += "X:1\n";
@@ -17,8 +17,6 @@ export class TmdABCGenerator {
     abc += `${tempoField}\n`;
     abc += `K:${TmdABCGenerator.abcKey(sheet.declaredKey || sheet.keySignature.toString())}\n\n`;
 
-    const instruments = SheetInstrumentHelper.distinctInstruments(sheet, false);
-
     instruments.forEach((inst, idx) => {
       const vId = `V${idx + 1}`;
       abc += `V:${vId} name="${inst}" snm="${inst.slice(0, 3)}"\n`;
@@ -28,7 +26,7 @@ export class TmdABCGenerator {
     instruments.forEach((inst, idx) => {
       const vId = `V${idx + 1}`;
       abc += `[V:${vId}]\n`;
-      if (TmdABCGenerator.paragraphsContainPercussion(sheet.entries, inst)) {
+      if (SheetInstrumentHelper.containsPercussionUnits(sheet, inst)) {
         abc += "%%MIDI channel 10\n";
       }
       abc += TmdABCGenerator.generateTrackMusic(inst, sheet);
@@ -186,11 +184,9 @@ export class TmdABCGenerator {
       case "rest":
         return `z${suffix}`;
       case "percussion": {
-        const pattern = event.content.pattern;
-        const mapping: Record<string, string> = {
-          X: "^F", x: "^F", T: "A", t: "A", S: "D", s: "D"
-        };
-        const pitches = Array.from(pattern).map((c) => mapping[c]).filter(Boolean);
+        const pitches = PercussionStroke.parse(event.content.pattern)
+          .map((s) => s.abcPitch)
+          .filter((p): p is string => Boolean(p));
         if (pitches.length === 0) return `z${suffix}`;
         const count = pitches.length;
         const base = Math.floor(multiplier / count);
@@ -278,15 +274,5 @@ export class TmdABCGenerator {
       majorName = sharps[normalized];
     }
     return isMinor ? `${majorName}m` : majorName;
-  }
-
-  private static paragraphsContainPercussion(paragraphs: Entry[], instrument: string): boolean {
-    return paragraphs
-      .filter((p) => p.assignment?.toLocaleLowerCase() === instrument.toLocaleLowerCase())
-      .some((p) =>
-        p.sections.some((s) =>
-          s.unitGroups.some((g) => g.units.some((u) => u.type === "percussion"))
-        )
-      );
   }
 }

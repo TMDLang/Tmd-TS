@@ -1,6 +1,6 @@
 import { SheetInstrumentHelper } from "./domain/index.js";
 import { PlaybackDirectiveEvent, PlaybackEvent, TmdMacroEvaluator, TmdPlaybackRenderer } from "./playback/index.js";
-import { Accidental, DEFAULT_INSTRUMENT, Note, Sheet } from "./syntax/index.js";
+import { Accidental, DEFAULT_INSTRUMENT, Note, PercussionStroke, Sheet } from "./syntax/index.js";
 
 export class TmdAudioError extends Error {}
 
@@ -89,7 +89,7 @@ export class TmdWAVRenderer {
       if (event.content.type === "percussion") {
         const pattern = event.content.pattern;
         for (let hitIndex = 0; hitIndex < pattern.length; hitIndex++) {
-          const midi = this.percussionToMidi(pattern[hitIndex]);
+          const midi = PercussionStroke.fromCharacter(pattern[hitIndex])?.midiPitch;
           if (midi === undefined) continue;
           const hitBeat = event.position + event.duration * hitIndex / Math.max(1, pattern.length);
           const start = Math.max(0, Math.floor(this.beatsToSeconds(hitBeat, initialTempo, tempoChanges) * sampleRate));
@@ -114,18 +114,6 @@ export class TmdWAVRenderer {
   }
   private static noteToMidi(note: Note, key: number): number { return 60 + key + [0, 2, 4, 5, 7, 9, 11][note.degree - 1] + (note.accidental === Accidental.Sharp ? 1 : note.accidental === Accidental.Flat ? -1 : 0) + note.octave * 12; }
   private static chordToMidi(offset: number): number[] { return [60 + offset, 64 + offset, 67 + offset]; }
-  private static percussionToMidi(symbol: string): number | undefined {
-    switch (symbol.toUpperCase()) {
-      case "X": return 42;
-      case "O": return 46;
-      case "S": return 38;
-      case "B":
-      case "D": return 36;
-      case "T": return 45;
-      case "C": return 49;
-      default: return undefined;
-    }
-  }
   private static beatsToSeconds(beat: number, initialTempo: number, changes: Array<{ position: number; tempo: number }>): number {
     if (beat <= 0) return beat * 60 / initialTempo;
     let previousBeat = 0;

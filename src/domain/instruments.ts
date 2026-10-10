@@ -13,6 +13,10 @@ export class SheetInstrumentHelper {
    */
   public static distinctInstruments(rawSheet: Sheet, fallbackToDefault = true): string[] {
     const sheet = TmdMacroEvaluator.expandThrowing(rawSheet);
+    return this.distinctInstrumentsFromExpanded(sheet, fallbackToDefault);
+  }
+
+  private static distinctInstrumentsFromExpanded(sheet: Sheet, fallbackToDefault: boolean): string[] {
     const distinct = Array.from(
       new Set(
         sheet.entries
@@ -24,6 +28,86 @@ export class SheetInstrumentHelper {
       return ['Piano'];
     }
     return distinct;
+  }
+
+  /**
+   * Expands all S-Expression macros on `rawSheet` once and returns the expanded sheet
+   * along with its sorted distinct instruments.
+   */
+  public static preparedForExport(
+    rawSheet: Sheet,
+    fallbackToDefault = false
+  ): { sheet: Sheet; instruments: string[] } {
+    const sheet = TmdMacroEvaluator.expandThrowing(rawSheet);
+    return {
+      sheet,
+      instruments: this.distinctInstrumentsFromExpanded(sheet, fallbackToDefault),
+    };
+  }
+
+  /**
+   * Returns `true` if any entry assigned to `instrument` (case-insensitively) contains a `percussion` unit.
+   */
+  public static containsPercussionUnits(sheet: Sheet, instrument: string): boolean {
+    const lower = instrument.toLowerCase();
+    return sheet.entries
+      .filter((p) => (p.assignment ?? '').toLowerCase() === lower)
+      .some((p) =>
+        p.sections.some((s) =>
+          s.unitGroups.some((g) => g.units.some((u) => u.type === 'percussion'))
+        )
+      );
+  }
+
+  /**
+   * Returns `true` if `instrument` is a percussion track by name keyword or by containing `percussion` units.
+   */
+  public static isPercussionTrack(sheet: Sheet, instrument: string): boolean {
+    const lower = instrument.toLowerCase();
+    const aliases = [
+      'drum',
+      'drums',
+      'groove',
+      'percussion',
+      'perc',
+      'beat',
+      'drumkit',
+      'kit',
+      'cajon',
+      'snare',
+      'kick',
+      'hihat',
+    ];
+    if (aliases.some((a) => lower.includes(a))) {
+      return true;
+    }
+    return this.containsPercussionUnits(sheet, instrument);
+  }
+
+  /**
+   * Returns `true` if `instrument` conventionally uses bass clef (`F` clef on line 4).
+   */
+  public static isBassClefInstrument(instrument: string): boolean {
+    const lower = instrument.toLowerCase();
+    const bassKeywords = [
+      'bass',
+      'cello',
+      'tuba',
+      'contrabass',
+      'bassoon',
+      'trombone',
+      'baritone',
+      'timpani',
+    ];
+    return bassKeywords.some((k) => lower.includes(k));
+  }
+
+  /**
+   * Returns `true` if `instrument` is a dedicated chord-symbol assignment (`CHORD` or `CHORDS`).
+   */
+  public static isChordSymbolTrack(instrument: string): boolean {
+    const lower = instrument.trim().toLowerCase();
+    return lower === 'chord' || lower === 'chords';
   }
 
   /**

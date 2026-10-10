@@ -1,3 +1,4 @@
+import { SheetInstrumentHelper } from "../domain/index.js";
 import {
   MeasureEvent,
   NotationDuration,
@@ -11,6 +12,7 @@ import {
   ChordSymbol,
   Entry,
   Note,
+  PercussionStroke,
   PitchMapping,
   Sheet,
   SpelledPitch,
@@ -323,10 +325,10 @@ export class TmdBrailleGenerator {
         e.assignment?.toLowerCase() === instrument.toLowerCase() &&
         e.pitchMode === "fixed"
     );
-    const isChordTrack = TmdBrailleGenerator.isChordSymbolAssignment(instrument);
-    const isPercussion = TmdBrailleGenerator.isPercussionAssignment(
-      instrument,
-      sheet.entries
+    const isChordTrack = SheetInstrumentHelper.isChordSymbolTrack(instrument);
+    const isPercussion = SheetInstrumentHelper.isPercussionTrack(
+      sheet,
+      instrument
     );
 
     let activeWrittenKey = isFixedPitchTrack
@@ -846,7 +848,8 @@ export class TmdBrailleGenerator {
           continue;
         }
         const { stepIndex, octave } =
-          TmdBrailleGenerator.percussionStepAndOctave(ch);
+          PercussionStroke.fromCharacter(ch)?.unpitchedDisplayPosition ??
+          PercussionStroke.snare.unpitchedDisplayPosition;
         const octStr = TmdBrailleGenerator.shouldEmitOctave(
           octave,
           stepIndex,
@@ -1246,64 +1249,6 @@ export class TmdBrailleGenerator {
         }
         return `>${abbr}${digits}'`;
       }
-    }
-  }
-
-  private static isChordSymbolAssignment(instrument: string): boolean {
-    const lower = instrument.trim().toLowerCase();
-    return lower === "chord" || lower === "chords";
-  }
-
-  private static isPercussionAssignment(
-    instrument: string,
-    entries: Entry[]
-  ): boolean {
-    const lower = instrument.toLowerCase();
-    if (
-      lower.includes("drum") ||
-      lower.includes("perc") ||
-      lower.includes("kit")
-    ) {
-      return true;
-    }
-    return entries.some(
-      (entry) =>
-        entry.assignment?.toLowerCase() === lower &&
-        entry.sections.some((sec) =>
-          sec.unitGroups.some((grp) =>
-            grp.units.some((u) => u.type === "percussion")
-          )
-        )
-    );
-  }
-
-  private static percussionStepAndOctave(token: string): {
-    stepIndex: number;
-    octave: number;
-  } {
-    switch (token) {
-      case "D":
-      case "d":
-      case "B":
-      case "b":
-        return { stepIndex: 3, octave: 4 }; // F4
-      case "T":
-      case "t":
-        return { stepIndex: 5, octave: 4 }; // A4
-      case "S":
-      case "s":
-        return { stepIndex: 1, octave: 5 }; // D5
-      case "X":
-      case "x":
-        return { stepIndex: 3, octave: 5 }; // F5
-      case "O":
-      case "o":
-        return { stepIndex: 4, octave: 5 }; // G5
-      case "C":
-      case "c":
-        return { stepIndex: 5, octave: 5 }; // A5
-      default:
-        return { stepIndex: 1, octave: 5 };
     }
   }
 

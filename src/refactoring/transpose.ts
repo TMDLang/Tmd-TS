@@ -1,4 +1,5 @@
 import { KeySignature, PitchMapping, ScaleDegree, scaleDegreeSemitoneOffset } from "../syntax/types.js";
+import { matchesRefactorTarget, parseParagraphHeaderLine } from "./format_helpers.js";
 import { containsTransposableUnit, measureUnits, parseTupletToken } from "./unit_helpers.js";
 
 export interface TmdTransposeOptions {
@@ -51,16 +52,10 @@ export function transposeSource(
       }
 
       // Paragraph Header
-      const paraMatch = trimmed.match(
-        /^([a-zA-Z0-9_\u4e00-\u9fa5-]+)\s*:\s*([a-zA-Z0-9_\u4e00-\u9fa5-]+)(@[^{]*)?\s*\{/
-      );
-      if (paraMatch) {
+      const header = parseParagraphHeaderLine(trimmed);
+      if (header) {
         insideParagraph = true;
-        const pSec = paraMatch[1];
-        const pInst = paraMatch[2];
-        inMatchingPara =
-          (!options.section || options.section === pSec) &&
-          (!options.instrument || options.instrument === pInst);
+        inMatchingPara = matchesRefactorTarget(options, header.section, header.instrument);
         resultLines.push(rawLine);
         continue;
       }
