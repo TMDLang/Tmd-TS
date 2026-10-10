@@ -298,6 +298,25 @@ verse:Piano@|0|{
     expect(parsed.syntaxValid).toBe(false);
     expect(parsed.syntaxError).toBeDefined();
     expect(parsed.syntaxError.line).toBeGreaterThanOrEqual(1);
+
+    // Semantic error ([1 3 5]) with valid syntax and measure beats
+    const semanticBad = `::SCORE::
+** Semantic Bad **
+!= 120
+?= C
+<4/4>
+verse:Piano@|0|{
+  <4*>
+  | [1 3 5] - - - |
+}
+-> verse ->#
+`;
+    const semRes = await checkTool.handler({ text: semanticBad });
+    const semParsed = JSON.parse(semRes.content[0].text);
+    expect(semParsed.valid).toBe(false);
+    expect(semParsed.syntaxValid).toBe(true);
+    expect(semParsed.errorCount).toBe(1);
+    expect(semParsed.diagnostics.some((d: any) => d.rule === 'E-CHORD-MULTINOTE')).toBe(true);
   });
 
   it('parseTmd includes structured line, column, snippet, and expectedTokens on syntax error', async () => {

@@ -87,4 +87,40 @@ describe("Problems Panel UI (TDD)", () => {
     expect(scrolledStartCol).toBe(5);
     expect(scrolledEndCol).toBe(6);
   });
+
+  it("surfaces TmdScoreValidator Stage 2-6 semantic errors and warnings in Problems Panel (#44)", () => {
+    const problemsList = { innerHTML: "" } as any;
+    const problemsCountBadge = { className: "", textContent: "" } as any;
+    const fixAllBtn = { style: { display: "" } } as any;
+    const problemsPanel = {
+      querySelector: () => fixAllBtn,
+    } as any;
+
+    const semanticScore = `::SCORE::
+** Semantic Check **
+!= 120
+?= C
+<4/4>
+
+A:UnknownMartianZorg@|0|{
+  <4*>
+  | [1 3 5] - - - |
+}
+-> A ->#
+`;
+    updateProblemsPanel(semanticScore, {
+      problemsPanel,
+      btnFixProblemsAi: fixAllBtn,
+      problemsCountBadge,
+      problemsList,
+    });
+
+    // Should report both E-CHORD-MULTINOTE and W-INSTRUMENT-UNKNOWN
+    expect(problemsCountBadge.textContent).toBe("2");
+    expect(problemsCountBadge.className).toBe("problems-badge error");
+    expect(problemsList.innerHTML).toContain("E-CHORD-MULTINOTE");
+    expect(problemsList.innerHTML).toContain("1+3+5");
+    expect(problemsList.innerHTML).toContain("W-INSTRUMENT-UNKNOWN");
+    expect(problemsList.innerHTML).toContain("UnknownMartianZorg");
+  });
 });

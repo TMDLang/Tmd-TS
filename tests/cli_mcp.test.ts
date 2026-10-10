@@ -69,6 +69,32 @@ verse:Piano@|0|{
     expect(badParsed.issueCount).toBe(1);
     expect(badParsed.issues[0].expectedUnits).toBe(4);
     expect(badParsed.issues[0].actualUnits).toBe(3);
+    expect(badParsed.errorCount).toBe(1);
+    expect(badParsed.diagnostics.some((d: any) => d.rule === "E-MEASURE-BEAT")).toBe(true);
+
+    const semanticBadTmd = `::SCORE::
+** Semantic Bad **
+!= 120
+?= C
+<4/4>
+
+verse:Piano@|0|{
+  <4*>
+  | [1 3 5] - - - |
+}
+unused:Piano@|0|{
+  <4*>
+  | 1 2 3 4 |
+}
+-> verse ->#
+`;
+    const semanticRes = await TmdMCPServer.handleCheckTmd({ text: semanticBadTmd });
+    const semanticParsed = JSON.parse(semanticRes.content[0].text);
+    expect(semanticParsed.valid).toBe(false);
+    expect(semanticParsed.errorCount).toBe(1);
+    expect(semanticParsed.warningCount).toBe(1);
+    expect(semanticParsed.diagnostics.some((d: any) => d.rule === "E-CHORD-MULTINOTE")).toBe(true);
+    expect(semanticParsed.diagnostics.some((d: any) => d.rule === "W-UNUSED-ENTRY")).toBe(true);
   });
 
 

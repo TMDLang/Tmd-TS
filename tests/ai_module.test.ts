@@ -266,7 +266,26 @@ verse:Piano@|0|{
     const validResult = validateTmdCodeWithIssues(tmdValid);
     expect(validResult.syntaxValid).toBe(true);
     expect(validResult.measureIssues.length).toBe(0);
+    expect(validResult.diagnostics.length).toBe(0);
     expect(validResult.allValid).toBe(true);
+
+    // Score with valid syntax and measure beats, but semantic error ([1 3 5] multi-note bracket misuse)
+    const tmdSemanticErr = `::SCORE::
+** Semantic Err **
+!= 120
+?= C
+<4/4>
+
+verse:Piano@|0|{
+  <4*>
+  | [1 3 5] - - - |
+}
+-> verse ->#`;
+    const semanticResult = validateTmdCodeWithIssues(tmdSemanticErr);
+    expect(semanticResult.syntaxValid).toBe(true);
+    expect(semanticResult.measureIssues.length).toBe(0);
+    expect(semanticResult.diagnostics.some((d) => d.rule === 'E-CHORD-MULTINOTE')).toBe(true);
+    expect(semanticResult.allValid).toBe(false);
   });
 
   it('builds tool declarations for Gemini and OpenAI providers from Web MCP tools', async () => {

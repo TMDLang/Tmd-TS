@@ -10,6 +10,7 @@ import { TmdSkill } from "../../../src/skill.js";
 import { TmdParser } from "../../../src/syntax/parser.js";
 import { accidentalToSemitone, scaleDegreeLetter } from "../../../src/syntax/types.js";
 import { TmdMeasureChecker } from "../../../src/validation/measure_check.js";
+import { TmdScoreValidator } from "../../../src/validation/score_validator.js";
 import { validateTmdCode } from "../ai/validator.js";
 
 export interface TmdWebMcpContext {
@@ -197,6 +198,9 @@ export const buildTmdWebMcpTools = (
         try {
           const syntaxResult = validateTmdCode(text);
           const issues = TmdMeasureChecker.check(text);
+          const diagnostics = TmdScoreValidator.validate(text);
+          const errorCount = diagnostics.filter((d) => d.severity === "error").length;
+          const warningCount = diagnostics.filter((d) => d.severity === "warning").length;
           const syntaxError = !syntaxResult.valid
             ? {
                 message: syntaxResult.message,
@@ -210,10 +214,12 @@ export const buildTmdWebMcpTools = (
           return textContent(
             JSON.stringify(
               {
-                valid: syntaxResult.valid && issues.length === 0,
+                valid: syntaxResult.valid && errorCount === 0 && issues.length === 0,
                 syntaxValid: syntaxResult.valid,
                 ...(syntaxError ? { syntaxError } : {}),
                 issueCount: issues.length,
+                errorCount,
+                warningCount,
                 issues: issues.map((i) => ({
                   paragraph: i.paragraphName,
                   instrument: i.instrument,
@@ -225,6 +231,7 @@ export const buildTmdWebMcpTools = (
                   snippet: i.snippet,
                   description: i.description,
                 })),
+                diagnostics,
               },
               null,
               2

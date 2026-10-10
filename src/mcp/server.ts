@@ -20,7 +20,7 @@ import {
 } from "../exporters/index.js";
 import { TmdSkill } from "../skill.js";
 import { accidentalToSemitone, scaleDegreeLetter, TmdParser } from "../syntax/index.js";
-import { TmdMeasureChecker } from "../validation/index.js";
+import { TmdMeasureChecker, TmdScoreValidator } from "../validation/index.js";
 import { TMD_VERSION } from "../version.js";
 const textContent = (text: string) => ({
   content: [
@@ -120,14 +120,20 @@ export class TmdMCPServer {
     }
 
     const issues = TmdMeasureChecker.check(content);
+    const diagnostics = TmdScoreValidator.validate(content);
+    const errorCount = diagnostics.filter((d) => d.severity === "error").length;
+    const warningCount = diagnostics.filter((d) => d.severity === "warning").length;
+
     return textContent(
       JSON.stringify(
         {
-          valid: issues.length === 0,
+          valid: errorCount === 0 && issues.length === 0,
           issueCount: issues.length,
+          errorCount,
+          warningCount,
           issues: issues.map((i) => ({
             paragraph: i.paragraphName,
-                instrument: i.instrument,
+            instrument: i.instrument,
             line: i.lineNumber,
             measureIndex: i.measureIndex,
             expectedUnits: i.expectedUnits,
@@ -136,6 +142,7 @@ export class TmdMCPServer {
             snippet: i.snippet,
             description: i.description,
           })),
+          diagnostics,
         },
         null,
         2

@@ -692,6 +692,7 @@ export class TmdAIDrawerController {
 
   public launchProblemFix(diagnostics: {
     issues?: any[];
+    diagnostics?: any[];
     syntaxError?: any;
   }): void {
     const { aiDrawer, aiPromptInput, inspectorPanel } = this.elements;
@@ -701,6 +702,7 @@ export class TmdAIDrawerController {
     const prompt = buildProblemsFixPrompt({
       scoreContent,
       issues: diagnostics.issues,
+      diagnostics: diagnostics.diagnostics,
       syntaxError: diagnostics.syntaxError,
     });
 
