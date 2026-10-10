@@ -21,7 +21,7 @@ import { AppDOMElements,initAppDOMElements } from "./ui/dom.js";
 import { setupExportMenu } from "./ui/exportMenu.js";
 import { renderInspectorView, setupInspectorPanelEvents } from "./ui/inspector.js";
 import { TmdLibraryDrawerController } from "./ui/libraryDrawer.js";
-import { setupHumModal } from "./ui/modals/humModal.js";
+import { setupHumModal, tryReloadOnChunkError } from "./ui/modals/humModal.js";
 import { setupInsertSectionModal } from "./ui/modals/insertSectionModal.js";
 import { setupRefactorModals } from "./ui/modals/refactorModals.js";
 import { applyPanelsState,savePanelsState } from "./ui/panelState.js";
@@ -703,6 +703,11 @@ function registerServiceWorker() {
     });
   }
 }
+
+window.addEventListener("vite:preloadError", (event) => {
+  event.preventDefault();
+  tryReloadOnChunkError();
+});
 
 window.addEventListener("DOMContentLoaded", () => {
   registerServiceWorker();

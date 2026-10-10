@@ -7,6 +7,78 @@ import {
 import type { TmdWebEditor } from "../../editor.js";
 import { t } from "../../i18n.js";
 
+export const CHUNK_RELOAD_STORAGE_KEY = "tmd_chunk_reload_ts";
+export const CHUNK_RELOAD_DEBOUNCE_MS = 10_000;
+
+export interface ChunkReloadOptions {
+  storage?: Pick<Storage, "getItem" | "setItem">;
+  reload?: () => void;
+  now?: number;
+}
+
+export function isDynamicImportError(error: unknown): boolean {
+  const message =
+    error instanceof Error
+      ? error.message
+      : typeof error === "string"
+        ? error
+        : String(error ?? "");
+  return /Failed to fetch dynamically imported module|Importing a module script failed|error loading dynamically imported module|Unable to preload CSS|Loading chunk [\w-]+ failed/i.test(
+    message
+  );
+}
+
+export function tryReloadOnChunkError(options: ChunkReloadOptions = {}): boolean {
+  const now = options.now ?? Date.now();
+  const storage =
+    options.storage ??
+    (typeof window !== "undefined" ? window.sessionStorage : undefined);
+  const reload =
+    options.reload ??
+    (() => {
+      if (typeof window !== "undefined") {
+        window.location.reload();
+      }
+    });
+
+  try {
+    const rawLastReload = storage?.getItem(CHUNK_RELOAD_STORAGE_KEY);
+    if (rawLastReload) {
+      const lastReload = Number(rawLastReload);
+      if (Number.isFinite(lastReload) && now - lastReload < CHUNK_RELOAD_DEBOUNCE_MS) {
+        return false;
+      }
+    }
+    storage?.setItem(CHUNK_RELOAD_STORAGE_KEY, String(now));
+  } catch {
+    // Proceed with reload even if sessionStorage is restricted
+  }
+
+  reload();
+  return true;
+}
+
+export async function importWithChunkErrorRecovery<T>(
+  importer: () => Promise<T>,
+  options: ChunkReloadOptions = {}
+): Promise<T> {
+  try {
+    return await importer();
+  } catch (firstError) {
+    if (!isDynamicImportError(firstError)) {
+      throw firstError;
+    }
+    try {
+      return await importer();
+    } catch (retryError) {
+      if (isDynamicImportError(retryError)) {
+        tryReloadOnChunkError(options);
+      }
+      throw retryError;
+    }
+  }
+}
+
 export interface HumModalElements {
   humModal: HTMLDialogElement;
   toolHumRecording?: HTMLButtonElement | null;
@@ -193,7 +265,8 @@ export function setupHumModal(
             const audioBuffer = await resampleAudioBuffer(rawBuffer, 22050);
 
             // Dynamically import @spotify/basic-pitch to avoid loading tensorflow at startup
-            const { BasicPitch, noteFramesToTime, outputToNotesPoly } = await import("@spotify/basic-pitch");
+            const { BasicPitch, noteFramesToTime, outputToNotesPoly } =
+              await importWithChunkErrorRecovery(() => import("@spotify/basic-pitch"));
             const basicPitch = new BasicPitch("https://unpkg.com/@spotify/basic-pitch@1.0.1/model/model.json");
 
             const frames: number[][] = [];
