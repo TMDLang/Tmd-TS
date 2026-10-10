@@ -32,9 +32,7 @@ export class TmdReaperGenerator {
       TmdPlaybackRenderer.quarterToSeconds(quarter, segments);
 
     // Calculate section markers
-    const orders: Playback[] = sheet.playback.length > 0
-      ? sheet.playback
-      : Array.from(new Set(sheet.entries.map((p) => p.name))).map((n) => ({ type: "name" as const, name: n }));
+    const orders = SheetInstrumentHelper.effectivePlaybackOrders(sheet);
 
     let currentQuarter = 0.0;
     let markerId = 1;
@@ -73,29 +71,17 @@ export class TmdReaperGenerator {
 
     // Build Tracks
     const trackChunks: string[] = [];
-    let melodyChannel = 0;
+    const channelState = { nextMelodicChannel: 0 };
 
     for (const instrument of distinctInstruments) {
       const instTimeline = TmdPlaybackRenderer.render(sheet, instrument);
       if (!instTimeline.events.some((event) => event.content.type !== 'rest')) continue;
       const midiInst = MIDIInstrument.resolve(instrument);
-      let channel: number;
-      if (MIDIInstrument.isPercussion(midiInst)) {
-        channel = 9;
-      } else {
-        if (melodyChannel === 9) melodyChannel += 1;
-        channel = melodyChannel % 16;
-        melodyChannel += 1;
-      }
+      const channel = MIDIInstrument.allocateChannel(midiInst, channelState);
 
       // Pan
-      let pan = 0.0;
-      const lower = instrument.toLowerCase();
-      if (lower.includes('left') || lower.includes('-l')) {
-        pan = -0.8;
-      } else if (lower.includes('right') || lower.includes('-r')) {
-        pan = 0.8;
-      }
+      const panPos = MIDIInstrument.stereoPanHeuristic(instrument);
+      const pan = panPos === 'left' ? -0.8 : panPos === 'right' ? 0.8 : 0.0;
 
       // Color
       const color = this.getTrackColor(midiInst);

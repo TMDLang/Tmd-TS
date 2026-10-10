@@ -778,3 +778,68 @@ export function mapSectionsNotes(sections: Section[], transform: (note: Note) =>
     })),
   }));
 }
+
+export interface MetronomeTempo {
+  beatUnit: string;
+  lilyPondUnit: string;
+  abcUnit: string;
+  isDotted: boolean;
+  perMinute: number;
+}
+
+export function metronomeTempoForBeat(beat: Beat, quarterBPM: number): MetronomeTempo {
+  if (beat.noteValue === 8 && beat.count > 3 && beat.count % 3 === 0) {
+    const bpm = Math.round(quarterBPM / 1.5);
+    return {
+      beatUnit: "quarter",
+      lilyPondUnit: "4.",
+      abcUnit: "3/8",
+      isDotted: true,
+      perMinute: bpm,
+    };
+  }
+  switch (beat.noteValue) {
+    case 2:
+      return {
+        beatUnit: "half",
+        lilyPondUnit: "2",
+        abcUnit: "1/2",
+        isDotted: false,
+        perMinute: Math.round(quarterBPM / 2.0),
+      };
+    case 8:
+      return {
+        beatUnit: "eighth",
+        lilyPondUnit: "8",
+        abcUnit: "1/8",
+        isDotted: false,
+        perMinute: Math.round(quarterBPM * 2.0),
+      };
+    case 16:
+      return {
+        beatUnit: "16th",
+        lilyPondUnit: "16",
+        abcUnit: "1/16",
+        isDotted: false,
+        perMinute: Math.round(quarterBPM * 4.0),
+      };
+    default:
+      return {
+        beatUnit: "quarter",
+        lilyPondUnit: "4",
+        abcUnit: "1/4",
+        isDotted: false,
+        perMinute: Math.round(quarterBPM),
+      };
+  }
+}
+
+export function effectivePlaybackOrders(sheet: Sheet): Playback[] {
+  if (sheet.playback.length > 0) {
+    return sheet.playback;
+  }
+  return Array.from(new Set(sheet.entries.map((entry) => entry.name))).map((name) => ({
+    type: "name" as const,
+    name,
+  }));
+}

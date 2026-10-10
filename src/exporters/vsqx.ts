@@ -1,11 +1,6 @@
 import { SheetInstrumentHelper } from "../domain/index.js";
-import { PlaybackTimeline, TmdPlaybackRenderer } from "../playback/index.js";
+import { TmdPlaybackRenderer } from "../playback/index.js";
 import { Sheet } from "../syntax/index.js";
-import {
-  MIDIEvent,
-  TmdMIDIEncoder,
-  TmdMIDIGenerator,
-} from './midi.js';
 import { VocaloidPhoneme } from './vocaloid_phoneme.js';
 import type { VocaloidExportOptions } from './vocaloid_types.js';
 /**
@@ -42,47 +37,13 @@ export class TmdVSQXGenerator {
     const ticksPerBar = Math.floor((beatCount * 4 * this.ticksPerQuarter) / beatNoteVal);
     const preMeasureTicks = preMeasure * ticksPerBar;
 
-    interface VSQXNote {
-      posTick: number;
-      durTick: number;
-      noteNum: number;
-      lyric: string;
-      phnm: string;
-    }
-
-    const notes: VSQXNote[] = [];
-    let maxTick = 0;
-    let i = 0;
-    while (i < timeline.events.length) {
-      const event = timeline.events[i];
-      if (event.content.type !== 'note') {
-        i++;
-        continue;
-      }
-      let bestEvent = event;
-      let bestPitch = TmdMIDIGenerator.noteToMIDIPitch(event.content.note, event.state.keyOffset);
-      let j = i + 1;
-      while (j < timeline.events.length && Math.abs(timeline.events[j].position - event.position) < 1e-4) {
-        const nextEv = timeline.events[j];
-        if (nextEv.content.type === 'note') {
-          const p = TmdMIDIGenerator.noteToMIDIPitch(nextEv.content.note, nextEv.state.keyOffset);
-          if (p > bestPitch) {
-            bestPitch = p;
-            bestEvent = nextEv;
-          }
-        }
-        j++;
-      }
-      i = j;
-
-      if (bestPitch < 0 || bestPitch > 127) continue;
-      const tick = preMeasureTicks + Math.round(bestEvent.position * this.ticksPerQuarter);
-      const dur = Math.max(1, Math.round(bestEvent.duration * this.ticksPerQuarter));
-      const lyric = defaultLyric;
-      const phnm = VocaloidPhoneme.resolvePhoneme(lyric);
-      notes.push({ posTick: tick, durTick: dur, noteNum: bestPitch, lyric, phnm });
-      maxTick = Math.max(maxTick, tick + dur);
-    }
+    const notes = VocaloidPhoneme.extractNotes(
+      timeline,
+      preMeasureTicks,
+      this.ticksPerQuarter,
+      defaultLyric
+    );
+    const maxTick = notes.reduce((max, n) => Math.max(max, n.tick + n.dur), 0);
 
     const totalPartDuration = Math.max(ticksPerBar * 4, maxTick + ticksPerBar);
 
@@ -186,12 +147,12 @@ export class TmdVSQXGenerator {
 
     for (const note of notes) {
       xml += `      <note>
-        <t>${note.posTick}</t>
-        <dur>${note.durTick}</dur>
-        <n>${note.noteNum}</n>
+        <t>${note.tick}</t>
+        <dur>${note.dur}</dur>
+        <n>${note.pitch}</n>
         <v>64</v>
         <y><![CDATA[${this.escapeCDATA(note.lyric)}]]></y>
-        <p><![CDATA[${this.escapeCDATA(note.phnm)}]]></p>
+        <p><![CDATA[${this.escapeCDATA(note.phoneme)}]]></p>
         <nStyle>
           <v id="accent">50</v>
           <v id="bendDep">0</v>

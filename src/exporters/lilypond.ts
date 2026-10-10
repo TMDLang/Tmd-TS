@@ -1,6 +1,6 @@
 import { SheetInstrumentHelper } from "../domain/index.js";
 import { MeasureEvent, NotationDuration, PlaybackDirectiveEvent, TmdMeasureRenderer } from "../playback/index.js";
-import { ChordSymbol, Note, PercussionStroke, PitchMapping, Sheet } from "../syntax/index.js";
+import { ChordSymbol, metronomeTempoForBeat, Note, PercussionStroke, PitchMapping, Sheet } from "../syntax/index.js";
 
 export class TmdLilyPondGenerator {
   public static generateLilyPond(rawSheet: Sheet): string {
@@ -77,30 +77,8 @@ export class TmdLilyPondGenerator {
   }
 
   public static resolveTempo(beat: { count: number; noteValue: number }, quarterBPM: number): string {
-    // Compound meter: denominator is 8 and numerator is a multiple of 3 (> 3, e.g. 6/8, 9/8, 12/8)
-    if (beat.noteValue === 8 && beat.count > 3 && beat.count % 3 === 0) {
-      // Beat unit is a dotted-quarter note (4.)
-      const bpm = Math.round(quarterBPM / 1.5);
-      return `\\tempo 4. = ${bpm}`;
-    }
-    switch (beat.noteValue) {
-      case 2: {
-        const bpm = Math.round(quarterBPM / 2.0);
-        return `\\tempo 2 = ${bpm}`;
-      }
-      case 8: {
-        const bpm = Math.round(quarterBPM * 2.0);
-        return `\\tempo 8 = ${bpm}`;
-      }
-      case 16: {
-        const bpm = Math.round(quarterBPM * 4.0);
-        return `\\tempo 16 = ${bpm}`;
-      }
-      default: {
-        const bpm = Math.round(quarterBPM);
-        return `\\tempo 4 = ${bpm}`;
-      }
-    }
+    const m = metronomeTempoForBeat(beat, quarterBPM);
+    return `\\tempo ${m.lilyPondUnit} = ${m.perMinute}`;
   }
 
   private static formatDirective(directive: PlaybackDirectiveEvent): string {

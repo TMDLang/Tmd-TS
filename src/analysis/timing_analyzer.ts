@@ -1,14 +1,11 @@
 import type { TmdTimingProfile } from "../analysis/inspector.js";
-import { PlaybackDirectiveEvent, PlaybackState,TmdPlaybackRenderer } from "../playback/playback.js";
-import { DEFAULT_TEMPO_BPM, KeySignature, Playback, Sheet } from "../syntax/types.js";
+import { PlaybackDirectiveEvent, PlaybackState, TmdPlaybackRenderer } from "../playback/playback.js";
+import { DEFAULT_TEMPO_BPM, effectivePlaybackOrders, KeySignature, Sheet } from "../syntax/types.js";
 
 /** Computes score timing independently from the Inspector facade. */
 export class TmdSongTimingAnalyzer {
   public static analyze(sheet: Sheet, timelineDirectives: PlaybackDirectiveEvent[]): TmdTimingProfile {
-    const orders: Playback[] = sheet.playback.length > 0
-      ? sheet.playback
-      : Array.from(new Set(sheet.entries.map((entry) => entry.name)))
-        .map((name) => ({ type: "name" as const, name }));
+    const orders = effectivePlaybackOrders(sheet);
 
     let state: PlaybackState = {
       tempo: sheet.speed > 0 ? sheet.speed : DEFAULT_TEMPO_BPM,
@@ -50,7 +47,7 @@ export class TmdSongTimingAnalyzer {
         if (directive.position > cursor) {
           const segment = directive.position - cursor;
           durationSeconds += segment * 60 / tempo;
-          measureCount += segment / this.measureDuration(meter);
+          measureCount += segment / TmdPlaybackRenderer.measureDuration(meter);
           cursor = directive.position;
         }
         tempo = directive.state.tempo;
@@ -59,7 +56,7 @@ export class TmdSongTimingAnalyzer {
       if (endPosition > cursor) {
         const segment = endPosition - cursor;
         durationSeconds += segment * 60 / tempo;
-        measureCount += segment / this.measureDuration(meter);
+        measureCount += segment / TmdPlaybackRenderer.measureDuration(meter);
       }
 
       const occurrence = (occurrences.get(order.name) ?? 0) + 1;
@@ -87,9 +84,5 @@ export class TmdSongTimingAnalyzer {
     }
 
     return { totalDurationSeconds: currentSeconds, totalMeasures, sections };
-  }
-
-  private static measureDuration(beat: { count: number; noteValue: number }): number {
-    return Math.max(1, beat.count) * 4 / Math.max(1, beat.noteValue);
   }
 }

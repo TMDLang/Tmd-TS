@@ -35,29 +35,16 @@ export class TmdMIDIGenerator {
       ),
     ];
 
-    const programToMelodyChannel = new Map<number, number>();
-    let nextMelodyChannel = 0;
+    const channelState = {
+      nextMelodicChannel: 0,
+      programToMelodyChannel: new Map<number, number>(),
+    };
 
     for (const instrument of distinctInstruments) {
       const instTimeline = TmdPlaybackRenderer.render(effectiveSheet, instrument, renderOpts);
       if (!instTimeline.events.some((event) => event.content.type !== 'rest')) continue;
       const midiInst = MIDIInstrument.resolve(instrument);
-      let channel: number;
-      if (MIDIInstrument.isPercussion(midiInst)) {
-        channel = 9;
-      } else {
-        const prog = MIDIInstrument.program(midiInst);
-        if (programToMelodyChannel.has(prog)) {
-          channel = programToMelodyChannel.get(prog)!;
-        } else {
-          if (nextMelodyChannel === 9) {
-            nextMelodyChannel += 1;
-          }
-          channel = nextMelodyChannel % 16;
-          programToMelodyChannel.set(prog, channel);
-          nextMelodyChannel += 1;
-        }
-      }
+      const channel = MIDIInstrument.allocateChannel(midiInst, channelState);
 
       trackData.push(
         TmdMIDIEncoder.encodeTrack(
@@ -155,8 +142,8 @@ export class TmdMIDIGenerator {
       });
     }
 
-    const lower = instrument.toLowerCase();
-    if (lower.includes('left') || lower.includes('-l')) {
+    const panPos = MIDIInstrument.stereoPanHeuristic(instrument);
+    if (panPos === 'left') {
       events.push({
         tick: 0,
         message: {
@@ -166,7 +153,7 @@ export class TmdMIDIGenerator {
           value: 20,
         },
       });
-    } else if (lower.includes('right') || lower.includes('-r')) {
+    } else if (panPos === 'right') {
       events.push({
         tick: 0,
         message: {

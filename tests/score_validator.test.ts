@@ -405,4 +405,54 @@ A:Piano@|0|{
     expect(validatorSrc).not.toContain("const STANDARD_CHORD_QUALITIES");
     expect(validatorSrc).not.toContain("const EXTENDED_CHORD_QUALITIES");
   });
+
+  it("shares canonical SSOT for monophonic vocal extraction, effectivePlaybackOrders, channel/pan, and metronome tempo (#51)", async () => {
+    const { TmdParser, metronomeTempoForBeat } = await import("../src/syntax/index.js");
+    const { SheetInstrumentHelper } = await import("../src/domain/index.js");
+    const { TmdPlaybackRenderer } = await import("../src/playback/index.js");
+    const { MIDIInstrument } = await import("../src/exporters/midi_instrument.js");
+    const { VocaloidPhoneme } = await import("../src/exporters/vocaloid_phoneme.js");
+
+    // 1. effectivePlaybackOrders
+    const sheetNoOrders = TmdParser.parseThrowing(
+      "::SCORE::\n!= 120\n?= C\n<4/4>\nIntro:Piano@|0|{\n<4*>\n| 1 2 3 4 |\n}\nVerse:Piano@|0|{\n<4*>\n| 5 6 7 1^ |\n}\n->#"
+    );
+    expect(SheetInstrumentHelper.effectivePlaybackOrders(sheetNoOrders)).toEqual([
+      { type: "name", name: "Intro" },
+      { type: "name", name: "Verse" },
+    ]);
+
+    // 2. TmdPlaybackRenderer.monophonicEvents & VocaloidPhoneme.extractNotes
+    const chordSheet = TmdParser.parseThrowing(
+      "::SCORE::\n!= 120\n?= C\n<4/4>\nA:Vocal@|0|{\n<4*>\n| 1+3+5 2 3 4 |\n}\n-> A ->#"
+    );
+    const timeline = TmdPlaybackRenderer.render(chordSheet, "Vocal");
+    const mono = TmdPlaybackRenderer.monophonicEvents(timeline);
+    expect(mono).toHaveLength(4);
+    const extracted = VocaloidPhoneme.extractNotes(timeline, 0, 480, "la");
+    expect(extracted).toHaveLength(4);
+    expect(extracted[0].pitch).toBe(67); // 5 in C = G4 = 67
+
+    // 3. MIDIInstrument.allocateChannel & stereoPanHeuristic
+    const state = { nextMelodicChannel: 8 };
+    const ch1 = MIDIInstrument.allocateChannel(MIDIInstrument.Piano, state);
+    const ch2 = MIDIInstrument.allocateChannel(MIDIInstrument.Violin, state);
+    const chPerc = MIDIInstrument.allocateChannel(MIDIInstrument.Percussion, state);
+    expect(ch1).toBe(8);
+    expect(ch2).toBe(10); // Skips channel 9
+    expect(chPerc).toBe(9);
+    expect(MIDIInstrument.stereoPanHeuristic("Guitar-L")).toBe("left");
+    expect(MIDIInstrument.stereoPanHeuristic("Piano_Right")).toBe("right");
+    expect(MIDIInstrument.stereoPanHeuristic("Lead")).toBe("center");
+
+    // 4. metronomeTempoForBeat
+    const compound = metronomeTempoForBeat({ count: 6, noteValue: 8 }, 120);
+    expect(compound).toEqual({
+      beatUnit: "quarter",
+      lilyPondUnit: "4.",
+      abcUnit: "3/8",
+      isDotted: true,
+      perMinute: 80,
+    });
+  });
 });

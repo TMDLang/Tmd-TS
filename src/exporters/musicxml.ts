@@ -1,6 +1,6 @@
 import { SheetInstrumentHelper } from "../domain/index.js";
 import { PlaybackDirectiveEvent, TmdMeasureRenderer } from "../playback/index.js";
-import { ChordSymbol, Note, PercussionStroke, PitchMapping, Sheet } from "../syntax/index.js";
+import { ChordSymbol, metronomeTempoForBeat, Note, PercussionStroke, PitchMapping, Sheet } from "../syntax/index.js";
 
 export class TmdMusicXMLGenerator {
   public static generateMusicXML(rawSheet: Sheet): string {
@@ -236,27 +236,8 @@ export class TmdMusicXMLGenerator {
   }
 
   public static resolveMetronome(beat: { count: number; noteValue: number }, quarterBPM: number): { beatUnit: string; isDotted: boolean; perMinute: number } {
-    // Compound meter: denominator is 8 and numerator is a multiple of 3 (> 3, e.g. 6/8, 9/8, 12/8)
-    if (beat.noteValue === 8 && beat.count > 3 && beat.count % 3 === 0) {
-      // Beat unit is a dotted-quarter note (value = 1.5 quarters)
-      const bpm = quarterBPM / 1.5;
-      return { beatUnit: "quarter", isDotted: true, perMinute: Math.round(bpm) };
-    }
-    // Beat unit based on time signature denominator
-    switch (beat.noteValue) {
-      case 2:
-        // Half note (value = 2.0 quarters)
-        return { beatUnit: "half", isDotted: false, perMinute: Math.round(quarterBPM / 2.0) };
-      case 8:
-        // Eighth note (value = 0.5 quarters)
-        return { beatUnit: "eighth", isDotted: false, perMinute: Math.round(quarterBPM * 2.0) };
-      case 16:
-        // 16th note (value = 0.25 quarters)
-        return { beatUnit: "16th", isDotted: false, perMinute: Math.round(quarterBPM * 4.0) };
-      default:
-        // Default: quarter note
-        return { beatUnit: "quarter", isDotted: false, perMinute: Math.round(quarterBPM) };
-    }
+    const m = metronomeTempoForBeat(beat, quarterBPM);
+    return { beatUnit: m.beatUnit, isDotted: m.isDotted, perMinute: m.perMinute };
   }
 
   private static generatePlaybackDirectiveXML(directive: PlaybackDirectiveEvent): string {

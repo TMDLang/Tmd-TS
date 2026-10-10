@@ -56,13 +56,7 @@ export class TmdChordProGenerator {
       distinctInstruments[0];
 
     // Group sections by order
-    const orders: Playback[] =
-      sheet.playback.length > 0
-        ? sheet.playback
-        : Array.from(new Set(sheet.entries.map((p) => p.name))).map((n) => ({
-            type: 'name' as const,
-            name: n,
-          }));
+    const orders = SheetInstrumentHelper.effectivePlaybackOrders(sheet);
 
     const measuresPerLine = options.measuresPerLine ?? 4;
     let currentKeyOffset = sheet.keySignature.semitoneOffset;

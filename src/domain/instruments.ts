@@ -1,5 +1,5 @@
 import { TmdMacroEvaluator } from '../playback/macro.js';
-import { DEFAULT_INSTRUMENT, Sheet } from '../syntax/types.js';
+import { DEFAULT_INSTRUMENT, effectivePlaybackOrders, Playback, Sheet } from '../syntax/types.js';
 
 export interface SheetExportPrepOptions {
   targetParagraph?: string;
@@ -11,6 +11,12 @@ export interface SheetExportPrepOptions {
  * Eliminates duplicate instrument filtering and vocal track heuristic resolution across exporters.
  */
 export class SheetInstrumentHelper {
+  /**
+   * Returns `sheet.playback` when explicitly specified, or falls back to playing each distinct entry section name in appearance order.
+   */
+  public static effectivePlaybackOrders(sheet: Sheet): Playback[] {
+    return effectivePlaybackOrders(sheet);
+  }
   /**
    * Returns a sorted array of distinct instrument names present in the sheet.
    * If the sheet has no instruments, falls back to `["Piano"]` if fallback is enabled.

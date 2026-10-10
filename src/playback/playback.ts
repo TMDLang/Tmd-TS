@@ -4,9 +4,11 @@ import {
   DEFAULT_INSTRUMENT,
   DEFAULT_TEMPO_BPM,
   DynamicMark,
+  effectivePlaybackOrders,
   Entry,
   KeySignature,
   Note,
+  noteToMIDIPitch,
   Playback,
   SectionDirective,
   SectionDirectiveKind,
@@ -74,6 +76,40 @@ export interface TmdPlaybackRendererOptions {
 }
 
 export class TmdPlaybackRenderer {
+  /**
+   * Returns timeline events with simultaneous `note` events collapsed to the highest-pitched note,
+   * suitable for monophonic singing-synthesizer exporters (VSQ, VSQX, UST).
+   */
+  public static monophonicEvents(timeline: PlaybackTimeline): PlaybackEvent[] {
+    const result: PlaybackEvent[] = [];
+    let i = 0;
+    while (i < timeline.events.length) {
+      const ev = timeline.events[i];
+      if (ev.content.type === "note") {
+        let bestEvent = ev;
+        let bestPitch = noteToMIDIPitch(ev.content.note, ev.state.keyOffset);
+        let j = i + 1;
+        while (j < timeline.events.length && Math.abs(timeline.events[j].position - ev.position) < 1e-4) {
+          const nextEv = timeline.events[j];
+          if (nextEv.content.type === "note") {
+            const p = noteToMIDIPitch(nextEv.content.note, nextEv.state.keyOffset);
+            if (p > bestPitch) {
+              bestPitch = p;
+              bestEvent = nextEv;
+            }
+          }
+          j++;
+        }
+        result.push(bestEvent);
+        i = j;
+      } else {
+        result.push(ev);
+        i++;
+      }
+    }
+    return result;
+  }
+
   private static visitOrder(order: Playback, state: PlaybackState): { state: PlaybackState; name?: string } {
     if (order.type === "relative") {
       const delta = parseInt(order.value.replace("+", ""), 10);
@@ -86,9 +122,7 @@ export class TmdPlaybackRenderer {
   }
 
   private static ordersFor(sheet: Sheet): Playback[] {
-    if (sheet.playback.length > 0) return sheet.playback;
-    return Array.from(new Set(sheet.entries.map((entry) => entry.name)))
-      .map((name) => ({ type: "name" as const, name }));
+    return effectivePlaybackOrders(sheet);
   }
 
   private static initialStateFor(sheet: Sheet): PlaybackState {

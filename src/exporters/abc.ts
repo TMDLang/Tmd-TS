@@ -1,6 +1,6 @@
 import { SheetInstrumentHelper } from "../domain/index.js";
 import { MeasureEvent, PlaybackDirectiveEvent, TmdMeasureRenderer } from "../playback/index.js";
-import { KeySignature, Note, PercussionStroke, PitchMapping, Sheet } from "../syntax/index.js";
+import { KeySignature, metronomeTempoForBeat, Note, PercussionStroke, PitchMapping, Sheet } from "../syntax/index.js";
 
 export class TmdABCGenerator {
   public static generateABC(rawSheet: Sheet): string {
@@ -37,30 +37,8 @@ export class TmdABCGenerator {
   }
 
   public static resolveTempo(beat: { count: number; noteValue: number }, quarterBPM: number): string {
-    // Compound meter: denominator is 8 and numerator is a multiple of 3 (> 3, e.g. 6/8, 9/8, 12/8)
-    if (beat.noteValue === 8 && beat.count > 3 && beat.count % 3 === 0) {
-      // Beat unit is a dotted-quarter note (in ABC represented as 3/8)
-      const bpm = Math.round(quarterBPM / 1.5);
-      return `Q:3/8=${bpm}`;
-    }
-    switch (beat.noteValue) {
-      case 2: {
-        const bpm = Math.round(quarterBPM / 2.0);
-        return `Q:1/2=${bpm}`;
-      }
-      case 8: {
-        const bpm = Math.round(quarterBPM * 2.0);
-        return `Q:1/8=${bpm}`;
-      }
-      case 16: {
-        const bpm = Math.round(quarterBPM * 4.0);
-        return `Q:1/16=${bpm}`;
-      }
-      default: {
-        const bpm = Math.round(quarterBPM);
-        return `Q:1/4=${bpm}`;
-      }
-    }
+    const m = metronomeTempoForBeat(beat, quarterBPM);
+    return `Q:${m.abcUnit}=${m.perMinute}`;
   }
 
   private static generateTrackMusic(instrument: string, sheet: Sheet): string {

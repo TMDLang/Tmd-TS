@@ -825,5 +825,46 @@ export namespace MIDIInstrument {
   export function isPercussion(instrument: MIDIInstrumentValue): boolean {
     return instrument === MIDIInstrument.Percussion;
   }
-}
 
+  export type StereoPanPosition = 'left' | 'center' | 'right';
+
+  export function stereoPanHeuristic(instrumentName: string): StereoPanPosition {
+    const lower = instrumentName.toLowerCase();
+    if (lower.includes('left') || lower.includes('-l')) {
+      return 'left';
+    }
+    if (lower.includes('right') || lower.includes('-r')) {
+      return 'right';
+    }
+    return 'center';
+  }
+
+  export function allocateChannel(
+    instrument: MIDIInstrumentValue,
+    state: { nextMelodicChannel: number; programToMelodyChannel?: Map<number, number> }
+  ): number {
+    if (isPercussion(instrument)) {
+      return 9;
+    }
+    if (state.programToMelodyChannel) {
+      const prog = program(instrument);
+      const existing = state.programToMelodyChannel.get(prog);
+      if (existing !== undefined) {
+        return existing;
+      }
+      if (state.nextMelodicChannel === 9) {
+        state.nextMelodicChannel += 1;
+      }
+      const channel = state.nextMelodicChannel % 16;
+      state.programToMelodyChannel.set(prog, channel);
+      state.nextMelodicChannel += 1;
+      return channel;
+    }
+    if (state.nextMelodicChannel === 9) {
+      state.nextMelodicChannel += 1;
+    }
+    const channel = state.nextMelodicChannel % 16;
+    state.nextMelodicChannel = (state.nextMelodicChannel + 1) % 16;
+    return channel;
+  }
+}
