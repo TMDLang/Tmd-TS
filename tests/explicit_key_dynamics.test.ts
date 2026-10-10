@@ -84,10 +84,105 @@ main:Piano@|0|{
 
     expect(abc).toContain("K:Bm");
     expect(abc).toContain("!ppp!");
+    // Under inline {key= F#m} (3 sharps: F#, C#, G#), degree 4 in ?= D is G4 natural -> must emit =g4
+    expect(abc).toContain("=g4");
     expect(lily).toContain("\\key b \\minor");
     expect(lily).toContain("\\ppp");
     expect(xml).toContain("<mode>minor</mode>");
     expect(xml).toContain("<ppp/>");
     expect(velocities.slice(0, 8)).toEqual([20, 35, 50, 65, 80, 95, 110, 125]);
   });
+
+  it("spells flat-key notes, chord roots, and boundary accidentals diatonically in MusicXML and LilyPond", () => {
+    const flatScore = `
+::SCORE::
+** Flat Key Spelling **
+!= 120
+?= F
+key= F
+<4/4>
+
+A:Piano@|0|{
+  <4*>
+  | 1 2 3 4 |
+  | [4] - [Bb/D] - |
+}
+-> A ->#
+`;
+    const sheetF = TmdParser.parse(flatScore);
+    const xmlF = TmdMusicXMLGenerator.generateMusicXML(sheetF);
+    const lyF = TmdLilyPondGenerator.generateLilyPond(sheetF);
+
+    expect(xmlF).toContain("<fifths>-1</fifths>");
+    expect(xmlF).toContain("<step>B</step>\n          <alter>-1</alter>\n          <octave>4</octave>");
+    expect(xmlF).not.toContain("<step>A</step>\n          <alter>1</alter>");
+    expect(xmlF).toContain("<root-step>B</root-step>\n          <root-alter>-1</root-alter>");
+    expect(xmlF).not.toContain("<root-step>A</root-step>\n          <root-alter>1</root-alter>");
+
+    expect(lyF).toContain("\\key f \\major");
+    expect(lyF).toContain("f'4 g'4 a'4 bes'4");
+    expect(lyF).not.toContain("ais'4");
+    expect(lyF).toContain("bes");
+    expect(lyF).not.toContain("ais");
+
+    const boundaryScore = `
+::SCORE::
+** Octave Boundary Accidentals **
+!= 120
+?= C
+<4/4>
+
+A:Piano@|0|{
+  <4*>
+  | 1, 3, 7, 7' |
+}
+-> A ->#
+`;
+    const sheetB = TmdParser.parse(boundaryScore);
+    const xmlB = TmdMusicXMLGenerator.generateMusicXML(sheetB);
+    const lyB = TmdLilyPondGenerator.generateLilyPond(sheetB);
+
+    expect(xmlB).toContain("<step>C</step>\n          <alter>-1</alter>\n          <octave>4</octave>");
+    expect(xmlB).toContain("<step>B</step>\n          <alter>-1</alter>\n          <octave>4</octave>");
+    expect(xmlB).toContain("<step>B</step>\n          <alter>1</alter>\n          <octave>4</octave>");
+    expect(lyB).toContain("ces'4");
+    expect(lyB).toContain("es'4");
+    expect(lyB).toContain("bes'4");
+    expect(lyB).toContain("bis'4");
+  });
+
+  it("preserves octave and intra-measure accidental memory in ABC notation", () => {
+    const scoreD = `
+::SCORE::
+** ABC Octave in D **
+!= 120
+?= D
+<4/4>
+
+A:Piano@|0|{
+  <4*>
+  | 7_ 7,_ 7_ 1 |
+}
+-> A ->#
+`;
+    const abcD = TmdABCGenerator.generateABC(TmdParser.parse(scoreD));
+    expect(abcD).toContain("c4 =c4 ^c4 d4");
+
+    const scoreC = `
+::SCORE::
+** ABC Intra-Measure Memory **
+!= 120
+?= C
+<4/4>
+
+A:Piano@|0|{
+  <4*>
+  | 1' 1 1, 7' |
+}
+-> A ->#
+`;
+    const abcC = TmdABCGenerator.generateABC(TmdParser.parse(scoreC));
+    expect(abcC).toContain("^c4 =c4 _c4 ^b4");
+  });
 });
+

@@ -184,54 +184,14 @@ export class TmdLilyPondGenerator {
   }
 
   private static noteToLilyPondPitch(note: Note, keyOffset: number): string {
-    let midiPitch = 60 + keyOffset + (note.degree === 1 ? 0 : [0, 2, 4, 5, 7, 9, 11][note.degree - 1]);
-    if (note.accidental === "sharp") midiPitch += 1;
-    else if (note.accidental === "flat") midiPitch -= 1;
-    midiPitch += note.octave * 12;
-
-    return TmdLilyPondGenerator.midiPitchToLilyPond(midiPitch);
+    const spelled = PitchMapping.spellNote(note, keyOffset);
+    return PitchMapping.lilyPondPitch(spelled);
   }
 
   private static chordToLilyPondPitches(chord: ChordSymbol, keyOffset: number): string[] {
-    let root = 0;
-    if (chord.root.isScaleDegree) {
-      root = 60 + keyOffset + (chord.root.degree === 1 ? 0 : [0, 2, 4, 5, 7, 9, 11][chord.root.degree - 1]);
-      if (chord.root.accidental === "sharp") root += 1;
-      else if (chord.root.accidental === "flat") root -= 1;
-      root += chord.root.octave * 12;
-    } else {
-      root = 48 + chord.root.semitoneOffset;
-    }
-    const intervals = chordQualityIntervals(chord.quality);
-    const pitches: number[] = intervals.map((i) => root + i);
-    if (chord.bass) {
-      let bassPitch: number;
-      if (chord.bass.isScaleDegree) {
-        bassPitch = 36 + keyOffset + (chord.bass.degree === 1 ? 0 : [0, 2, 4, 5, 7, 9, 11][chord.bass.degree - 1]);
-        if (chord.bass.accidental === "sharp") bassPitch += 1;
-        else if (chord.bass.accidental === "flat") bassPitch -= 1;
-        bassPitch += chord.bass.octave * 12;
-      } else {
-        bassPitch = 36 + chord.bass.semitoneOffset;
-      }
-      if (!pitches.includes(bassPitch)) {
-        pitches.unshift(bassPitch);
-      }
-    }
-    return pitches.map((p) => TmdLilyPondGenerator.midiPitchToLilyPond(p));
-  }
-
-  private static midiPitchToLilyPond(pitch: number): string {
-    const semitone = ((pitch % 12) + 12) % 12;
-    const octave = Math.floor(pitch / 12) - 1;
-
-    let name = PitchMapping.lilyPondNames[semitone];
-    if (octave > 3) {
-      name += "'".repeat(octave - 3);
-    } else if (octave < 3) {
-      name += ",".repeat(3 - octave);
-    }
-    return name;
+    return PitchMapping.spellChordVoicing(chord, keyOffset).map((spelled) =>
+      PitchMapping.lilyPondPitch(spelled)
+    );
   }
 
   private static lilyPondKey(key: string): string {

@@ -1,12 +1,6 @@
 import { SheetInstrumentHelper } from "../domain/index.js";
 import { MeasureEvent, PlaybackDirectiveEvent, TmdMacroEvaluator, TmdMeasureRenderer } from "../playback/index.js";
-import { Entry, KeySignature, Note, Sheet } from "../syntax/index.js";
-
-interface ABCKeyInfo {
-  name: string;
-  stepAccidentals: number[];
-  degreeSteps: number[];
-}
+import { Entry, KeySignature, Note, PitchMapping, Sheet } from "../syntax/index.js";
 
 export class TmdABCGenerator {
   public static generateABC(rawSheet: Sheet): string {
@@ -74,10 +68,33 @@ export class TmdABCGenerator {
   private static generateTrackMusic(instrument: string, sheet: Sheet): string {
     const measures = TmdMeasureRenderer.renderMeasures(sheet, instrument);
     let result = "";
+    const initialKey = sheet.declaredKey || sheet.keySignature.toString();
+    let currentKeyStepAlters = PitchMapping.keySignatureStepAlters(initialKey);
 
     for (let mIdx = 0; mIdx < measures.length; mIdx++) {
       const measure = measures[mIdx];
+      const measureStepAlters = new Map<number, number[]>();
+
       for (const directive of measure.directives) {
+        switch (directive.kind.type) {
+          case "absoluteKey":
+          case "explicitKey":
+            currentKeyStepAlters = PitchMapping.keySignatureStepAlters(directive.kind.key);
+            measureStepAlters.clear();
+            break;
+          case "relativeKey": {
+            const key = PitchMapping.tonicScaleInfo(directive.state.keyOffset).name;
+            currentKeyStepAlters = PitchMapping.keySignatureStepAlters(key);
+            measureStepAlters.clear();
+            break;
+          }
+          case "fixedPitch":
+            currentKeyStepAlters = [0, 0, 0, 0, 0, 0, 0];
+            measureStepAlters.clear();
+            break;
+          default:
+            break;
+        }
         result += TmdABCGenerator.formatDirective(directive);
       }
 
@@ -92,7 +109,7 @@ export class TmdABCGenerator {
       }
 
       for (const group of groups) {
-        result += TmdABCGenerator.formatEventGroup(group);
+        result += TmdABCGenerator.formatEventGroup(group, currentKeyStepAlters, measureStepAlters);
         result += " ";
       }
       result += "|";
@@ -123,7 +140,7 @@ export class TmdABCGenerator {
       case "dynamics":
         return `!${k.mark}! `;
       case "relativeKey": {
-        const key = TmdABCGenerator.keyInfo(directive.state.keyOffset).name;
+        const key = PitchMapping.tonicScaleInfo(directive.state.keyOffset).name;
         return `K:${key} `;
       }
       case "fixedPitch":
@@ -131,9 +148,13 @@ export class TmdABCGenerator {
     }
   }
 
-  private static formatEventGroup(group: MeasureEvent[]): string {
+  private static formatEventGroup(
+    group: MeasureEvent[],
+    defaultKeyStepAlters: number[],
+    measureStepAlters: Map<number, number[]>
+  ): string {
     if (group.length === 1) {
-      return TmdABCGenerator.formatMeasureEvent(group[0]);
+      return TmdABCGenerator.formatMeasureEvent(group[0], defaultKeyStepAlters, measureStepAlters);
     }
 
     // Check if group is composed of multiple simultaneous notes (polyphonic chord/multi-note)
@@ -144,25 +165,29 @@ export class TmdABCGenerator {
       const multiplier = Math.max(1, Math.round(duration * 4));
       const suffix = multiplier > 1 ? String(multiplier) : "";
       const pitches = noteEvents.map((ev) => {
-        const note = (ev.content as { type: "note"; note: any }).note;
-        return TmdABCGenerator.noteToABCPitch(note, ev.state.keyOffset);
+        const note = (ev.content as { type: "note"; note: Note }).note;
+        return TmdABCGenerator.noteToABCPitch(note, ev.state.keyOffset, defaultKeyStepAlters, measureStepAlters);
       });
       const tie = group.some((ev) => ev.tieStart) ? "-" : "";
       return `[${pitches.join("")}]${suffix}${tie}`;
     }
 
     // Otherwise format sequentially
-    return group.map((ev) => TmdABCGenerator.formatMeasureEvent(ev)).join(" ");
+    return group.map((ev) => TmdABCGenerator.formatMeasureEvent(ev, defaultKeyStepAlters, measureStepAlters)).join(" ");
   }
 
-  private static formatMeasureEvent(event: MeasureEvent): string {
+  private static formatMeasureEvent(
+    event: MeasureEvent,
+    defaultKeyStepAlters: number[],
+    measureStepAlters: Map<number, number[]>
+  ): string {
     const multiplier = Math.max(1, Math.round(event.duration * 4));
     const suffix = multiplier > 1 ? String(multiplier) : "";
 
     switch (event.content.type) {
       case "note": {
         const tie = event.tieStart ? "-" : "";
-        return `${TmdABCGenerator.noteToABCPitch(event.content.note, event.state.keyOffset)}${suffix}${tie}`;
+        return `${TmdABCGenerator.noteToABCPitch(event.content.note, event.state.keyOffset, defaultKeyStepAlters, measureStepAlters)}${suffix}${tie}`;
       }
       case "chord":
         return `"${event.content.chord.toString()}"z${suffix}`;
@@ -189,70 +214,38 @@ export class TmdABCGenerator {
     }
   }
 
-  private static keyInfo(keyOffset: number): ABCKeyInfo {
-    const normalized = ((keyOffset % 12) + 12) % 12;
-    switch (normalized) {
-      case 0: // C
-        return { name: "C", stepAccidentals: [0, 0, 0, 0, 0, 0, 0], degreeSteps: [0, 1, 2, 3, 4, 5, 6] };
-      case 1: // Db
-        return { name: "Db", stepAccidentals: [0, -1, -1, 0, -1, -1, -1], degreeSteps: [1, 2, 3, 4, 5, 6, 0] };
-      case 2: // D
-        return { name: "D", stepAccidentals: [1, 0, 0, 1, 0, 0, 0], degreeSteps: [1, 2, 3, 4, 5, 6, 0] };
-      case 3: // Eb
-        return { name: "Eb", stepAccidentals: [0, 0, -1, 0, 0, -1, -1], degreeSteps: [2, 3, 4, 5, 6, 0, 1] };
-      case 4: // E
-        return { name: "E", stepAccidentals: [1, 1, 0, 1, 1, 0, 0], degreeSteps: [2, 3, 4, 5, 6, 0, 1] };
-      case 5: // F
-        return { name: "F", stepAccidentals: [0, 0, 0, 0, 0, 0, -1], degreeSteps: [3, 4, 5, 6, 0, 1, 2] };
-      case 6: // F#
-        return { name: "F#", stepAccidentals: [1, 1, 1, 1, 1, 1, 0], degreeSteps: [3, 4, 5, 6, 0, 1, 2] };
-      case 7: // G
-        return { name: "G", stepAccidentals: [0, 0, 0, 1, 0, 0, 0], degreeSteps: [4, 5, 6, 0, 1, 2, 3] };
-      case 8: // Ab
-        return { name: "Ab", stepAccidentals: [0, -1, -1, 0, 0, -1, -1], degreeSteps: [5, 6, 0, 1, 2, 3, 4] };
-      case 9: // A
-        return { name: "A", stepAccidentals: [1, 0, 0, 1, 1, 0, 0], degreeSteps: [5, 6, 0, 1, 2, 3, 4] };
-      case 10: // Bb
-        return { name: "Bb", stepAccidentals: [0, 0, -1, 0, 0, 0, -1], degreeSteps: [6, 0, 1, 2, 3, 4, 5] };
-      case 11: // B
-        return { name: "B", stepAccidentals: [1, 1, 0, 1, 1, 1, 0], degreeSteps: [6, 0, 1, 2, 3, 4, 5] };
-      default:
-        return { name: "C", stepAccidentals: [0, 0, 0, 0, 0, 0, 0], degreeSteps: [0, 1, 2, 3, 4, 5, 6] };
-    }
-  }
+  private static noteToABCPitch(
+    note: Note,
+    keyOffset: number,
+    defaultKeyStepAlters: number[],
+    measureStepAlters: Map<number, number[]>
+  ): string {
+    const spelled = PitchMapping.spellNote(note, keyOffset);
+    const octaveAlters = measureStepAlters.get(spelled.octave) ?? [...defaultKeyStepAlters];
+    const expectedAlter = octaveAlters[spelled.stepIndex];
 
-  private static noteToABCPitch(note: Note, keyOffset: number): string {
-    const info = TmdABCGenerator.keyInfo(keyOffset);
-    const degIdx = Math.max(0, Math.min(6, note.degree - 1));
-    const stepIdx = info.degreeSteps[degIdx];
-    const keyAcc = info.stepAccidentals[stepIdx];
-
-    let delta = 0;
-    if (note.accidental === "sharp") delta = 1;
-    else if (note.accidental === "flat") delta = -1;
-
-    const noteAlter = keyAcc + delta;
     let prefix = "";
-    if (noteAlter === keyAcc) {
+    if (spelled.alter === expectedAlter) {
       prefix = "";
-    } else if (noteAlter === 0 && keyAcc !== 0) {
-      prefix = "=";
-    } else if (noteAlter === 1 && keyAcc !== 1) {
-      prefix = "^";
-    } else if (noteAlter === -1 && keyAcc !== -1) {
-      prefix = "_";
-    } else if (noteAlter >= 2) {
-      prefix = "^^";
-    } else if (noteAlter <= -2) {
-      prefix = "__";
+    } else {
+      octaveAlters[spelled.stepIndex] = spelled.alter;
+      measureStepAlters.set(spelled.octave, octaveAlters);
+      if (spelled.alter === 0) {
+        prefix = "=";
+      } else if (spelled.alter === 1) {
+        prefix = "^";
+      } else if (spelled.alter === -1) {
+        prefix = "_";
+      } else if (spelled.alter >= 2) {
+        prefix = "^^";
+      } else if (spelled.alter <= -2) {
+        prefix = "__";
+      }
     }
 
-    const stepUpper = ["C", "D", "E", "F", "G", "A", "B"][stepIdx];
-    const stepLower = ["c", "d", "e", "f", "g", "a", "b"][stepIdx];
-
-    const semitones = [0, 2, 4, 5, 7, 9, 11][note.degree - 1];
-    const midiPitch = 60 + keyOffset + semitones + delta + note.octave * 12;
-    const octave = Math.floor(midiPitch / 12) - 1;
+    const stepUpper = PitchMapping.stepNames[spelled.stepIndex];
+    const stepLower = PitchMapping.stepLowerNames[spelled.stepIndex];
+    const octave = spelled.octave;
 
     let letter = "";
     if (octave >= 5) {
@@ -272,15 +265,27 @@ export class TmdABCGenerator {
 
   private static abcKey(key: string): string {
     const trimmed = key.trim();
-    const match = trimmed.match(/^([A-Ga-g])([#b']?)(m|min|minor)?$/i);
-    if (match) {
-      const letter = match[1].toUpperCase();
-      const accidental = match[2] === "'" ? "#" : match[2];
-      const mode = match[3] ? "m" : "";
-      return `${letter}${accidental}${mode}`;
+    if (!trimmed) return "C";
+    let isMinor = false;
+    let root = trimmed;
+    if (root.endsWith("m") && !root.toLowerCase().endsWith("maj")) {
+      isMinor = true;
+      root = root.slice(0, -1).trim();
+    } else if (root.toLowerCase().endsWith("minor")) {
+      isMinor = true;
+      root = root.slice(0, -5).trim();
+    } else if (root.toLowerCase().endsWith("min")) {
+      isMinor = true;
+      root = root.slice(0, -3).trim();
     }
-    const keySig = KeySignature.parse(trimmed);
-    return TmdABCGenerator.keyInfo(keySig.semitoneOffset).name;
+    const keySig = KeySignature.parse(root);
+    const normalized = ((keySig.semitoneOffset % 12) + 12) % 12;
+    let majorName = PitchMapping.tonicScaleInfo(normalized).name;
+    if (root.includes("#") && majorName.includes("b")) {
+      const sharps = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+      majorName = sharps[normalized];
+    }
+    return isMinor ? `${majorName}m` : majorName;
   }
 
   private static paragraphsContainPercussion(paragraphs: Entry[], instrument: string): boolean {

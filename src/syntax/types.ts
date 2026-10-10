@@ -344,8 +344,25 @@ export interface Sheet {
   distinctAssignments?: () => string[];
 }
 
+export interface SpelledPitch {
+  stepIndex: number;
+  step: string;
+  alter: number;
+  octave: number;
+  midiPitch: number;
+}
+
+export interface TonicScaleInfo {
+  name: string;
+  stepAccidentals: number[];
+  degreeSteps: number[];
+}
+
 export const PitchMapping = {
   tmdKeyNames: ["C", "C'", "D", "E,", "E", "F", "F'", "G", "A,", "A", "B,", "B"],
+  stepNames: ["C", "D", "E", "F", "G", "A", "B"],
+  stepLowerNames: ["c", "d", "e", "f", "g", "a", "b"],
+  naturalStepSemitones: [0, 2, 4, 5, 7, 9, 11],
   musicXMLSteps: ["C", "C", "D", "D", "E", "F", "F", "G", "G", "A", "A", "B"],
   musicXMLAlters: [0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0],
   lilyPondNames: ["c", "cis", "d", "dis", "e", "f", "fis", "g", "gis", "a", "ais", "b"],
@@ -356,6 +373,257 @@ export const PitchMapping = {
   },
   keyName(semitone: number): string {
     return this.tmdKeyNames[this.normalizedSemitone(semitone)];
+  },
+  tonicScaleInfo(keyOffset: number): TonicScaleInfo {
+    switch (this.normalizedSemitone(keyOffset)) {
+      case 0:
+        return { name: "C", stepAccidentals: [0, 0, 0, 0, 0, 0, 0], degreeSteps: [0, 1, 2, 3, 4, 5, 6] };
+      case 1:
+        return { name: "Db", stepAccidentals: [0, -1, -1, 0, -1, -1, -1], degreeSteps: [1, 2, 3, 4, 5, 6, 0] };
+      case 2:
+        return { name: "D", stepAccidentals: [1, 0, 0, 1, 0, 0, 0], degreeSteps: [1, 2, 3, 4, 5, 6, 0] };
+      case 3:
+        return { name: "Eb", stepAccidentals: [0, 0, -1, 0, 0, -1, -1], degreeSteps: [2, 3, 4, 5, 6, 0, 1] };
+      case 4:
+        return { name: "E", stepAccidentals: [1, 1, 0, 1, 1, 0, 0], degreeSteps: [2, 3, 4, 5, 6, 0, 1] };
+      case 5:
+        return { name: "F", stepAccidentals: [0, 0, 0, 0, 0, 0, -1], degreeSteps: [3, 4, 5, 6, 0, 1, 2] };
+      case 6:
+        return { name: "F#", stepAccidentals: [1, 1, 1, 1, 1, 1, 0], degreeSteps: [3, 4, 5, 6, 0, 1, 2] };
+      case 7:
+        return { name: "G", stepAccidentals: [0, 0, 0, 1, 0, 0, 0], degreeSteps: [4, 5, 6, 0, 1, 2, 3] };
+      case 8:
+        return { name: "Ab", stepAccidentals: [0, -1, -1, 0, 0, -1, -1], degreeSteps: [5, 6, 0, 1, 2, 3, 4] };
+      case 9:
+        return { name: "A", stepAccidentals: [1, 0, 0, 1, 1, 0, 0], degreeSteps: [5, 6, 0, 1, 2, 3, 4] };
+      case 10:
+        return { name: "Bb", stepAccidentals: [0, 0, -1, 0, 0, 0, -1], degreeSteps: [6, 0, 1, 2, 3, 4, 5] };
+      case 11:
+        return { name: "B", stepAccidentals: [1, 1, 0, 1, 1, 1, 0], degreeSteps: [6, 0, 1, 2, 3, 4, 5] };
+      default:
+        return { name: "C", stepAccidentals: [0, 0, 0, 0, 0, 0, 0], degreeSteps: [0, 1, 2, 3, 4, 5, 6] };
+    }
+  },
+  spellNote(note: Note, keyOffset: number): SpelledPitch {
+    const info = this.tonicScaleInfo(keyOffset);
+    const degIdx = Math.max(0, Math.min(6, note.degree - 1));
+    const stepIndex = info.degreeSteps[degIdx];
+    const alter = info.stepAccidentals[stepIndex] + accidentalToSemitone(note.accidental);
+    const midiPitch = noteToMIDIPitch(note, keyOffset);
+    const naturalSemitone = this.naturalStepSemitones[stepIndex];
+    const octave = Math.round((midiPitch - naturalSemitone - alter) / 12) - 1;
+    return {
+      stepIndex,
+      step: this.stepNames[stepIndex],
+      alter,
+      octave,
+      midiPitch,
+    };
+  },
+  spellChordRoot(
+    chordRoot: ChordRoot,
+    keyOffset: number,
+    defaultLetterOctave = 3,
+    defaultDegreeOctave = 4
+  ): SpelledPitch {
+    if (chordRoot.isScaleDegree) {
+      return this.spellNote(
+        {
+          accidental: chordRoot.accidental,
+          degree: chordRoot.degree,
+          octave: chordRoot.octave + (defaultDegreeOctave - 4),
+        },
+        keyOffset
+      );
+    } else {
+      const stepIndex = Math.max(0, Math.min(6, chordRoot.degree - 1));
+      const alter = accidentalToSemitone(chordRoot.accidental);
+      const octave = defaultLetterOctave + chordRoot.octave;
+      const naturalSemitone = this.naturalStepSemitones[stepIndex];
+      const midiPitch = (octave + 1) * 12 + naturalSemitone + alter;
+      return {
+        stepIndex,
+        step: this.stepNames[stepIndex],
+        alter,
+        octave,
+        midiPitch,
+      };
+    }
+  },
+  spellChordVoicing(chord: ChordSymbol, keyOffset: number): SpelledPitch[] {
+    const rootPitch = this.spellChordRoot(chord.root, keyOffset, 3, 4);
+    let intervals: Array<[number, number]>;
+    switch (chord.quality) {
+      case "minor":
+        intervals = [[0, 0], [2, 3], [4, 7]];
+        break;
+      case "dominant7":
+        intervals = [[0, 0], [2, 4], [4, 7], [6, 10]];
+        break;
+      case "major7":
+        intervals = [[0, 0], [2, 4], [4, 7], [6, 11]];
+        break;
+      case "minor7":
+        intervals = [[0, 0], [2, 3], [4, 7], [6, 10]];
+        break;
+      case "diminished":
+        intervals = [[0, 0], [2, 3], [4, 6]];
+        break;
+      case "halfDiminished":
+        intervals = [[0, 0], [2, 3], [4, 6], [6, 10]];
+        break;
+      case "augmented":
+        intervals = [[0, 0], [2, 4], [4, 8]];
+        break;
+      case "suspended":
+        intervals = [[0, 0], [3, 5], [4, 7]];
+        break;
+      case "power":
+        intervals = [[0, 0], [4, 7]];
+        break;
+      case "major":
+      default:
+        intervals = [[0, 0], [2, 4], [4, 7]];
+        break;
+    }
+
+    const pitches: SpelledPitch[] = intervals.map(([diatonicSteps, semitones]) => {
+      const totalSteps = rootPitch.stepIndex + diatonicSteps;
+      const memberStepIndex = totalSteps % 7;
+      const memberOctave = rootPitch.octave + Math.floor(totalSteps / 7);
+      const memberMidi = rootPitch.midiPitch + semitones;
+      const naturalMidi = (memberOctave + 1) * 12 + this.naturalStepSemitones[memberStepIndex];
+      const memberAlter = memberMidi - naturalMidi;
+      return {
+        stepIndex: memberStepIndex,
+        step: this.stepNames[memberStepIndex],
+        alter: memberAlter,
+        octave: memberOctave,
+        midiPitch: memberMidi,
+      };
+    });
+
+    if (chord.bass) {
+      const bassPitch = this.spellChordRoot(chord.bass, keyOffset, 2, 2);
+      if (!pitches.some((p) => p.midiPitch === bassPitch.midiPitch)) {
+        pitches.unshift(bassPitch);
+      }
+    }
+    return pitches;
+  },
+  lilyPondPitch(spelled: SpelledPitch): string {
+    const base = this.stepLowerNames[Math.max(0, Math.min(6, spelled.stepIndex))];
+    let acc = "";
+    if (spelled.alter === 1) acc = "is";
+    else if (spelled.alter >= 2) acc = "isis";
+    else if (spelled.alter === -1) acc = "es";
+    else if (spelled.alter <= -2) acc = "eses";
+
+    let oct = "";
+    if (spelled.octave > 3) {
+      oct = "'".repeat(spelled.octave - 3);
+    } else if (spelled.octave < 3) {
+      oct = ",".repeat(3 - spelled.octave);
+    }
+    return `${base}${acc}${oct}`;
+  },
+  keySignatureToFifths(key: string): number {
+    const trimmed = key.trim().toUpperCase();
+    switch (trimmed) {
+      case "C": return 0;
+      case "G": return 1;
+      case "D": return 2;
+      case "A": return 3;
+      case "E": return 4;
+      case "B": return 5;
+      case "F#":
+      case "F'": return 6;
+      case "C#":
+      case "C'": return 7;
+      case "F": return -1;
+      case "BB":
+      case "B,":
+      case "A#":
+      case "A'": return -2;
+      case "EB":
+      case "E,": return -3;
+      case "AB":
+      case "A,": return -4;
+      case "DB":
+      case "D,": return -5;
+      case "GB":
+      case "G,": return -6;
+      case "CB":
+      case "C,": return -7;
+      default: return 0;
+    }
+  },
+  parseKeyModeAndFifths(key: string): { fifths: number; mode: "major" | "minor" } {
+    let root = key.trim();
+    let isMinor = false;
+    if (root.endsWith("m") && !root.toLowerCase().endsWith("maj")) {
+      isMinor = true;
+      root = root.slice(0, -1).trim();
+    } else if (root.toLowerCase().endsWith("minor")) {
+      isMinor = true;
+      root = root.slice(0, -5).trim();
+    } else if (root.toLowerCase().endsWith("min")) {
+      isMinor = true;
+      root = root.slice(0, -3).trim();
+    } else if (root.toLowerCase().endsWith("major")) {
+      root = root.slice(0, -5).trim();
+    }
+
+    if (isMinor) {
+      const normalizedRoot = root.toUpperCase();
+      let minorFifths: number;
+      switch (normalizedRoot) {
+        case "A": minorFifths = 0; break;
+        case "E": minorFifths = 1; break;
+        case "B": minorFifths = 2; break;
+        case "F#":
+        case "F'": minorFifths = 3; break;
+        case "C#":
+        case "C'": minorFifths = 4; break;
+        case "G#":
+        case "G'": minorFifths = 5; break;
+        case "D#":
+        case "D'": minorFifths = 6; break;
+        case "A#":
+        case "A'": minorFifths = 7; break;
+        case "D": minorFifths = -1; break;
+        case "G": minorFifths = -2; break;
+        case "C": minorFifths = -3; break;
+        case "F": minorFifths = -4; break;
+        case "BB":
+        case "B,": minorFifths = -5; break;
+        case "EB":
+        case "E,": minorFifths = -6; break;
+        case "AB":
+        case "A,": minorFifths = -7; break;
+        default:
+          minorFifths = this.keySignatureToFifths(root) - 3;
+          break;
+      }
+      return { fifths: minorFifths, mode: "minor" };
+    }
+    return { fifths: this.keySignatureToFifths(root), mode: "major" };
+  },
+  keySignatureStepAlters(key: string): number[] {
+    const { fifths } = this.parseKeyModeAndFifths(key);
+    const alters = [0, 0, 0, 0, 0, 0, 0];
+    if (fifths > 0) {
+      const sharpOrder = [3, 0, 4, 1, 5, 2, 6]; // F, C, G, D, A, E, B
+      for (let i = 0; i < Math.min(7, fifths); i++) {
+        alters[sharpOrder[i]] = 1;
+      }
+    } else if (fifths < 0) {
+      const flatOrder = [6, 2, 5, 1, 4, 0, 3]; // B, E, A, D, G, C, F
+      for (let i = 0; i < Math.min(7, -fifths); i++) {
+        alters[flatOrder[i]] = -1;
+      }
+    }
+    return alters;
   },
   semitoneToDegreeAccidental(semitone: number): { degree: ScaleDegree; accidental: Accidental } {
     switch (this.normalizedSemitone(semitone)) {
@@ -390,3 +658,4 @@ export function noteToMIDIPitch(note: Note, keyOffset: number): number {
 export function noteToTotalSemitones(note: Note): number {
   return scaleDegreeSemitoneOffset(note.degree) + accidentalToSemitone(note.accidental) + note.octave * 12;
 }
+

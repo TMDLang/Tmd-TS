@@ -240,8 +240,8 @@ export class TmdMusicXMLGenerator {
       case "absoluteKey":
         return `      <attributes><key><fifths>${TmdMusicXMLGenerator.keySignatureToFifths(directive.kind.key)}</fifths></key></attributes>\n`;
       case "explicitKey": {
-        const mode = /(?:m|min|minor)$/i.test(directive.kind.key) ? "minor" : "major";
-        return `      <attributes><key><fifths>${TmdMusicXMLGenerator.keySignatureToFifths(directive.kind.key)}</fifths><mode>${mode}</mode></key></attributes>\n`;
+        const { fifths, mode } = PitchMapping.parseKeyModeAndFifths(directive.kind.key);
+        return `      <attributes><key><fifths>${fifths}</fifths><mode>${mode}</mode></key></attributes>\n`;
       }
       case "dynamics":
         return `      <direction placement="below"><direction-type><dynamics><${directive.kind.mark}/></dynamics></direction-type></direction>\n`;
@@ -285,8 +285,9 @@ export class TmdMusicXMLGenerator {
     const initialMetronome = TmdMusicXMLGenerator.resolveMetronome(sheet.beat, speed);
     const dotTag = initialMetronome.isDotted ? "\n            <beat-unit-dot/>" : "";
     const key = sheet.declaredKey || sheet.keySignature.toString();
-    const modeTag = sheet.declaredKey ? `<mode>${/(?:m|min|minor)$/i.test(key) ? "minor" : "major"}</mode>` : "";
-    return `      <attributes>\n        <divisions>${divisions}</divisions>\n        <key>\n          <fifths>${TmdMusicXMLGenerator.keySignatureToFifths(key)}</fifths>${modeTag}\n        </key>\n        <time>\n          <beats>${sheet.beat.count}</beats>\n          <beat-type>${sheet.beat.noteValue}</beat-type>\n        </time>\n${TmdMusicXMLGenerator.generateClefXML(instrument, sheet)}      </attributes>\n      <direction placement="above">\n        <direction-type>\n          <metronome>\n            <beat-unit>${initialMetronome.beatUnit}</beat-unit>${dotTag}\n            <per-minute>${initialMetronome.perMinute}</per-minute>\n          </metronome>\n        </direction-type>\n        <sound tempo="${Math.round(speed)}"/>\n      </direction>\n`;
+    const { fifths, mode } = PitchMapping.parseKeyModeAndFifths(key);
+    const modeTag = sheet.declaredKey ? `<mode>${mode}</mode>` : "";
+    return `      <attributes>\n        <divisions>${divisions}</divisions>\n        <key>\n          <fifths>${fifths}</fifths>${modeTag}\n        </key>\n        <time>\n          <beats>${sheet.beat.count}</beats>\n          <beat-type>${sheet.beat.noteValue}</beat-type>\n        </time>\n${TmdMusicXMLGenerator.generateClefXML(instrument, sheet)}      </attributes>\n      <direction placement="above">\n        <direction-type>\n          <metronome>\n            <beat-unit>${initialMetronome.beatUnit}</beat-unit>${dotTag}\n            <per-minute>${initialMetronome.perMinute}</per-minute>\n          </metronome>\n        </direction-type>\n        <sound tempo="${Math.round(speed)}"/>\n      </direction>\n`;
   }
 
   private static generateNoteXML(
@@ -330,12 +331,9 @@ export class TmdMusicXMLGenerator {
   }
 
   private static generateChordXML(chord: ChordSymbol, duration: number, divisions: number, keyOffset: number): string {
-    const semitone = chord.root.isScaleDegree
-      ? ((keyOffset + chord.root.semitoneOffset) % 12 + 12) % 12
-      : (chord.root.semitoneOffset % 12 + 12) % 12;
-
-    const rootStep = PitchMapping.musicXMLSteps[semitone];
-    const rootAlter = PitchMapping.musicXMLAlters[semitone];
+    const spelledRoot = PitchMapping.spellChordRoot(chord.root, keyOffset);
+    const rootStep = spelledRoot.step;
+    const rootAlter = spelledRoot.alter;
 
     let kindValue = "other";
     const kindText = chord.toString();
@@ -360,11 +358,9 @@ export class TmdMusicXMLGenerator {
     xml += `        </root>\n        <kind text="${TmdMusicXMLGenerator.escapeXML(kindText)}">${kindValue}</kind>\n`;
 
     if (chord.bass) {
-      const bassSemitone = chord.bass.isScaleDegree
-        ? ((keyOffset + chord.bass.semitoneOffset) % 12 + 12) % 12
-        : (chord.bass.semitoneOffset % 12 + 12) % 12;
-      const bassStep = PitchMapping.musicXMLSteps[bassSemitone];
-      const bassAlter = PitchMapping.musicXMLAlters[bassSemitone];
+      const spelledBass = PitchMapping.spellChordRoot(chord.bass, keyOffset);
+      const bassStep = spelledBass.step;
+      const bassAlter = spelledBass.alter;
       xml += `        <bass>\n          <bass-step>${TmdMusicXMLGenerator.escapeXML(bassStep)}</bass-step>\n`;
       if (bassAlter !== 0) {
         xml += `          <bass-alter>${bassAlter}</bass-alter>\n`;
@@ -379,44 +375,12 @@ export class TmdMusicXMLGenerator {
   }
 
   private static pitchToStepAlterOctave(note: Note, keyOffset: number): { step: string; alter: number; octave: number } {
-    let midiPitch = 60 + keyOffset + (note.degree === 1 ? 0 : [0, 2, 4, 5, 7, 9, 11][note.degree - 1]);
-    if (note.accidental === "sharp") midiPitch += 1;
-    else if (note.accidental === "flat") midiPitch -= 1;
-    midiPitch += note.octave * 12;
-
-    const semitone = ((midiPitch % 12) + 12) % 12;
-    const step = PitchMapping.musicXMLSteps[semitone];
-    const alter = PitchMapping.musicXMLAlters[semitone];
-    const octave = Math.floor(midiPitch / 12) - 1;
-
-    return { step, alter, octave };
+    const spelled = PitchMapping.spellNote(note, keyOffset);
+    return { step: spelled.step, alter: spelled.alter, octave: spelled.octave };
   }
 
   private static keySignatureToFifths(key: string): number {
-    const trimmed = key.trim().toUpperCase();
-    switch (trimmed) {
-      case "C": return 0;
-      case "G": return 1;
-      case "D": return 2;
-      case "A": return 3;
-      case "E": return 4;
-      case "B": return 5;
-      case "F#":
-      case "F'": return 6;
-      case "F": return -1;
-      case "BB":
-      case "B,": return -2;
-      case "EB":
-      case "E,": return -3;
-      case "AB":
-      case "A,":
-      case "A'": return 3;
-      case "DB":
-      case "D,": return -5;
-      case "GB":
-      case "G,": return -6;
-      default: return 0;
-    }
+    return PitchMapping.parseKeyModeAndFifths(key).fifths;
   }
 
   private static escapeXML(str: string): string {
