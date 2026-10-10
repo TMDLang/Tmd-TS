@@ -31,6 +31,7 @@
     "build": "tsc",
     "eslint": "eslint",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
     "web:dev": "npm --prefix web run dev",
     "web:build": "npm --prefix web run build",

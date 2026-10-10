@@ -211,4 +211,21 @@ describe("core architecture boundaries", () => {
     expect(existsSync(join(sourceRoot, "analysis", "localization.ts"))).toBe(true);
     expect(existsSync(join(sourceRoot, "core", "localization.ts"))).toBe(false);
   });
+
+  it("configures Vitest coverage and records coverage in GitHub Actions CI", () => {
+    const repoRoot = join(import.meta.dirname, "..");
+    const pkg = JSON.parse(readFileSync(join(repoRoot, "package.json"), "utf8"));
+    expect(pkg.scripts["test:coverage"]).toBe("vitest run --coverage");
+
+    const vitestConfig = readFileSync(join(repoRoot, "vitest.config.ts"), "utf8");
+    expect(vitestConfig).toContain('provider: "v8"');
+    expect(vitestConfig).toContain('"json-summary"');
+    expect(vitestConfig).toContain('"lcov"');
+
+    const ciYaml = readFileSync(join(repoRoot, ".github", "workflows", "ci.yml"), "utf8");
+    expect(ciYaml).toContain("npm run test:coverage");
+    expect(ciYaml).toContain("GITHUB_STEP_SUMMARY");
+    expect(ciYaml).toContain("coverage/coverage-summary.json");
+    expect(ciYaml).toContain("name: coverage-report");
+  });
 });

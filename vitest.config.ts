@@ -13,4 +13,13 @@ export default defineConfig({
       { find: /^soundfont-player$/, replacement: path.resolve(__dirname, "web/node_modules/soundfont-player") },
     ],
   },
+  test: {
+    coverage: {
+      provider: "v8",
+      reportsDirectory: "./coverage",
+      reporter: ["text", "json-summary", "lcov"],
+      include: ["src/**/*.ts", "web/src/**/*.ts"],
+      exclude: ["**/*.d.ts", "web/src/shims/**"],
+    },
+  },
 });
