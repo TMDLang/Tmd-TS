@@ -207,10 +207,12 @@ export class TmdPlaybackRenderer {
   ): PlaybackTimeline {
     const sheet = TmdMacroEvaluator.expandThrowing(inputSheet);
     const targetInst = instrument || DEFAULT_INSTRUMENT;
-      const paragraphs = sheet.entries.filter((p) => {
-      const pInst = p.assignment || DEFAULT_INSTRUMENT;
-      return pInst.toLocaleLowerCase() === targetInst.toLocaleLowerCase()
-        || p.assignment?.toLocaleLowerCase() === instrument.toLocaleLowerCase();
+    const paragraphs = sheet.entries.filter((p) => {
+      if (p.isPrototype || !p.assignment) return false;
+      return (
+        p.assignment.toLocaleLowerCase() === targetInst.toLocaleLowerCase() ||
+        p.assignment.toLocaleLowerCase() === instrument.toLocaleLowerCase()
+      );
     });
     const orders = this.ordersFor(sheet);
     let state = this.initialStateFor(sheet);
@@ -391,9 +393,15 @@ export class TmdPlaybackRenderer {
               if (currentEventIndices.length > 0) {
                 for (const index of currentEventIndices) events[index].duration += baseSlotDuration;
               } else if (events.length > 0) {
-                // Leading tie inside group extends last event from preceding group
-                const last = events[events.length - 1];
-                last.duration += baseSlotDuration;
+                // Leading tie inside group extends all simultaneous events from preceding group
+                const lastPos = events[events.length - 1].position;
+                for (let k = events.length - 1; k >= 0; k--) {
+                  if (Math.abs(events[k].position - lastPos) < 1e-6) {
+                    events[k].duration += baseSlotDuration;
+                  } else {
+                    break;
+                  }
+                }
               } else {
                 events.push({ position: position + idx * baseSlotDuration, duration: baseSlotDuration, content: { type: "rest" }, state });
                 currentEventIndices = [events.length - 1];

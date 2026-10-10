@@ -44,7 +44,8 @@ export function formatUnitGroup(group: UnitGroup): string {
   if (group.units.length === 1 && group.length === 1) {
     return formatUnit(group.units[0]);
   }
-  const unitsStr = group.units.map(formatUnit).join("");
+  const separator = group.units.some((u) => u.type === "multiNote" || u.type === "chord") ? " " : "";
+  const unitsStr = group.units.map(formatUnit).join(separator);
   const lenStr = "-".repeat(group.length);
   return `(${unitsStr})%(${lenStr})`;
 }
@@ -122,9 +123,10 @@ export function formatSection(sec: Section, beat: Beat = { count: 4, noteValue: 
 }
 
 export function formatParagraph(p: Entry, beat?: Beat): string {
-  if (p.showProgram) {
+  if (p.showProgram !== undefined) {
     const time = p.executionTime ?? "";
-    return `${p.name}:${p.assignment}@${time}{\n"""${p.showProgram}"""\n}\n\n`;
+    const head = p.assignment ? `${p.name}:${p.assignment}` : p.name;
+    return `${head}@${time}{\n"""${p.showProgram}"""\n}\n\n`;
   }
 
   let result = "";

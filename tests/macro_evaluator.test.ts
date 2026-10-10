@@ -2,10 +2,14 @@ import { describe, expect,it } from 'vitest';
 
 import {
   formatOrder,
+  formatParagraph,
   formatSheet,
+  formatUnitGroup,
+  Lexer,
   TmdMacroError,
   TmdMacroEvaluator,
   TmdMeasureChecker,
+  TmdMeasureRenderer,
   TmdMIDIGenerator,
   TmdParser,
   TmdPlaybackRenderer,
@@ -875,6 +879,86 @@ Theme { <4*> 1 2 3 4 }
 
 -> (layer (canon Theme (Violin1 Violin2) 2) ->#`;
         expect(() => TmdParser.parse(input)).toThrow(/expected \)/);
+      });
+    });
+
+    describe('Issue #54: Lexer ranges, Format multiNote/chord & showProgram, Playback & MeasureRenderer bugs', () => {
+      it('Lexer.tokenizeWithRanges tracks exact offsets across block comments and rolls back line/col on unquoted ~', () => {
+        const src = '/* 1 2 3 */ 1 2';
+        const lexed = new Lexer(src).tokenizeWithRanges();
+        // First note '1' is after '/* 1 2 3 */ ' at offset 12, not inside the comment at offset 3
+        expect(lexed[0].range.start.offset).toBe(12);
+        expect(lexed[1].range.start.offset).toBe(14);
+
+        const tildeTokens = new Lexer('~   1').tokenize();
+        expect(tildeTokens[0].column).toBe(1);
+        expect(tildeTokens[1].column).toBe(5);
+      });
+
+      it('formatUnitGroup separates multiNote/chord units with space and formatParagraph avoids :undefined on showProgram', () => {
+        const sheet = TmdParser.parse(`::SCORE::
+!= 120
+?= C
+<4/4>
+PartA:Piano@|0|{
+  <4*>
+  (1+3 2+4)%(--) 0 0
+}
+-> PartA ->#`);
+        const group = sheet.entries[0].sections[0].unitGroups[0];
+        expect(formatUnitGroup(group)).toBe('(1+3 2+4)%(--)');
+
+        const progFormatted = formatParagraph({
+          name: 'Show',
+          assignment: undefined,
+          start: 0,
+          sections: [],
+          executionTime: '00:10',
+          showProgram: 'Hello',
+        });
+        expect(progFormatted).not.toContain('undefined');
+        expect(progFormatted).toContain('Show@00:10{');
+      });
+
+      it('TmdPlaybackRenderer skips abstract prototypes and extends all simultaneous notes on leading unit-group tie', () => {
+        const sheet = TmdParser.parse(`::SCORE::
+!= 120
+?= C
+<4/4>
+UnusedTheme {
+  <4*>
+  1 2 3 4
+}
+PartA:Piano@|0|{
+  <4*>
+  1+3 (- 2)%(--) 0
+}
+-> UnusedTheme -> PartA ->#`);
+        const piano = TmdPlaybackRenderer.render(sheet, 'Piano');
+        // UnusedTheme has no assignment and should not play on Piano; PartA starts after UnusedTheme (at beat 4)
+        expect(piano.events.filter((e) => e.position < 4)).toHaveLength(0);
+        // 1+3 is extended by the leading '-' of (- 2)%(--) (1 beat + 1 beat = 2 beats for BOTH notes)
+        const dyadEvents = piano.events.filter((e) => Math.abs(e.position - 4) < 1e-6);
+        expect(dyadEvents).toHaveLength(2);
+        expect(dyadEvents[0].duration).toBeCloseTo(2.0);
+        expect(dyadEvents[1].duration).toBeCloseTo(2.0);
+      });
+
+      it('TmdMeasureRenderer avoids extra measures on time-sig expansion and preserves order-level keyOffset', () => {
+        const sheet = TmdParser.parse(`::SCORE::
+!= 100
+?= C
+<2/4>
+PartA:Piano@|0|{
+  <4*>
+  1 2 | {<4/4>} 0 0 0 0
+}
+-> {?+2} -> PartA ->#`);
+        const measures = TmdMeasureRenderer.renderMeasures(sheet, 'Piano');
+        expect(measures).toHaveLength(2);
+        expect(measures[0].keyOffset).toBe(2);
+        expect(measures[1].keyOffset).toBe(2);
+        expect(measures[1].events.every((ev) => ev.state.keyOffset === 2)).toBe(true);
       });
     });
   });

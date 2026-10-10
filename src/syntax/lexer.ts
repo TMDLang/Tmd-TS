@@ -66,27 +66,25 @@ export class Lexer {
   }
 
   public tokenizeWithRanges(): LexedToken[] {
-    const tokens = this.tokenize();
-    let offset = 0;
-    return tokens.map((token) => {
-      const line = token.line;
-      const column = token.column;
-      let start = offset;
-      if (token.text) {
-        const index = this.input.indexOf(token.text, offset);
-        start = index < 0 ? offset : index;
-        offset = start + token.text.length;
-      }
-      return {
+    const result: LexedToken[] = [];
+    while (true) {
+      this.skipWhitespaceAndComments();
+      const start = this.pos;
+      const token = this.nextToken();
+      const end = this.pos;
+      const length = end - start;
+      result.push({
         token,
         text: token.text,
         range: {
-          start: { offset: start, line, column },
-          length: token.text.length,
-          endOffset: start + token.text.length,
+          start: { offset: start, line: token.line, column: token.column },
+          length,
+          endOffset: end,
         },
-      };
-    });
+      });
+      if (token.type === "eof") break;
+    }
+    return result;
   }
 
   private nextToken(): Token {
@@ -125,6 +123,8 @@ export class Lexer {
     // Song metadata (~ "..." or =~:__KEY__= "...")
     if (c === "~" || (c === "=" && this.peek(1) === "~")) {
       const metaStartPos = this.pos;
+      const metaStartLine = this.line;
+      const metaStartCol = this.col;
       const named = c === "=";
       if (named) { this.advance(); this.advance(); } else { this.advance(); }
       while (this.peek() === " " || this.peek() === "\t") this.advance();
@@ -159,6 +159,8 @@ export class Lexer {
         return { type: "metadata", value: { key, value }, text: rawText, line, column: col };
       }
       this.pos = metaStartPos;
+      this.line = metaStartLine;
+      this.col = metaStartCol;
     }
 
     // -># or ->

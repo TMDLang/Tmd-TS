@@ -81,10 +81,7 @@ export class TmdMeasureRenderer {
     const timeline = TmdPlaybackRenderer.render(sheet, instrument);
     const defaultBeat: Beat =
       sheet.beat && sheet.beat.count > 0 && sheet.beat.noteValue > 0 ? sheet.beat : { count: 4, noteValue: 4 };
-    const initialMeasureDuration = (defaultBeat.count * 4.0) / defaultBeat.noteValue;
-
-    const totalDuration = Math.max(timeline.duration, initialMeasureDuration);
-    const measureCount = Math.max(1, Math.ceil(totalDuration / initialMeasureDuration));
+    const totalDuration = timeline.duration;
 
     const intervals: Interval[] = [];
     let curStart = 0.0;
@@ -96,7 +93,7 @@ export class TmdMeasureRenderer {
 
     let nextDirectiveIndex = 0;
 
-    while (curStart < totalDuration || intervals.length < measureCount) {
+    while (curStart < totalDuration - 1e-6 || intervals.length === 0) {
       while (
         nextDirectiveIndex < timeSigDirectives.length &&
         timeSigDirectives[nextDirectiveIndex].position <= curStart
@@ -114,18 +111,23 @@ export class TmdMeasureRenderer {
     }
 
     const measures: Measure[] = [];
-    const initialState: PlaybackState = {
+    let activeState: PlaybackState = {
       tempo: sheet.speed > 0 ? sheet.speed : DEFAULT_TEMPO_BPM,
       keyOffset: sheet.keySignature.semitoneOffset,
       timeSignature: defaultBeat,
       dynamicLevel: 'mf',
     };
     const orderedDirectives = [...timeline.directives].sort((a, b) => a.position - b.position);
-    const stateAt = (position: number): PlaybackState => {
-      let state = initialState;
+    const stateAt = (position: number, fallbackState: PlaybackState): PlaybackState => {
+      let state = fallbackState;
       for (const directive of orderedDirectives) {
         if (directive.position > position) break;
-        state = directive.state;
+        if (directive.position >= intervals[0].start) {
+          state = {
+            ...directive.state,
+            timeSignature: fallbackState.timeSignature,
+          };
+        }
       }
       return state;
     };
@@ -140,6 +142,14 @@ export class TmdMeasureRenderer {
       const directivesInMeasure = timeline.directives.filter(
         (d) => d.position >= mStart && d.position < mEnd
       );
+
+      const epsilon = 1e-4;
+      activeState = { ...activeState, timeSignature: mBeat };
+      for (const dir of directivesInMeasure) {
+        if (dir.position <= mStart + epsilon) {
+          activeState = { ...dir.state, timeSignature: mBeat };
+        }
+      }
 
       const rawMeasureEvents: MeasureEvent[] = [];
       for (const event of timeline.events) {
@@ -172,9 +182,11 @@ export class TmdMeasureRenderer {
 
       const paddedEvents: MeasureEvent[] = [];
       let cursor = 0.0;
-      const measureState = stateAt(mStart);
+      if (rawMeasureEvents.length > 0 && rawMeasureEvents[0].startOffset <= epsilon) {
+        activeState = { ...rawMeasureEvents[0].state, timeSignature: mBeat };
+      }
+      const measureState = stateAt(mStart, activeState);
 
-      const epsilon = 1e-4;
       for (const ev of rawMeasureEvents) {
         const gap = ev.startOffset - cursor;
         if (gap > epsilon) {
@@ -182,9 +194,9 @@ export class TmdMeasureRenderer {
             startOffset: cursor,
             duration: gap,
             content: { type: 'rest' },
-          tieStart: false,
-          tieStop: false,
-          state: stateAt(mStart + cursor),
+            tieStart: false,
+            tieStop: false,
+            state: stateAt(mStart + cursor, measureState),
           });
         }
         paddedEvents.push(ev);
@@ -197,9 +209,9 @@ export class TmdMeasureRenderer {
           startOffset: cursor,
           duration: trailingGap,
           content: { type: 'rest' },
-            tieStart: false,
-            tieStop: false,
-            state: stateAt(mStart + cursor),
+          tieStart: false,
+          tieStop: false,
+          state: stateAt(mStart + cursor, rawMeasureEvents[rawMeasureEvents.length - 1]?.state ?? measureState),
         });
       }
 
@@ -213,6 +225,21 @@ export class TmdMeasureRenderer {
         events: paddedEvents,
         directives: directivesInMeasure,
       });
+
+      if (rawMeasureEvents.length > 0) {
+        activeState = rawMeasureEvents[rawMeasureEvents.length - 1].state;
+      }
+      if (directivesInMeasure.length > 0) {
+        const lastDirective = directivesInMeasure[directivesInMeasure.length - 1];
+        const lastEventPos =
+          rawMeasureEvents.length > 0
+            ? mStart + rawMeasureEvents[rawMeasureEvents.length - 1].startOffset
+            : -1.0;
+        if (lastDirective.position >= lastEventPos - epsilon) {
+          activeState = lastDirective.state;
+        }
+      }
+      activeState = { ...activeState, timeSignature: mBeat };
     }
 
     return measures;
