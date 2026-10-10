@@ -2,11 +2,13 @@ import { formatParagraph, formatSheet } from "../syntax/format.js";
 import { TmdParser } from "../syntax/parser.js";
 import {
   Entry,
-  ScaleDegree,
+  mapSectionsNotes,
+  Note,
   Sheet,
 } from "../syntax/types.js";
 import { TmdRefactorError } from "./errors.js";
 import { escapeRegex, parseParagraphHeaderLine } from "./format_helpers.js";
+import { transposeNoteDiatonicSteps } from "./transpose.js";
 
 export interface TmdDuplicateTrackOptions {
   section?: string;
@@ -118,74 +120,19 @@ export function duplicateTrack(
   options: TmdDuplicateTrackOptions | undefined,
   formatSource: (source: string) => string,
 ): string {
-    const sheet = TmdParser.parseThrowing(source);
-    let matching = sheet.entries.filter((p) => p.assignment === sourceInstrument);
-    if (options?.section) {
-      matching = matching.filter((p) => p.name === options.section);
-    }
-    if (matching.length === 0) {
-      if (options?.section) {
-        throw new TmdRefactorError(`Track '${options.section}:${sourceInstrument}' not found in score`);
-      }
-      throw new TmdRefactorError(`Instrument '${sourceInstrument}' not found in score`);
-    }
-
-    const shift = options?.octaveShift || 0;
-    const duplicatedParagraphs: Entry[] = matching.map((orig) => {
-      const clonedSections = orig.sections.map((sec) => ({
-        noteLength: sec.noteLength,
-        barlinePositions: [...(sec.barlinePositions ?? [])],
-        directives: [...sec.directives],
-        unitGroups: sec.unitGroups.map((g) => ({
-          length: g.length,
-          units: g.units.map((u) => {
-            if (u.type === "note") {
-              return {
-                type: "note" as const,
-                note: {
-                  degree: u.note.degree,
-                  accidental: u.note.accidental,
-                  octave: u.note.octave + shift,
-                },
-              };
-            }
-            if (u.type === "multiNote") {
-              return {
-                type: "multiNote" as const,
-                notes: u.notes.map((note) => ({ ...note, octave: note.octave + shift })),
-              };
-            }
-            return u;
-          }),
-        })),
-      }));
-
-      return {
-        name: orig.name,
-        assignment: targetInstrument,
-        start: orig.start,
-        sections: clonedSections,
-        executionTime: orig.executionTime,
-        showProgram: orig.showProgram,
-      };
-    });
-
-    const newParagraphsText = duplicatedParagraphs
-      .map((p) => formatParagraph(p, sheet.beat))
-      .join("\n");
-
-    let combined: string;
-    const orderMatch = source.search(/(^|\n)\s*->/);
-    if (orderMatch !== -1) {
-      const insertPos = orderMatch === 0 ? 0 : orderMatch + 1;
-      combined = source.slice(0, insertPos) + "\n" + newParagraphsText + "\n" + source.slice(insertPos);
-    } else {
-      combined = source + "\n\n" + newParagraphsText;
-    }
-
-    const formatted = formatSource(combined);
-    TmdParser.parseThrowing(formatted);
-    return formatted;
+  const shift = options?.octaveShift || 0;
+  return cloneAndInsertTrack(
+    source,
+    sourceInstrument,
+    targetInstrument,
+    options?.section,
+    (note) => ({
+      degree: note.degree,
+      accidental: note.accidental,
+      octave: note.octave + shift,
+    }),
+    formatSource
+  );
 }
 
 export function generateHarmony(
@@ -195,87 +142,63 @@ export function generateHarmony(
   options: TmdHarmonyOptions,
   formatSource: (source: string) => string,
 ): string {
-    const sheet = TmdParser.parseThrowing(source);
-    let matching = sheet.entries.filter((p) => p.assignment === sourceInstrument);
-    if (options?.section) {
-      matching = matching.filter((p) => p.name === options.section);
+  const steps = options.intervalSteps;
+  return cloneAndInsertTrack(
+    source,
+    sourceInstrument,
+    harmonyInstrument,
+    options?.section,
+    (note) => transposeNoteDiatonicSteps(note, steps),
+    formatSource
+  );
+}
+
+function cloneAndInsertTrack(
+  source: string,
+  sourceInstrument: string,
+  targetInstrument: string,
+  section: string | undefined,
+  transformNote: (note: Note) => Note,
+  formatSource: (source: string) => string,
+): string {
+  const sheet = TmdParser.parseThrowing(source);
+  let matching = sheet.entries.filter((p) => p.assignment === sourceInstrument);
+  if (section) {
+    matching = matching.filter((p) => p.name === section);
+  }
+  if (matching.length === 0) {
+    if (section) {
+      throw new TmdRefactorError(`Track '${section}:${sourceInstrument}' not found in score`);
     }
-    if (matching.length === 0) {
-      if (options?.section) {
-        throw new TmdRefactorError(`Track '${options.section}:${sourceInstrument}' not found in score`);
-      }
-      throw new TmdRefactorError(`Instrument '${sourceInstrument}' not found in score`);
-    }
+    throw new TmdRefactorError(`Instrument '${sourceInstrument}' not found in score`);
+  }
 
-    const steps = options.intervalSteps; // e.g. +2 for 3rd up, -2 for 3rd down
-    const harmonizedParagraphs: Entry[] = matching.map((orig) => {
-      const clonedSections = orig.sections.map((sec) => ({
-        noteLength: sec.noteLength,
-        barlinePositions: [...(sec.barlinePositions ?? [])],
-        directives: [...sec.directives],
-        unitGroups: sec.unitGroups.map((g) => ({
-          length: g.length,
-          units: g.units.map((u) => {
-            if (u.type === "note") {
-              const currentDeg = u.note.degree as number; // 1..7
-              const zeroIndexed = currentDeg - 1; // 0..6
-              const newZero = zeroIndexed + steps;
-              const newDeg = (((newZero % 7) + 7) % 7) + 1;
-              const octaveDelta = Math.floor(newZero / 7);
+  const clonedParagraphs: Entry[] = matching.map((orig) => ({
+    name: orig.name,
+    assignment: targetInstrument,
+    ...(orig.pitchMode ? { pitchMode: orig.pitchMode } : {}),
+    start: orig.start,
+    sections: mapSectionsNotes(orig.sections, transformNote),
+    executionTime: orig.executionTime,
+    showProgram: orig.showProgram,
+  }));
 
-              return {
-                type: "note" as const,
-                note: {
-                  degree: newDeg as ScaleDegree,
-                  accidental: u.note.accidental,
-                  octave: u.note.octave + octaveDelta,
-                },
-              };
-            }
-            if (u.type === "multiNote") {
-              return {
-                type: "multiNote" as const,
-                notes: u.notes.map((note) => {
-                  const currentDeg = note.degree as number;
-                  const zeroIndexed = currentDeg - 1;
-                  const newZero = zeroIndexed + steps;
-                  const newDeg = (((newZero % 7) + 7) % 7) + 1;
-                  const octaveDelta = Math.floor(newZero / 7);
-                  return { ...note, degree: newDeg as ScaleDegree, octave: note.octave + octaveDelta };
-                }),
-              };
-            }
-            return u;
-          }),
-        })),
-      }));
+  const newParagraphsText = clonedParagraphs
+    .map((p) => formatParagraph(p, sheet.beat))
+    .join("\n");
 
-      return {
-        name: orig.name,
-        assignment: harmonyInstrument,
-        start: orig.start,
-        sections: clonedSections,
-        executionTime: orig.executionTime,
-        showProgram: orig.showProgram,
-      };
-    });
+  let combined: string;
+  const orderMatch = source.search(/(^|\n)\s*->/);
+  if (orderMatch !== -1) {
+    const insertPos = orderMatch === 0 ? 0 : orderMatch + 1;
+    combined = source.slice(0, insertPos) + "\n" + newParagraphsText + "\n" + source.slice(insertPos);
+  } else {
+    combined = source + "\n\n" + newParagraphsText;
+  }
 
-    const newParagraphsText = harmonizedParagraphs
-      .map((p) => formatParagraph(p, sheet.beat))
-      .join("\n");
-
-    let combined: string;
-    const orderMatch = source.search(/(^|\n)\s*->/);
-    if (orderMatch !== -1) {
-      const insertPos = orderMatch === 0 ? 0 : orderMatch + 1;
-      combined = source.slice(0, insertPos) + "\n" + newParagraphsText + "\n" + source.slice(insertPos);
-    } else {
-      combined = source + "\n\n" + newParagraphsText;
-    }
-
-    const formatted = formatSource(combined);
-    TmdParser.parseThrowing(formatted);
-    return formatted;
+  const formatted = formatSource(combined);
+  TmdParser.parseThrowing(formatted);
+  return formatted;
 }
 
 export function inlineOrders(source: string, formatSource: (source: string) => string): string {

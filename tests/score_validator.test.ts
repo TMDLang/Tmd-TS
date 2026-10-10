@@ -363,6 +363,12 @@ A:Piano@|0|{
     expect(ChordSymbol.isStandardQuality("halfDiminished")).toBe(true);
     expect(ChordSymbol.isStandardQuality("add9")).toBe(false);
     expect(ChordSymbol.isRecognizedExtendedQuality("add9")).toBe(true);
+    expect(ChordSymbol.isRecognizedExtendedQuality("m7b5")).toBe(true);
+    expect(ChordSymbol.isRecognizedExtendedQuality("7#11")).toBe(true);
+    expect(ChordSymbol.isRecognizedExtendedQuality("7b13")).toBe(true);
+    expect(ChordSymbol.isRecognizedExtendedQuality("maj7#11")).toBe(true);
+    expect(ChordSymbol.isRecognizedExtendedQuality("maj7#5")).toBe(true);
+    expect(ChordSymbol.isRecognizedExtendedQuality("m6/9")).toBe(true);
     expect(ChordSymbol.isRecognizedExtendedQuality("weirdquality")).toBe(false);
 
     expect(MIDIInstrument.isRecognized("Piano")).toBe(true);
@@ -371,8 +377,25 @@ A:Piano@|0|{
     expect(MIDIInstrument.isRecognized("Gtr")).toBe(true);
     expect(MIDIInstrument.isRecognized("Uke")).toBe(true);
     expect(MIDIInstrument.isRecognized("Vox")).toBe(true);
+    expect(MIDIInstrument.isRecognized("Miku")).toBe(true);
+    expect(MIDIInstrument.isRecognized("鋼琴")).toBe(true);
+    expect(MIDIInstrument.isRecognized("電吉他")).toBe(true);
+    expect(MIDIInstrument.isRecognized("古箏")).toBe(true);
     expect(MIDIInstrument.isRecognized("Unknown")).toBe(false);
     expect(MIDIInstrument.isRecognized("UnknownMartianZorg")).toBe(false);
+
+    const { mapSectionsNotes, TmdParser } = await import("../src/syntax/index.js");
+    const { transposeNoteDiatonicSteps } = await import("../src/refactoring/transpose.js");
+    const parsed = TmdParser.parseThrowing(
+      "::SCORE::\n!= 120\n?= C\n<4/4>\nA:Piano@|0|{\n<4*>\n| 1 2+4 [C] 0 |\n}\n-> A ->#"
+    );
+    const transformed = mapSectionsNotes(parsed.entries[0].sections, (note) =>
+      transposeNoteDiatonicSteps(note, 2)
+    );
+    expect(transformed[0].unitGroups[0].units[0]).toEqual({
+      type: "note",
+      note: { degree: 3, accidental: "natural", octave: 0 },
+    });
 
     const validatorSrc = fs.readFileSync(
       path.resolve(process.cwd(), "src/validation/score_validator.ts"),

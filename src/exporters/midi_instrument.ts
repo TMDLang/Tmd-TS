@@ -329,7 +329,7 @@ export namespace MIDIInstrument {
     }
 
     // 2. Percussion channel check
-    const drumAliases = ['drum', 'drums', 'groove', 'percussion', 'beat', 'drumkit', 'kit', 'cajon', 'snare', 'kick', 'hihat'];
+    const drumAliases = ['drum', 'drums', 'groove', 'percussion', 'beat', 'drumkit', 'kit', 'cajon', 'snare', 'kick', 'hihat', '爵士鼓', '打擊', '鼓'];
     if (
       drumAliases.some(d => trimmed.includes(d)) ||
       (trimmed.includes('perc') && !trimmed.includes('percussive'))
@@ -363,11 +363,11 @@ export namespace MIDIInstrument {
       [MIDIInstrument.Shamisen, ['shamisen']],
       [MIDIInstrument.Bagpipe, ['bagpipe', 'bagpipes']],
       [MIDIInstrument.Kalimba, ['kalimba', 'mbira']],
-      [MIDIInstrument.Shanai, ['shanai', 'shehnai']],
+      [MIDIInstrument.Shanai, ['shanai', 'shehnai', 'suona', '嗩吶']],
       [MIDIInstrument.Sitar, ['sitar']],
       [MIDIInstrument.Banjo, ['banjo']],
-      [MIDIInstrument.Koto, ['guzheng', 'zheng', 'koto']],
-      [MIDIInstrument.Fiddle, ['fiddle']],
+      [MIDIInstrument.Koto, ['guzheng', 'zheng', 'koto', '古箏', '琵琶']],
+      [MIDIInstrument.Fiddle, ['fiddle', 'erhu', '二胡']],
 
       // Synth Effects (96-103)
       [MIDIInstrument.FxSoundtrack, ['soundtrack']],
@@ -392,12 +392,12 @@ export namespace MIDIInstrument {
       // Guitar (24-31) - Prioritize lead guitar and compound guitar names before generic synth lead
       [MIDIInstrument.GuitarHarmonics, ['guitarharmonics', 'harmonics']],
       [MIDIInstrument.DistortionGuitar, ['distortion', 'dist', 'fuzz', 'heavy', 'metal']],
-      [MIDIInstrument.OverdriveGuitar, ['overdrive', 'od', 'rockguitar', 'leadguitar', 'lead-guitar', 'electricguitar', 'electric-guitar']],
+      [MIDIInstrument.OverdriveGuitar, ['overdrive', 'od', 'rockguitar', 'leadguitar', 'lead-guitar', 'electricguitar', 'electric-guitar', '電吉他']],
       [MIDIInstrument.CleanGuitar, ['cleanguitar', 'electricclean']],
       [MIDIInstrument.MutedGuitar, ['mutedguitar']],
       [MIDIInstrument.JazzGuitar, ['jazzguitar']],
       [MIDIInstrument.NylonGuitar, ['nylon', 'classicalguitar', 'ukulele', 'uke']],
-      [MIDIInstrument.SteelGuitar, ['steelguitar', 'steel', 'acousticguitar', 'guitar', 'gtr', 'mandolin']],
+      [MIDIInstrument.SteelGuitar, ['steelguitar', 'steel', 'acousticguitar', 'guitar', 'gtr', 'mandolin', '木吉他', '吉他']],
 
       // Synth Leads (80-87)
       [MIDIInstrument.LeadBassAndLead, ['basslead']],
@@ -410,44 +410,44 @@ export namespace MIDIInstrument {
       [MIDIInstrument.LeadSquare, ['square', 'leadsynth', 'lead_synth', 'lead']],
 
       // Pipe (72-79)
-      [MIDIInstrument.Shakuhachi, ['shakuhachi']],
+      [MIDIInstrument.Shakuhachi, ['shakuhachi', 'xiao', '簫']],
       [MIDIInstrument.PanFlute, ['panflute']],
       [MIDIInstrument.BlownBottle, ['bottle']],
       [MIDIInstrument.Recorder, ['recorder']],
       [MIDIInstrument.Ocarina, ['ocarina']],
-      [MIDIInstrument.Piccolo, ['piccolo']],
-      [MIDIInstrument.Flute, ['flute', 'pipe']],
+      [MIDIInstrument.Piccolo, ['piccolo', '短笛']],
+      [MIDIInstrument.Flute, ['flute', 'pipe', 'dizi', '長笛', '竹笛']],
       [MIDIInstrument.Whistle, ['whistle']],
 
       // Reed (64-71) - Put compound names before sax/horn/bass
       [MIDIInstrument.EnglishHorn, ['englishhorn', 'coranglais']],
-      [MIDIInstrument.FrenchHorn, ['frenchhorn']],
-      [MIDIInstrument.Bassoon, ['bassoon', 'fagott']],
-      [MIDIInstrument.Clarinet, ['clarinet']],
-      [MIDIInstrument.Oboe, ['oboe']],
+      [MIDIInstrument.FrenchHorn, ['frenchhorn', '法國號']],
+      [MIDIInstrument.Bassoon, ['bassoon', 'fagott', '低音管']],
+      [MIDIInstrument.Clarinet, ['clarinet', '單簧管', '豎笛']],
+      [MIDIInstrument.Oboe, ['oboe', '雙簧管']],
       [MIDIInstrument.BaritoneSax, ['baritonesax', 'barisax']],
       [MIDIInstrument.SopranoSax, ['sopranosax']],
       [MIDIInstrument.TenorSax, ['tenorsax']],
       [MIDIInstrument.AltoSax, ['altosax']],
-      [MIDIInstrument.Sax, ['sax', 'saxophone']],
+      [MIDIInstrument.Sax, ['sax', 'saxophone', '薩克斯風']],
 
       // Brass (56-63)
       [MIDIInstrument.MutedTrumpet, ['mutedtrumpet']],
       [MIDIInstrument.SynthBrass1, ['synthbrass']],
-      [MIDIInstrument.Trumpet, ['trumpet', 'cornet']],
-      [MIDIInstrument.Trombone, ['trombone']],
-      [MIDIInstrument.Tuba, ['tuba']],
+      [MIDIInstrument.Trumpet, ['trumpet', 'cornet', 'flugelhorn', '小號']],
+      [MIDIInstrument.Trombone, ['trombone', 'euphonium', '長號']],
+      [MIDIInstrument.Tuba, ['tuba', '低音號']],
       [MIDIInstrument.FrenchHorn, ['horn']],
-      [MIDIInstrument.Brass, ['brass']],
+      [MIDIInstrument.Brass, ['brass', '銅管']],
 
       // Ensemble & Choir (48-55)
       [MIDIInstrument.OrchestraHit, ['orchestrahit', 'orchhit', 'orchestra', 'hit']],
       [MIDIInstrument.SynthVoice, ['synthvoice']],
       [MIDIInstrument.VoiceOohs, ['voiceooh', 'oohs', 'voice']],
-      [MIDIInstrument.Choir, ['choiraah', 'aahs', 'choir', 'vocal', 'singer', 'vox', 'chorus', 'soprano', 'alto', 'tenor', 'baritone']],
+      [MIDIInstrument.Choir, ['choiraah', 'aahs', 'choir', 'vocal', 'singer', 'vox', 'chorus', 'miku', 'utau', 'teto', 'sing', 'soprano', 'alto', 'tenor', 'baritone', '主唱', '人聲', '合唱']],
       [MIDIInstrument.SynthStrings1, ['synthstrings']],
       [MIDIInstrument.StringEnsemble2, ['slowstrings']],
-      [MIDIInstrument.StringEnsemble1, ['string', 'strings', 'str']],
+      [MIDIInstrument.StringEnsemble1, ['string', 'strings', 'str', '弦樂']],
 
       // Solo Strings (40-47)
       [MIDIInstrument.PizzicatoStrings, ['pizzicato', 'pizz', 'pluck']],
@@ -455,10 +455,10 @@ export namespace MIDIInstrument {
       [MIDIInstrument.Harpsichord, ['harpsichord', 'cembalo']],
       [MIDIInstrument.OrchestralHarp, ['harp']],
       [MIDIInstrument.Timpani, ['timpani', 'kettledrum']],
-      [MIDIInstrument.Contrabass, ['contrabass', 'doublebass', 'uprightbass', 'upright', 'stringbass']],
-      [MIDIInstrument.Cello, ['cello', 'violoncello']],
-      [MIDIInstrument.Viola, ['viola']],
-      [MIDIInstrument.Violin, ['violin']],
+      [MIDIInstrument.Contrabass, ['contrabass', 'doublebass', 'uprightbass', 'upright', 'stringbass', '低音提琴']],
+      [MIDIInstrument.Cello, ['cello', 'violoncello', '大提琴']],
+      [MIDIInstrument.Viola, ['viola', '中提琴']],
+      [MIDIInstrument.Violin, ['violin', '小提琴']],
 
       // Bass (32-39)
       [MIDIInstrument.FretlessBass, ['fretless']],
@@ -467,14 +467,14 @@ export namespace MIDIInstrument {
       [MIDIInstrument.AcousticBass, ['acousticbass']],
       [MIDIInstrument.PickBass, ['pickbass']],
       [MIDIInstrument.FingerBass, ['fingerbass', 'electricbass']],
-      [MIDIInstrument.Bass, ['bass', 'sub']],
+      [MIDIInstrument.Bass, ['bass', 'sub', '貝斯']],
 
       // Organ (16-23)
       [MIDIInstrument.TangoAccordion, ['tangoaccordion', 'bandoneon', 'tango']],
       [MIDIInstrument.PercussiveOrgan, ['percussiveorgan', 'percussive']],
       [MIDIInstrument.RockOrgan, ['rockorgan']],
       [MIDIInstrument.ChurchOrgan, ['churchorgan', 'church']],
-      [MIDIInstrument.ReedOrgan, ['reedorgan', 'reed']],
+      [MIDIInstrument.ReedOrgan, ['reedorgan', 'reed', 'sheng', '笙']],
       [MIDIInstrument.Accordion, ['accordion']],
       [MIDIInstrument.Harmonica, ['harmonica']],
       [MIDIInstrument.Organ, ['organ', 'drawbar', 'b3', 'hammond']],
@@ -488,6 +488,7 @@ export namespace MIDIInstrument {
       [MIDIInstrument.Marimba, ['marimba']],
       [MIDIInstrument.Dulcimer, ['dulcimer', 'santur']],
       [MIDIInstrument.Celesta, ['celesta']],
+      [MIDIInstrument.Koto, ['pipa', 'lute']],
 
       // Piano & Generic Role Fallbacks (0-7)
       [MIDIInstrument.ElectricPiano2, ['dx7', 'fmep']],
@@ -496,8 +497,8 @@ export namespace MIDIInstrument {
       [MIDIInstrument.BrightAcousticPiano, ['brightpiano', 'brightacoustic', 'bright']],
       [MIDIInstrument.ElectricGrandPiano, ['electricgrand']],
       [MIDIInstrument.Clavinet, ['clavinet', 'clavi', 'clav']],
-      [MIDIInstrument.LeadSquare, ['synth', 'syn', 'arp', 'arpeggio', 'melody']],
-      [MIDIInstrument.Piano, ['piano', 'pno', 'keyboard', 'keys', 'grand', 'chord', 'chords', 'harmony', 'accompaniment', 'accomp']],
+      [MIDIInstrument.LeadSquare, ['synth', 'syn', 'arp', 'arpeggio', 'melody', 'motif', '主旋律']],
+      [MIDIInstrument.Piano, ['piano', 'pno', 'keyboard', 'keys', 'grand', 'chord', 'chords', 'harmony', 'accompaniment', 'accomp', '鋼琴', '和弦']],
     ];
 
     for (const [inst, terms] of aliases) {

@@ -151,27 +151,28 @@ export const STANDARD_CHORD_QUALITIES: ReadonlySet<string> = new Set([
 ]);
 
 export const EXTENDED_CHORD_QUALITIES: ReadonlySet<string> = new Set([
-  "add9",
-  "add2",
-  "add4",
-  "add11",
-  "maj9",
-  "maj11",
-  "maj13",
-  "m9",
-  "m11",
-  "m13",
-  "min9",
-  "min11",
-  "min13",
-  "9",
-  "11",
-  "13",
   "6",
   "m6",
   "min6",
   "6/9",
   "69",
+  "m6/9",
+  "9",
+  "maj9",
+  "m9",
+  "min9",
+  "add9",
+  "add2",
+  "add4",
+  "add11",
+  "11",
+  "m11",
+  "min11",
+  "maj11",
+  "13",
+  "maj13",
+  "m13",
+  "min13",
   "sus2",
   "sus4",
   "7sus4",
@@ -179,12 +180,17 @@ export const EXTENDED_CHORD_QUALITIES: ReadonlySet<string> = new Set([
   "9sus4",
   "dim7",
   "aug7",
-  "m(maj7)",
-  "mmaj7",
+  "m7b5",
   "7b5",
   "7#5",
   "7b9",
   "7#9",
+  "7#11",
+  "7b13",
+  "m(maj7)",
+  "mmaj7",
+  "maj7#11",
+  "maj7#5",
 ]);
 
 export function chordQualityIntervals(quality: ChordQualityKind): number[] {
@@ -749,4 +755,26 @@ export function chordToMIDIPitches(chord: string | ChordSymbol, keyOffset: numbe
 
 export function noteToTotalSemitones(note: Note): number {
   return scaleDegreeSemitoneOffset(note.degree) + accidentalToSemitone(note.accidental) + note.octave * 12;
+}
+
+export function mapUnitNotes(unit: Unit, transform: (note: Note) => Note): Unit {
+  if (unit.type === "note") {
+    return { type: "note", note: transform(unit.note) };
+  }
+  if (unit.type === "multiNote") {
+    return { type: "multiNote", notes: unit.notes.map(transform) };
+  }
+  return unit;
+}
+
+export function mapSectionsNotes(sections: Section[], transform: (note: Note) => Note): Section[] {
+  return sections.map((sec) => ({
+    noteLength: sec.noteLength,
+    directives: [...sec.directives],
+    ...(sec.barlinePositions ? { barlinePositions: [...sec.barlinePositions] } : {}),
+    unitGroups: sec.unitGroups.map((group) => ({
+      length: group.length,
+      units: group.units.map((u) => mapUnitNotes(u, transform)),
+    })),
+  }));
 }

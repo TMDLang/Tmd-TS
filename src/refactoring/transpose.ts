@@ -1,4 +1,4 @@
-import { KeySignature, PitchMapping, ScaleDegree, scaleDegreeSemitoneOffset } from "../syntax/types.js";
+import { Accidental, KeySignature, Note, PitchMapping, ScaleDegree, scaleDegreeSemitoneOffset } from "../syntax/types.js";
 import { matchesRefactorTarget, parseParagraphHeaderLine } from "./format_helpers.js";
 import { containsTransposableUnit, measureUnits, parseTupletToken } from "./unit_helpers.js";
 
@@ -9,6 +9,18 @@ export interface TmdTransposeOptions {
   updateKeySignature?: boolean;
   section?: string;
   instrument?: string;
+}
+
+export function transposeNoteDiatonicSteps(note: Note, steps: number): Note {
+  const zeroIndexed = (note.degree as number) - 1;
+  const newZero = zeroIndexed + steps;
+  const newDeg = ((((newZero % 7) + 7) % 7) + 1) as ScaleDegree;
+  const octaveDelta = Math.floor(newZero / 7);
+  return {
+    accidental: note.accidental,
+    degree: newDeg,
+    octave: note.octave + octaveDelta,
+  };
 }
 
 export function transposeSource(
@@ -117,17 +129,16 @@ function transposeTmdNote(
 
   // Case 1: Pure diatonic scale degree transpose (e.g. diatonicSteps: +1)
   if (options.diatonicSteps !== 0 && options.semitones === 0) {
-    const zeroIndexed = deg - 1;
-    const newZero = zeroIndexed + options.diatonicSteps;
-    const newDeg = (((newZero % 7) + 7) % 7) + 1;
-    const addedOctaves = Math.floor(newZero / 7);
-    const finalOctave = octaveDelta + addedOctaves;
+    const shifted = transposeNoteDiatonicSteps(
+      { accidental: Accidental.Natural, degree: deg as ScaleDegree, octave: octaveDelta },
+      options.diatonicSteps
+    );
 
     let newOctStr = "";
-    if (finalOctave > 0) newOctStr = "^".repeat(finalOctave);
-    else if (finalOctave < 0) newOctStr = "_".repeat(-finalOctave);
+    if (shifted.octave > 0) newOctStr = "^".repeat(shifted.octave);
+    else if (shifted.octave < 0) newOctStr = "_".repeat(-shifted.octave);
 
-    return `${newDeg}${acc}${newOctStr}`;
+    return `${shifted.degree}${acc}${newOctStr}`;
   }
 
   // Case 2: Semitone chromatic transposition
