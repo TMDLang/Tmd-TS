@@ -3,6 +3,32 @@ import * as path from "node:path";
 import { readUTF8, writeUTF8 } from "../io/text_io.js";
 import { TmdRefactor } from "../refactoring/index.js";
 
+function matchOption(
+  arg: string,
+  argv: string[],
+  i: number,
+  shortOpt?: string,
+  longOpt?: string
+): { matched: true; value: string | undefined; nextI: number } | { matched: false } {
+  if (shortOpt) {
+    if (arg === shortOpt) {
+      return { matched: true, value: argv[i + 1], nextI: i + 1 };
+    }
+    if (arg.startsWith(`${shortOpt}=`)) {
+      return { matched: true, value: arg.slice(shortOpt.length + 1), nextI: i };
+    }
+  }
+  if (longOpt) {
+    if (arg === longOpt) {
+      return { matched: true, value: argv[i + 1], nextI: i + 1 };
+    }
+    if (arg.startsWith(`${longOpt}=`)) {
+      return { matched: true, value: arg.slice(longOpt.length + 1), nextI: i };
+    }
+  }
+  return { matched: false };
+}
+
 export function handleRefactorCommand(argv: string[]): number {
   const sub = argv[0];
   if (!sub || sub === "-h" || sub === "--help") {
@@ -39,20 +65,26 @@ SUBCOMMANDS:
         console.log(`USAGE: tmd refactor rename-instrument [<options>] <input-path>`);
         return 0;
       }
-      if (arg === "--from") {
-        from = rest[++i];
+      let opt = matchOption(arg, rest, i, undefined, "--from");
+      if (opt.matched) {
+        from = opt.value;
+        i = opt.nextI;
         continue;
       }
-      if (arg === "--to") {
-        to = rest[++i];
+      opt = matchOption(arg, rest, i, undefined, "--to");
+      if (opt.matched) {
+        to = opt.value;
+        i = opt.nextI;
         continue;
       }
       if (arg === "-i" || arg === "--in-place") {
         inPlace = true;
         continue;
       }
-      if (arg === "-o" || arg === "--output") {
-        outputPath = rest[++i];
+      opt = matchOption(arg, rest, i, "-o", "--output");
+      if (opt.matched) {
+        outputPath = opt.value;
+        i = opt.nextI;
         continue;
       }
       if (!arg.startsWith("-")) {
@@ -109,20 +141,26 @@ SUBCOMMANDS:
         console.log(`USAGE: tmd refactor rename-section [<options>] <input-path>`);
         return 0;
       }
-      if (arg === "--from") {
-        from = rest[++i];
+      let opt = matchOption(arg, rest, i, undefined, "--from");
+      if (opt.matched) {
+        from = opt.value;
+        i = opt.nextI;
         continue;
       }
-      if (arg === "--to") {
-        to = rest[++i];
+      opt = matchOption(arg, rest, i, undefined, "--to");
+      if (opt.matched) {
+        to = opt.value;
+        i = opt.nextI;
         continue;
       }
       if (arg === "-i" || arg === "--in-place") {
         inPlace = true;
         continue;
       }
-      if (arg === "-o" || arg === "--output") {
-        outputPath = rest[++i];
+      opt = matchOption(arg, rest, i, "-o", "--output");
+      if (opt.matched) {
+        outputPath = opt.value;
+        i = opt.nextI;
         continue;
       }
       if (!arg.startsWith("-")) {
@@ -177,12 +215,16 @@ SUBCOMMANDS:
         console.log(`USAGE: tmd refactor extract-instrument [<options>] <input-path>`);
         return 0;
       }
-      if (arg === "--instrument") {
-        instrument = rest[++i];
+      let opt = matchOption(arg, rest, i, undefined, "--instrument");
+      if (opt.matched) {
+        instrument = opt.value;
+        i = opt.nextI;
         continue;
       }
-      if (arg === "-o" || arg === "--output") {
-        outputPath = rest[++i];
+      opt = matchOption(arg, rest, i, "-o", "--output");
+      if (opt.matched) {
+        outputPath = opt.value;
+        i = opt.nextI;
         continue;
       }
       if (!arg.startsWith("-")) {
@@ -236,20 +278,26 @@ SUBCOMMANDS:
         console.log(`USAGE: tmd refactor ${sub} [<options>] <input-path>`);
         return 0;
       }
-      if (arg === "--section") {
-        targetSection = rest[++i];
+      let opt = matchOption(arg, rest, i, undefined, "--section");
+      if (opt.matched) {
+        targetSection = opt.value;
+        i = opt.nextI;
         continue;
       }
-      if (arg === "--instrument") {
-        targetInstrument = rest[++i];
+      opt = matchOption(arg, rest, i, undefined, "--instrument");
+      if (opt.matched) {
+        targetInstrument = opt.value;
+        i = opt.nextI;
         continue;
       }
       if (arg === "-i" || arg === "--in-place") {
         inPlace = true;
         continue;
       }
-      if (arg === "-o" || arg === "--output") {
-        outputPath = rest[++i];
+      opt = matchOption(arg, rest, i, "-o", "--output");
+      if (opt.matched) {
+        outputPath = opt.value;
+        i = opt.nextI;
         continue;
       }
       if (!arg.startsWith("-")) {
@@ -315,28 +363,38 @@ SUBCOMMANDS:
         console.log(`USAGE: tmd refactor duplicate-track [<options>] <input-path>`);
         return 0;
       }
-      if (arg === "--source") {
-        source = rest[++i];
+      let opt = matchOption(arg, rest, i, undefined, "--source");
+      if (opt.matched) {
+        source = opt.value;
+        i = opt.nextI;
         continue;
       }
-      if (arg === "--target") {
-        target = rest[++i];
+      opt = matchOption(arg, rest, i, undefined, "--target");
+      if (opt.matched) {
+        target = opt.value;
+        i = opt.nextI;
         continue;
       }
-      if (arg === "--section") {
-        section = rest[++i];
+      opt = matchOption(arg, rest, i, undefined, "--section");
+      if (opt.matched) {
+        section = opt.value;
+        i = opt.nextI;
         continue;
       }
-      if (arg === "--octave") {
-        octaveShift = parseInt(rest[++i], 10) || 0;
+      opt = matchOption(arg, rest, i, undefined, "--octave");
+      if (opt.matched) {
+        octaveShift = parseInt(opt.value ?? "", 10) || 0;
+        i = opt.nextI;
         continue;
       }
       if (arg === "-i" || arg === "--in-place") {
         inPlace = true;
         continue;
       }
-      if (arg === "-o" || arg === "--output") {
-        outputPath = rest[++i];
+      opt = matchOption(arg, rest, i, "-o", "--output");
+      if (opt.matched) {
+        outputPath = opt.value;
+        i = opt.nextI;
         continue;
       }
       if (!arg.startsWith("-")) {
@@ -395,28 +453,38 @@ SUBCOMMANDS:
         console.log(`USAGE: tmd refactor generate-harmony [<options>] <input-path>`);
         return 0;
       }
-      if (arg === "--source") {
-        source = rest[++i];
+      let opt = matchOption(arg, rest, i, undefined, "--source");
+      if (opt.matched) {
+        source = opt.value;
+        i = opt.nextI;
         continue;
       }
-      if (arg === "--target") {
-        target = rest[++i];
+      opt = matchOption(arg, rest, i, undefined, "--target");
+      if (opt.matched) {
+        target = opt.value;
+        i = opt.nextI;
         continue;
       }
-      if (arg === "--section") {
-        section = rest[++i];
+      opt = matchOption(arg, rest, i, undefined, "--section");
+      if (opt.matched) {
+        section = opt.value;
+        i = opt.nextI;
         continue;
       }
-      if (arg === "--interval") {
-        intervalSteps = parseInt(rest[++i], 10) || 0;
+      opt = matchOption(arg, rest, i, undefined, "--interval");
+      if (opt.matched) {
+        intervalSteps = parseInt(opt.value ?? "", 10) || 0;
+        i = opt.nextI;
         continue;
       }
       if (arg === "-i" || arg === "--in-place") {
         inPlace = true;
         continue;
       }
-      if (arg === "-o" || arg === "--output") {
-        outputPath = rest[++i];
+      opt = matchOption(arg, rest, i, "-o", "--output");
+      if (opt.matched) {
+        outputPath = opt.value;
+        i = opt.nextI;
         continue;
       }
       if (!arg.startsWith("-")) {
@@ -475,8 +543,10 @@ SUBCOMMANDS:
         inPlace = true;
         continue;
       }
-      if (arg === "-o" || arg === "--output") {
-        outputPath = rest[++i];
+      const opt = matchOption(arg, rest, i, "-o", "--output");
+      if (opt.matched) {
+        outputPath = opt.value;
+        i = opt.nextI;
         continue;
       }
       if (!arg.startsWith("-")) {
@@ -548,32 +618,42 @@ OPTIONS:
 `);
         return 0;
       }
-      if (arg === "-s" || arg === "--semitones") {
-        semitones = parseInt(rest[++i], 10) || 0;
+      let opt = matchOption(arg, rest, i, "-s", "--semitones");
+      if (opt.matched) {
+        semitones = parseInt(opt.value ?? "", 10) || 0;
+        i = opt.nextI;
         continue;
       }
-      if (arg === "-d" || arg === "--diatonic") {
-        diatonicSteps = parseInt(rest[++i], 10) || 0;
+      opt = matchOption(arg, rest, i, "-d", "--diatonic");
+      if (opt.matched) {
+        diatonicSteps = parseInt(opt.value ?? "", 10) || 0;
+        i = opt.nextI;
         continue;
       }
       if (arg === "-k" || arg === "--update-key") {
         updateKeySignature = true;
         continue;
       }
-      if (arg === "--section") {
-        section = rest[++i];
+      opt = matchOption(arg, rest, i, undefined, "--section");
+      if (opt.matched) {
+        section = opt.value;
+        i = opt.nextI;
         continue;
       }
-      if (arg === "--instrument") {
-        instrument = rest[++i];
+      opt = matchOption(arg, rest, i, undefined, "--instrument");
+      if (opt.matched) {
+        instrument = opt.value;
+        i = opt.nextI;
         continue;
       }
       if (arg === "-i" || arg === "--in-place") {
         inPlace = true;
         continue;
       }
-      if (arg === "-o" || arg === "--output") {
-        outputPath = rest[++i];
+      opt = matchOption(arg, rest, i, "-o", "--output");
+      if (opt.matched) {
+        outputPath = opt.value;
+        i = opt.nextI;
         continue;
       }
       if (!arg.startsWith("-")) {
