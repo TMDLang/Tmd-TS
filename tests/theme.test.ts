@@ -108,4 +108,34 @@ describe("Theme Controller & Light Mode (TDD)", () => {
     // Editor should support setTheme on returned TmdWebEditor
     expect(editorContent).toContain("setTheme");
   });
+
+  it("uses theme-aware hover variables instead of hardcoded dark #30363d on .btn:hover in light mode", () => {
+    const cssPath = path.join(__dirname, "../web/src/styles.css");
+    const css = fs.readFileSync(cssPath, "utf-8");
+
+    expect(css).toContain("--bg-hover:");
+    expect(css).toContain("--border-hover:");
+    expect(css).toContain("--bg-subtle-hover:");
+
+    // .btn:hover must use var(--bg-hover) and must NOT hardcode #30363d
+    const btnHoverMatch = css.match(/\.btn:hover\s*\{([^}]*)\}/);
+    expect(btnHoverMatch).not.toBeNull();
+    expect(btnHoverMatch![1]).toContain("var(--bg-hover)");
+    expect(btnHoverMatch![1]).toContain("var(--border-hover)");
+    expect(btnHoverMatch![1]).not.toContain("#30363d");
+
+    // .btn-primary:hover must keep white text (#ffffff) rather than inheriting blue --text-bright in light mode
+    const btnPrimaryHoverMatch = css.match(/\.btn-primary:hover\s*\{([^}]*)\}/);
+    expect(btnPrimaryHoverMatch).not.toBeNull();
+    expect(btnPrimaryHoverMatch![1]).toContain("color: #ffffff");
+
+    // .problem-item:hover and .library-action-btn:hover must use theme-aware hover variables
+    const problemHoverMatch = css.match(/\.problem-item:hover\s*\{([^}]*)\}/);
+    expect(problemHoverMatch).not.toBeNull();
+    expect(problemHoverMatch![1]).toContain("var(--bg-subtle-hover)");
+
+    const libActionHoverMatch = css.match(/\.library-action-btn:hover\s*\{([^}]*)\}/);
+    expect(libActionHoverMatch).not.toBeNull();
+    expect(libActionHoverMatch![1]).toContain("var(--bg-hover)");
+  });
 });
