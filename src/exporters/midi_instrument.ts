@@ -463,11 +463,11 @@ export namespace MIDIInstrument {
       // Bass (32-39)
       [MIDIInstrument.FretlessBass, ['fretless']],
       [MIDIInstrument.SlapBass1, ['slapbass', 'slap']],
-      [MIDIInstrument.SynthBass1, ['synthbass', 'sub']],
+      [MIDIInstrument.SynthBass1, ['synthbass']],
       [MIDIInstrument.AcousticBass, ['acousticbass']],
       [MIDIInstrument.PickBass, ['pickbass']],
       [MIDIInstrument.FingerBass, ['fingerbass', 'electricbass']],
-      [MIDIInstrument.Bass, ['bass']],
+      [MIDIInstrument.Bass, ['bass', 'sub']],
 
       // Organ (16-23)
       [MIDIInstrument.TangoAccordion, ['tangoaccordion', 'bandoneon', 'tango']],
