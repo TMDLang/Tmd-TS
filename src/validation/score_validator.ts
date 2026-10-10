@@ -1,3 +1,4 @@
+import { MIDIInstrument } from "../exporters/midi_instrument.js";
 import { TmdMacroError, TmdMacroEvaluator, TmdPlaybackRenderer } from "../playback/index.js";
 import { ChordSymbol, Entry, SExpr, Sheet, TmdParser } from "../syntax/index.js";
 import { TmdMeasureChecker } from "./measure_check.js";
@@ -36,231 +37,6 @@ export interface TmdValidationOptions {
   isSnippet?: boolean;
   lineOffset?: number;
 }
-
-const STANDARD_CHORD_QUALITIES = new Set([
-  "major",
-  "minor",
-  "dominant7",
-  "major7",
-  "minor7",
-  "diminished",
-  "halfDiminished",
-  "augmented",
-  "suspended",
-  "power",
-]);
-
-const EXTENDED_CHORD_QUALITIES = new Set([
-  "add9",
-  "add2",
-  "add4",
-  "add11",
-  "maj9",
-  "maj11",
-  "maj13",
-  "m9",
-  "m11",
-  "m13",
-  "min9",
-  "min11",
-  "min13",
-  "9",
-  "11",
-  "13",
-  "6",
-  "m6",
-  "min6",
-  "6/9",
-  "69",
-  "sus2",
-  "sus4",
-  "7sus4",
-  "7sus2",
-  "9sus4",
-  "dim7",
-  "aug7",
-  "m(maj7)",
-  "mmaj7",
-  "7b5",
-  "7#5",
-  "7b9",
-  "7#9",
-]);
-
-const KNOWN_INSTRUMENT_KEYWORDS = [
-  "drum",
-  "perc",
-  "kit",
-  "snare",
-  "kick",
-  "hihat",
-  "cymbal",
-  "tom",
-  "woodblock",
-  "taiko",
-  "vocal",
-  "voice",
-  "singer",
-  "lead",
-  "melody",
-  "soprano",
-  "alto",
-  "tenor",
-  "baritone",
-  "choir",
-  "aahs",
-  "oohs",
-  "synthvoice",
-  "vox",
-  "harpsichord",
-  "clav",
-  "celesta",
-  "glock",
-  "vibraphone",
-  "vibe",
-  "marimba",
-  "xylophone",
-  "tubular",
-  "bell",
-  "dulcimer",
-  "musicbox",
-  "organ",
-  "accordion",
-  "harmonica",
-  "tango",
-  "reed",
-  "church",
-  "drawbar",
-  "percussive",
-  "rockorgan",
-  "nylon",
-  "steel",
-  "acousticguitar",
-  "jazzguitar",
-  "cleanguitar",
-  "mutedguitar",
-  "overdrive",
-  "distortion",
-  "harmonics",
-  "guitar",
-  "gtr",
-  "ukulele",
-  "uke",
-  "banjo",
-  "mandolin",
-  "sitar",
-  "shamisen",
-  "koto",
-  "kalimba",
-  "fretless",
-  "slap",
-  "synthbass",
-  "acousticbass",
-  "fingerbass",
-  "pickbass",
-  "bass",
-  "contrabass",
-  "upright",
-  "violin",
-  "viola",
-  "cello",
-  "violoncello",
-  "pizz",
-  "harp",
-  "timpani",
-  "tremolo",
-  "strings",
-  "string",
-  "str",
-  "orchestra",
-  "hit",
-  "fiddle",
-  "trumpet",
-  "trombone",
-  "tuba",
-  "mutedtrumpet",
-  "frenchhorn",
-  "horn",
-  "brass",
-  "synthbrass",
-  "sopranosax",
-  "altosax",
-  "tenorsax",
-  "baritonesax",
-  "sax",
-  "oboe",
-  "englishhorn",
-  "bassoon",
-  "clarinet",
-  "piccolo",
-  "flute",
-  "recorder",
-  "panflute",
-  "bottle",
-  "shakuhachi",
-  "whistle",
-  "ocarina",
-  "bagpipe",
-  "shanai",
-  "square",
-  "sawtooth",
-  "saw",
-  "calliope",
-  "chiff",
-  "charang",
-  "fifth",
-  "basslead",
-  "synth",
-  "syn",
-  "newage",
-  "warm",
-  "polysynth",
-  "halo",
-  "sweep",
-  "pad",
-  "rain",
-  "soundtrack",
-  "crystal",
-  "atmosphere",
-  "brightness",
-  "goblins",
-  "echoes",
-  "scifi",
-  "agogo",
-  "steeldrum",
-  "melodictom",
-  "synthdrum",
-  "reversecymbal",
-  "fxgret",
-  "breath",
-  "seashore",
-  "bird",
-  "telephone",
-  "helicopter",
-  "applause",
-  "gunshot",
-  "honkytonk",
-  "epiano",
-  "electricpiano",
-  "rhodes",
-  "wurlitzer",
-  "dx7",
-  "grand",
-  "bright",
-  "piano",
-  "pno",
-  "keys",
-  "keyboard",
-  "chord",
-  "chords",
-  "harmony",
-  "accompaniment",
-  "accomp",
-  "arp",
-  "arpeggio",
-  "sub",
-  "pluck",
-];
 
 export class TmdScoreValidator {
   public static validate(
@@ -415,7 +191,7 @@ export class TmdScoreValidator {
           for (const unit of group.units) {
             if (unit.type === "chord") {
               const chord = unit.chord;
-              if (!STANDARD_CHORD_QUALITIES.has(chord.quality)) {
+              if (!ChordSymbol.isStandardQuality(chord.quality)) {
                 const rawSuffix = chord.quality;
                 const rawDesc = chord.toString();
                 const loc = this.findTokenLocation(
@@ -441,7 +217,7 @@ export class TmdScoreValidator {
                     message: `Chord symbol '[${rawDesc}]' appears to be a multi-note chord written with brackets instead of '+'.`,
                     suggestion: `Did you mean '${suggested}'? Brackets '[...]' are for chord symbols (e.g. '[Cmaj7]'), while simultaneous notes use '+' (e.g. '${suggested}').`,
                   });
-                } else if (!this.isRecognizedExtendedChordSuffix(rawSuffix)) {
+                } else if (!ChordSymbol.isRecognizedExtendedQuality(rawSuffix)) {
                   diagnostics.push({
                     file,
                     line,
@@ -809,10 +585,6 @@ export class TmdScoreValidator {
     return rawDescription.trim();
   }
 
-  private static isRecognizedExtendedChordSuffix(suffix: string): boolean {
-    return EXTENDED_CHORD_QUALITIES.has(suffix.trim().toLowerCase());
-  }
-
   private static collectSExprSymbols(sexpr: SExpr, set: Set<string>): void {
     if (typeof sexpr === "string") {
       set.add(sexpr);
@@ -828,21 +600,7 @@ export class TmdScoreValidator {
   }
 
   private static isRecognizedInstrument(name: string): boolean {
-    const trimmed = name.trim().toLowerCase();
-    const directNum = Number(trimmed);
-    if (Number.isInteger(directNum) && directNum >= 0 && directNum <= 127) {
-      return true;
-    }
-    for (const prefix of ["prog:", "program:", "prg:", "p:", "prog", "program", "prg"]) {
-      if (trimmed.startsWith(prefix)) {
-        const suffix = trimmed.slice(prefix.length).trim();
-        const prog = Number(suffix);
-        if (suffix.length > 0 && Number.isInteger(prog) && prog >= 0 && prog <= 127) {
-          return true;
-        }
-      }
-    }
-    return KNOWN_INSTRUMENT_KEYWORDS.some((kw) => trimmed.includes(kw));
+    return MIDIInstrument.isRecognized(name);
   }
 
   private static findEntryLine(

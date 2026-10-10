@@ -329,15 +329,18 @@ export namespace MIDIInstrument {
     }
 
     // 2. Percussion channel check
-    const drumAliases = ['drum', 'drums', 'groove', 'percussion', 'beat', 'drumkit', 'cajon', 'snare', 'kick', 'hihat'];
-    if (drumAliases.some(d => trimmed.includes(d))) {
+    const drumAliases = ['drum', 'drums', 'groove', 'percussion', 'beat', 'drumkit', 'kit', 'cajon', 'snare', 'kick', 'hihat'];
+    if (
+      drumAliases.some(d => trimmed.includes(d)) ||
+      (trimmed.includes('perc') && !trimmed.includes('percussive'))
+    ) {
       return MIDIInstrument.Percussion;
     }
 
     // 3. Priority ordered aliases table (specific words must come before generic substrings)
     const aliases: [MIDIInstrument, string[]][] = [
       // Sound Effects (120-127)
-      [MIDIInstrument.GuitarFretNoise, ['fretnoise', 'guitar_fret']],
+      [MIDIInstrument.GuitarFretNoise, ['fretnoise', 'guitar_fret', 'fxgret']],
       [MIDIInstrument.BreathNoise, ['breathnoise', 'breath']],
       [MIDIInstrument.Seashore, ['seashore', 'ocean']],
       [MIDIInstrument.BirdTweet, ['birdtweet', 'bird']],
@@ -374,7 +377,7 @@ export namespace MIDIInstrument {
       [MIDIInstrument.FxCrystal, ['crystal']],
       [MIDIInstrument.FxEchoes, ['echoes']],
       [MIDIInstrument.FxSciFi, ['scifi', 'sci-fi']],
-      [MIDIInstrument.FxRain, ['fxrain']],
+      [MIDIInstrument.FxRain, ['fxrain', 'rain']],
 
       // Synth Pads (88-95)
       [MIDIInstrument.PadPolysynth, ['polysynth']],
@@ -387,14 +390,14 @@ export namespace MIDIInstrument {
       [MIDIInstrument.PadWarm, ['warm', 'pad']],
 
       // Guitar (24-31) - Prioritize lead guitar and compound guitar names before generic synth lead
-      [MIDIInstrument.GuitarHarmonics, ['guitarharmonics']],
+      [MIDIInstrument.GuitarHarmonics, ['guitarharmonics', 'harmonics']],
       [MIDIInstrument.DistortionGuitar, ['distortion', 'dist', 'fuzz', 'heavy', 'metal']],
       [MIDIInstrument.OverdriveGuitar, ['overdrive', 'od', 'rockguitar', 'leadguitar', 'lead-guitar', 'electricguitar', 'electric-guitar']],
       [MIDIInstrument.CleanGuitar, ['cleanguitar', 'electricclean']],
       [MIDIInstrument.MutedGuitar, ['mutedguitar']],
       [MIDIInstrument.JazzGuitar, ['jazzguitar']],
-      [MIDIInstrument.NylonGuitar, ['nylon', 'classicalguitar']],
-      [MIDIInstrument.SteelGuitar, ['steelguitar', 'acousticguitar', 'guitar']],
+      [MIDIInstrument.NylonGuitar, ['nylon', 'classicalguitar', 'ukulele', 'uke']],
+      [MIDIInstrument.SteelGuitar, ['steelguitar', 'steel', 'acousticguitar', 'guitar', 'gtr', 'mandolin']],
 
       // Synth Leads (80-87)
       [MIDIInstrument.LeadBassAndLead, ['basslead']],
@@ -403,7 +406,7 @@ export namespace MIDIInstrument {
       [MIDIInstrument.LeadCalliope, ['calliope']],
       [MIDIInstrument.LeadCharang, ['charang']],
       [MIDIInstrument.LeadChiff, ['chiff']],
-      [MIDIInstrument.LeadFifths, ['fifths']],
+      [MIDIInstrument.LeadFifths, ['fifths', 'fifth']],
       [MIDIInstrument.LeadSquare, ['square', 'leadsynth', 'lead_synth', 'lead']],
 
       // Pipe (72-79)
@@ -438,62 +441,63 @@ export namespace MIDIInstrument {
       [MIDIInstrument.Brass, ['brass']],
 
       // Ensemble & Choir (48-55)
-      [MIDIInstrument.OrchestraHit, ['orchestrahit', 'orchhit']],
+      [MIDIInstrument.OrchestraHit, ['orchestrahit', 'orchhit', 'orchestra', 'hit']],
       [MIDIInstrument.SynthVoice, ['synthvoice']],
-      [MIDIInstrument.VoiceOohs, ['voiceooh', 'voice']],
-      [MIDIInstrument.Choir, ['choiraah', 'choir', 'vocal', 'chorus']],
+      [MIDIInstrument.VoiceOohs, ['voiceooh', 'oohs', 'voice']],
+      [MIDIInstrument.Choir, ['choiraah', 'aahs', 'choir', 'vocal', 'singer', 'vox', 'chorus', 'soprano', 'alto', 'tenor', 'baritone']],
       [MIDIInstrument.SynthStrings1, ['synthstrings']],
       [MIDIInstrument.StringEnsemble2, ['slowstrings']],
-      [MIDIInstrument.StringEnsemble1, ['string', 'strings']],
+      [MIDIInstrument.StringEnsemble1, ['string', 'strings', 'str']],
 
       // Solo Strings (40-47)
-      [MIDIInstrument.PizzicatoStrings, ['pizzicato', 'pizz']],
+      [MIDIInstrument.PizzicatoStrings, ['pizzicato', 'pizz', 'pluck']],
       [MIDIInstrument.TremoloStrings, ['tremolo']],
       [MIDIInstrument.Harpsichord, ['harpsichord', 'cembalo']],
       [MIDIInstrument.OrchestralHarp, ['harp']],
       [MIDIInstrument.Timpani, ['timpani', 'kettledrum']],
-      [MIDIInstrument.Contrabass, ['contrabass', 'doublebass', 'uprightbass', 'stringbass']],
+      [MIDIInstrument.Contrabass, ['contrabass', 'doublebass', 'uprightbass', 'upright', 'stringbass']],
       [MIDIInstrument.Cello, ['cello', 'violoncello']],
       [MIDIInstrument.Viola, ['viola']],
       [MIDIInstrument.Violin, ['violin']],
 
       // Bass (32-39)
       [MIDIInstrument.FretlessBass, ['fretless']],
-      [MIDIInstrument.SlapBass1, ['slapbass']],
-      [MIDIInstrument.SynthBass1, ['synthbass']],
+      [MIDIInstrument.SlapBass1, ['slapbass', 'slap']],
+      [MIDIInstrument.SynthBass1, ['synthbass', 'sub']],
       [MIDIInstrument.AcousticBass, ['acousticbass']],
       [MIDIInstrument.PickBass, ['pickbass']],
       [MIDIInstrument.FingerBass, ['fingerbass', 'electricbass']],
       [MIDIInstrument.Bass, ['bass']],
 
       // Organ (16-23)
-      [MIDIInstrument.TangoAccordion, ['tangoaccordion', 'bandoneon']],
-      [MIDIInstrument.PercussiveOrgan, ['percussiveorgan']],
+      [MIDIInstrument.TangoAccordion, ['tangoaccordion', 'bandoneon', 'tango']],
+      [MIDIInstrument.PercussiveOrgan, ['percussiveorgan', 'percussive']],
       [MIDIInstrument.RockOrgan, ['rockorgan']],
-      [MIDIInstrument.ChurchOrgan, ['churchorgan']],
-      [MIDIInstrument.ReedOrgan, ['reedorgan']],
+      [MIDIInstrument.ChurchOrgan, ['churchorgan', 'church']],
+      [MIDIInstrument.ReedOrgan, ['reedorgan', 'reed']],
       [MIDIInstrument.Accordion, ['accordion']],
       [MIDIInstrument.Harmonica, ['harmonica']],
       [MIDIInstrument.Organ, ['organ', 'drawbar', 'b3', 'hammond']],
 
       // Chromatic Percussion (8-15)
       [MIDIInstrument.Glockenspiel, ['glockenspiel', 'glock']],
-      [MIDIInstrument.TubularBells, ['tubularbell', 'tubular', 'chimes']],
-      [MIDIInstrument.Vibraphone, ['vibraphone', 'vibes']],
+      [MIDIInstrument.TubularBells, ['tubularbell', 'tubular', 'chimes', 'bell']],
+      [MIDIInstrument.Vibraphone, ['vibraphone', 'vibes', 'vibe']],
       [MIDIInstrument.MusicBox, ['musicbox']],
       [MIDIInstrument.Xylophone, ['xylophone']],
       [MIDIInstrument.Marimba, ['marimba']],
       [MIDIInstrument.Dulcimer, ['dulcimer', 'santur']],
       [MIDIInstrument.Celesta, ['celesta']],
 
-      // Piano (0-7)
+      // Piano & Generic Role Fallbacks (0-7)
       [MIDIInstrument.ElectricPiano2, ['dx7', 'fmep']],
-      [MIDIInstrument.ElectricPiano, ['electricpiano', 'ep', 'rhodes', 'wurlitzer']],
+      [MIDIInstrument.ElectricPiano, ['electricpiano', 'epiano', 'ep', 'rhodes', 'wurlitzer']],
       [MIDIInstrument.HonkyTonkPiano, ['honkytonk', 'honky']],
-      [MIDIInstrument.BrightAcousticPiano, ['brightpiano', 'brightacoustic']],
+      [MIDIInstrument.BrightAcousticPiano, ['brightpiano', 'brightacoustic', 'bright']],
       [MIDIInstrument.ElectricGrandPiano, ['electricgrand']],
-      [MIDIInstrument.Clavinet, ['clavinet', 'clavi']],
-      [MIDIInstrument.Piano, ['piano', 'keyboard', 'grand']],
+      [MIDIInstrument.Clavinet, ['clavinet', 'clavi', 'clav']],
+      [MIDIInstrument.LeadSquare, ['synth', 'syn', 'arp', 'arpeggio', 'melody']],
+      [MIDIInstrument.Piano, ['piano', 'pno', 'keyboard', 'keys', 'grand', 'chord', 'chords', 'harmony', 'accompaniment', 'accomp']],
     ];
 
     for (const [inst, terms] of aliases) {
@@ -502,6 +506,10 @@ export namespace MIDIInstrument {
       }
     }
     return MIDIInstrument.Unknown;
+  }
+
+  export function isRecognized(name: string): boolean {
+    return resolve(name) !== MIDIInstrument.Unknown;
   }
 
   export function program(instrument: MIDIInstrumentValue): number {

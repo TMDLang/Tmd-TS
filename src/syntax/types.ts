@@ -137,6 +137,56 @@ export type ChordQualityKind =
   | "power"
   | string;
 
+export const STANDARD_CHORD_QUALITIES: ReadonlySet<string> = new Set([
+  "major",
+  "minor",
+  "dominant7",
+  "major7",
+  "minor7",
+  "diminished",
+  "halfDiminished",
+  "augmented",
+  "suspended",
+  "power",
+]);
+
+export const EXTENDED_CHORD_QUALITIES: ReadonlySet<string> = new Set([
+  "add9",
+  "add2",
+  "add4",
+  "add11",
+  "maj9",
+  "maj11",
+  "maj13",
+  "m9",
+  "m11",
+  "m13",
+  "min9",
+  "min11",
+  "min13",
+  "9",
+  "11",
+  "13",
+  "6",
+  "m6",
+  "min6",
+  "6/9",
+  "69",
+  "sus2",
+  "sus4",
+  "7sus4",
+  "7sus2",
+  "9sus4",
+  "dim7",
+  "aug7",
+  "m(maj7)",
+  "mmaj7",
+  "7b5",
+  "7#5",
+  "7b9",
+  "7#9",
+]);
+
 export function chordQualityIntervals(quality: ChordQualityKind): number[] {
   switch (quality) {
     case "major": return [0, 4, 7];
@@ -162,6 +212,14 @@ export class ChordSymbol {
     this.root = root;
     this.quality = quality;
     this.bass = bass;
+  }
+
+  static isStandardQuality(quality: string): boolean {
+    return STANDARD_CHORD_QUALITIES.has(quality);
+  }
+
+  static isRecognizedExtendedQuality(quality: string): boolean {
+    return EXTENDED_CHORD_QUALITIES.has(quality.trim().toLowerCase());
   }
 
   static parseRoot(str: string): { root: ChordRoot; remaining: string } | null {
