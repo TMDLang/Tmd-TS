@@ -228,4 +228,19 @@ describe("core architecture boundaries", () => {
     expect(ciYaml).toContain("coverage/coverage-summary.json");
     expect(ciYaml).toContain("name: coverage-report");
   });
+
+  it("aligns deploy-pages.yml with ci.yml on Node.js 22 and npm caching (#46)", () => {
+    const repoRoot = join(import.meta.dirname, "..");
+    const ciYaml = readFileSync(join(repoRoot, ".github", "workflows", "ci.yml"), "utf8");
+    const pagesYaml = readFileSync(
+      join(repoRoot, ".github", "workflows", "deploy-pages.yml"),
+      "utf8"
+    );
+
+    expect(ciYaml).toContain("node-version: 22");
+    expect(pagesYaml).toContain("node-version: 22");
+    expect(pagesYaml).not.toContain("node-version: 20");
+    expect(pagesYaml).toContain("cache: 'npm'");
+    expect(pagesYaml).toContain("web/package-lock.json");
+  });
 });
