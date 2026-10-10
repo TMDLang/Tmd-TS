@@ -217,4 +217,19 @@ export class TmdMeasureRenderer {
 
     return measures;
   }
+
+  public static groupSimultaneousEvents(events: MeasureEvent[]): MeasureEvent[][] {
+    const groups: MeasureEvent[][] = [];
+    for (const event of events) {
+      if (
+        groups.length > 0 &&
+        Math.abs(event.startOffset - groups[groups.length - 1][0].startOffset) < 1e-4
+      ) {
+        groups[groups.length - 1].push(event);
+      } else {
+        groups.push([event]);
+      }
+    }
+    return groups;
+  }
 }

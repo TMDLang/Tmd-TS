@@ -67,8 +67,9 @@ export class TmdLilyPondGenerator {
       for (const directive of measure.directives) {
         result += TmdLilyPondGenerator.formatDirective(directive);
       }
-      for (const event of measure.events) {
-        result += TmdLilyPondGenerator.formatMeasureEvent(event, percussion);
+      const groups = TmdMeasureRenderer.groupSimultaneousEvents(measure.events);
+      for (const group of groups) {
+        result += TmdLilyPondGenerator.formatEventGroup(group, percussion);
         result += " ";
       }
       result += "|\n  ";
@@ -128,6 +129,33 @@ export class TmdLilyPondGenerator {
       case "fixedPitch":
         return `\\key c \\major `;
     }
+  }
+
+  private static formatEventGroup(group: MeasureEvent[], percussion: boolean): string {
+    if (group.length === 1) {
+      return TmdLilyPondGenerator.formatMeasureEvent(group[0], percussion);
+    }
+
+    const noteEvents = group.filter((ev) => ev.content.type === "note");
+    if (noteEvents.length === group.length) {
+      const decomposed = NotationDuration.decompose(group[0].duration);
+      const pitches = noteEvents.map((ev) => {
+        const note = (ev.content as { type: "note"; note: Note }).note;
+        return TmdLilyPondGenerator.noteToLilyPondPitch(note, ev.state.keyOffset);
+      });
+      const chordBody = `<${pitches.join(" ")}>`;
+      const tieStart = group.some((ev) => ev.tieStart);
+      const parts: string[] = [];
+      decomposed.forEach((d, idx) => {
+        const durStr = `${d.baseDenominator}${d.isDotted ? "." : ""}`;
+        const isLast = idx === decomposed.length - 1;
+        const tie = isLast ? (tieStart ? "~" : "") : "~";
+        parts.push(`${chordBody}${durStr}${tie}`);
+      });
+      return parts.join(" ");
+    }
+
+    return group.map((ev) => TmdLilyPondGenerator.formatMeasureEvent(ev, percussion)).join(" ");
   }
 
   private static formatMeasureEvent(event: MeasureEvent, percussion: boolean): string {

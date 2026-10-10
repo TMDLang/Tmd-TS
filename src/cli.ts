@@ -33,7 +33,7 @@ import { TmdRefactor } from "./refactoring/index.js";
 import { TmdSkill } from "./skill.js";
 import { formatSummary } from "./syntax/index.js";
 import { TmdParser } from "./syntax/index.js";
-import { TmdMeasureChecker } from "./validation/index.js";
+import { TmdScoreValidator } from "./validation/index.js";
 import { TMD_VERSION } from "./version.js";
 
 export function printHelp(): void {
@@ -300,22 +300,25 @@ export function main(argv = process.argv.slice(2)): number {
 
   const isExporting = Object.values(outputs).some((v) => v !== undefined) || play;
   if (isExporting && !force) {
-    const issues = TmdMeasureChecker.check(fileContent);
-    if (issues.length > 0) {
+    const errors = TmdScoreValidator.validate(fileContent).filter(
+      (d) => d.severity === "error"
+    );
+    if (errors.length > 0) {
       console.error(
-        `❌ Export aborted: Found ${issues.length} measure discrepancy issue${
-          issues.length === 1 ? "" : "s"
+        `❌ Export aborted: Found ${errors.length} validation error${
+          errors.length === 1 ? "" : "s"
         } in ${input}:`
       );
-      for (const issue of issues.slice(0, 10)) {
-        console.error(`  - ${issue.description}`);
+      for (const issue of errors.slice(0, 10)) {
+        const loc = issue.line !== undefined ? `Line ${issue.line}: ` : "";
+        console.error(`  - [${issue.rule}] ${loc}${issue.message}`);
       }
-      if (issues.length > 10) {
+      if (errors.length > 10) {
         console.error(
-          `  ... and ${issues.length - 10} more issues. Run \`tmd check ${input}\` to see all.`
+          `  ... and ${errors.length - 10} more issues. Run \`tmd check ${input}\` to see all.`
         );
       }
-      console.error("\nUse --force (-f) to ignore measure errors and force export.");
+      console.error("\nUse --force (-f) to ignore validation errors and force export.");
       return 1;
     }
   }

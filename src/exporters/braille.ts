@@ -478,18 +478,7 @@ export class TmdBrailleGenerator {
         continue;
       }
 
-      const groups: MeasureEvent[][] = [];
-      for (const ev of measure.events) {
-        if (
-          groups.length > 0 &&
-          Math.abs(ev.startOffset - groups[groups.length - 1][0].startOffset) <
-            1e-4
-        ) {
-          groups[groups.length - 1].push(ev);
-        } else {
-          groups.push([ev]);
-        }
-      }
+      const groups = TmdMeasureRenderer.groupSimultaneousEvents(measure.events);
 
       let measureCells = "";
       const sightedTokens: string[] = [...preSighted];

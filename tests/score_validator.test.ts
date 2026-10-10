@@ -4,6 +4,7 @@ import * as path from "node:path";
 
 import { describe, expect, it, vi } from "vitest";
 
+import { main } from "../src/cli.js";
 import { handleCheckCommand } from "../src/commands/check.js";
 import { TmdLSPDiagnosticEngine } from "../src/lsp/index.js";
 import { TmdScoreValidator } from "../src/validation/index.js";
@@ -302,6 +303,49 @@ Unused:Piano@|0|{
       expect(jsonOut.diagnostics[0].rule).toBe("W-UNUSED-ENTRY");
       logSpy.mockRestore();
     } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it("aborts CLI export on TmdScoreValidator Stage 2–6 errors unless --force is passed, while allowing warnings", () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "tmd-cli-val-test-"));
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    try {
+      // Score with valid measure beats (passes TmdMeasureChecker) but has E-TIMELINE-OVERLAP error
+      const overlapFile = path.join(tmpDir, "overlap.tmd");
+      const outMidi = path.join(tmpDir, "overlap.mid");
+      fs.writeFileSync(
+        overlapFile,
+        `::SCORE::
+** Voice Overlap Error **
+!= 120
+?= C
+<4/4>
+A:Piano@|0|{
+  <4*>
+  | 1 2 3 4 |
+}
+A:Piano@|0|{
+  <4*>
+  | 5 6 7 1^ |
+}
+-> A ->#
+`,
+        "utf8"
+      );
+
+      // Without --force: must abort with exit code 1 and not create the MIDI file
+      expect(main([overlapFile, "-m", outMidi])).toBe(1);
+      expect(fs.existsSync(outMidi)).toBe(false);
+      expect(errSpy.mock.calls.map((c) => String(c[0])).join("\n")).toContain("E-TIMELINE-OVERLAP");
+
+      // With --force: succeeds and writes MIDI file
+      expect(main([overlapFile, "-m", outMidi, "--force"])).toBe(0);
+      expect(fs.existsSync(outMidi)).toBe(true);
+    } finally {
+      errSpy.mockRestore();
+      logSpy.mockRestore();
       fs.rmSync(tmpDir, { recursive: true, force: true });
     }
   });

@@ -3,6 +3,7 @@ import { describe, expect,it } from 'vitest';
 import {
   NotationDuration,
   TmdABCGenerator,
+  TmdBrailleGenerator,
   TmdLilyPondGenerator,
   TmdMeasureChecker,
   TmdMeasureRenderer,
@@ -595,8 +596,8 @@ A:Piano@|0|{
     });
   });
 
-  describe('Multi-Notes Polyphonic Support in Exporters (Issue #5)', () => {
-    it('outputs <chord/> tag for simultaneous notes in MusicXML', () => {
+  describe('Multi-Notes Polyphonic Support in Exporters (Issue #5 & Issue #47)', () => {
+    it('outputs <chord/> tag for simultaneous notes in MusicXML without inflating measure duration', () => {
       const tmd = `
 ::SCORE::
 ** Multi-Note MusicXML Test **
@@ -606,38 +607,59 @@ A:Piano@|0|{
 
 A:Piano@|0|{
     <4*>
-    1+3 2+4 3+5 4+6
+    1+3+5 2 3 4
 }
 -> A ->#
 `;
       const sheet = TmdParser.parse(tmd)!;
+      const measures = TmdMeasureRenderer.renderMeasures(sheet, 'Piano');
+      const groups = TmdMeasureRenderer.groupSimultaneousEvents(measures[0].events);
+      expect(groups).toHaveLength(4);
+      expect(groups[0]).toHaveLength(3);
+
       const xml = TmdMusicXMLGenerator.generateMusicXML(sheet);
 
-      // Must have <chord/> elements for the second note of each dyad
-      expect(xml).toContain('<chord/>');
+      // Must have 2 <chord/> elements for the triad 1+3+5
       const chordTags = (xml.match(/<chord\/>/g) || []).length;
-      expect(chordTags).toBe(4);
+      expect(chordTags).toBe(2);
+
+      // Every note (3 in triad + 3 single quarter notes = 6 <note> elements) must have duration 48 (1 quarter note)
+      const measure1Match = xml.match(/<measure number="1">([\s\S]*?)<\/measure>/);
+      expect(measure1Match).not.toBeNull();
+      const durations = Array.from(measure1Match![1].matchAll(/<duration>(\d+)<\/duration>/g)).map((m) =>
+        parseInt(m[1], 10)
+      );
+      expect(durations).toEqual([48, 48, 48, 48, 48, 48]);
     });
 
-    it('outputs chord bracket notation [...] for simultaneous notes in ABC', () => {
+    it('outputs simultaneous chord notation <...> in LilyPond, [...] in ABC, and interval cells in Braille for multiNote', () => {
       const tmd = `
 ::SCORE::
-** Multi-Note ABC Test **
+** Multi-Note Exporters Test **
 != 120
 ?= C
 <4/4>
 
 A:Piano@|0|{
     <4*>
-    1+3 2 0 0
+    1+3+5 2+4 3 4
 }
 -> A ->#
 `;
       const sheet = TmdParser.parse(tmd)!;
-      const abc = TmdABCGenerator.generateABC(sheet);
 
-      // 1+3 in C major is C4 and E4, 1 beat = 4 16ths -> [CE]4 or [C4E4]
-      expect(abc).toMatch(/\[[A-Ga-g\^=_0-9]+\]/);
+      // LilyPond: 1+3+5 -> <c' e' g'>4, 2+4 -> <d' f'>4, followed by e'4 f'4 |
+      const ly = TmdLilyPondGenerator.generateLilyPond(sheet);
+      expect(ly).toContain("<c' e' g'>4 <d' f'>4 e'4 f'4 |");
+
+      // ABC: 1+3+5 -> [ceg]4, 2+4 -> [df]4, followed by e4 f4 |
+      const abc = TmdABCGenerator.generateABC(sheet);
+      expect(abc).toContain('[ceg]4 [df]4 e4 f4 |');
+
+      // Braille: sighted summary reflects simultaneous chord notes rather than 7 sequential quarter notes
+      const braillePreview = TmdBrailleGenerator.generateBraillePreview(sheet);
+      expect(braillePreview.tracks[0].measures[0].sightedSummary).toContain('C4+E4+G4');
+      expect(braillePreview.tracks[0].measures[0].sightedSummary).toContain('D4+F4');
     });
   });
 });

@@ -86,54 +86,57 @@ export class TmdMusicXMLGenerator {
       }
 
       const expectedMeasureDuration = Math.max(1, Math.round(measure.nominalDuration * divisions));
-      const durations: number[] = measure.events.map((event) =>
-        Math.max(1, Math.round(event.duration * divisions))
+      const groups = TmdMeasureRenderer.groupSimultaneousEvents(measure.events);
+      const groupDurations: number[] = groups.map((group) =>
+        Math.max(1, Math.round(group[0].duration * divisions))
       );
-      const totalDur = durations.reduce((acc, d) => acc + d, 0);
+      const totalDur = groupDurations.reduce((acc, d) => acc + d, 0);
       const diff = expectedMeasureDuration - totalDur;
-      if (diff !== 0 && durations.length > 0) {
-        const lastIdx = durations.length - 1;
-        durations[lastIdx] = Math.max(1, durations[lastIdx] + diff);
+      if (diff !== 0 && groupDurations.length > 0) {
+        const lastIdx = groupDurations.length - 1;
+        groupDurations[lastIdx] = Math.max(1, groupDurations[lastIdx] + diff);
       }
 
-      measure.events.forEach((event, idx) => {
-        const duration = durations[idx];
-        const isChord = idx > 0 && Math.abs(event.startOffset - measure.events[idx - 1].startOffset) < 1e-4;
-        switch (event.content.type) {
-          case "note": {
-            const spelled = PitchMapping.spellNote(event.content.note, event.state.keyOffset);
-            const octaveAlters = measureStepAlters.get(spelled.octave)
-              ? [...measureStepAlters.get(spelled.octave)!]
-              : [...defaultKeyStepAlters];
-            const expectedAlter = octaveAlters[spelled.stepIndex];
-            let accidentalText: string | undefined;
-            if (spelled.alter !== expectedAlter && !event.tieStop) {
-              octaveAlters[spelled.stepIndex] = spelled.alter;
-              measureStepAlters.set(spelled.octave, octaveAlters);
-              accidentalText = TmdMusicXMLGenerator.musicXMLAccidentalName(spelled.alter);
+      groups.forEach((group, groupIdx) => {
+        const duration = groupDurations[groupIdx];
+        group.forEach((event, idxInGroup) => {
+          const isChord = idxInGroup > 0;
+          switch (event.content.type) {
+            case "note": {
+              const spelled = PitchMapping.spellNote(event.content.note, event.state.keyOffset);
+              const octaveAlters = measureStepAlters.get(spelled.octave)
+                ? [...measureStepAlters.get(spelled.octave)!]
+                : [...defaultKeyStepAlters];
+              const expectedAlter = octaveAlters[spelled.stepIndex];
+              let accidentalText: string | undefined;
+              if (spelled.alter !== expectedAlter && !event.tieStop) {
+                octaveAlters[spelled.stepIndex] = spelled.alter;
+                measureStepAlters.set(spelled.octave, octaveAlters);
+                accidentalText = TmdMusicXMLGenerator.musicXMLAccidentalName(spelled.alter);
+              }
+              content += TmdMusicXMLGenerator.generateNoteXML(
+                event.content.note,
+                duration,
+                divisions,
+                event.state.keyOffset,
+                event.tieStart,
+                event.tieStop,
+                isChord,
+                accidentalText
+              );
+              break;
             }
-            content += TmdMusicXMLGenerator.generateNoteXML(
-              event.content.note,
-              duration,
-              divisions,
-              event.state.keyOffset,
-              event.tieStart,
-              event.tieStop,
-              isChord,
-              accidentalText
-            );
-            break;
+            case "chord":
+              content += TmdMusicXMLGenerator.generateChordXML(event.content.chord, duration, divisions, event.state.keyOffset);
+              break;
+            case "rest":
+              content += TmdMusicXMLGenerator.generateRestXML(duration, divisions);
+              break;
+            case "percussion":
+              content += TmdMusicXMLGenerator.generatePercussionXML(event.content.pattern, duration, divisions);
+              break;
           }
-          case "chord":
-            content += TmdMusicXMLGenerator.generateChordXML(event.content.chord, duration, divisions, event.state.keyOffset);
-            break;
-          case "rest":
-            content += TmdMusicXMLGenerator.generateRestXML(duration, divisions);
-            break;
-          case "percussion":
-            content += TmdMusicXMLGenerator.generatePercussionXML(event.content.pattern, duration, divisions);
-            break;
-        }
+        });
       });
 
       xml += `    <measure number="${measure.index + 1}">\n${content}    </measure>\n\n`;
