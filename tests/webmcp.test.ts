@@ -169,6 +169,25 @@ verse:Piano@|0|{
     // Convert to ChordPro (.cho)
     const choRes = await convertTool!.handler({ text: sampleTmd, format: 'chordpro' });
     expect(choRes.content[0].text).toContain('{title: MCP Test}');
+
+    // Convert to Braille (.brl unicode and .brf ascii) and VOCALOID (.vsq / .vsqx) (#45)
+    expect(convertTool!.inputSchema.properties.format.enum).toContain('braille');
+    expect(convertTool!.inputSchema.properties.format.enum).toContain('vsq');
+    expect(convertTool!.inputSchema.properties.format.enum).toContain('vsqx');
+    expect(convertTool!.inputSchema.properties.section).toBeDefined();
+    expect(convertTool!.inputSchema.properties.instrument).toBeDefined();
+
+    const brlRes = await convertTool!.handler({ text: sampleTmd, format: 'braille' });
+    expect(brlRes.content[0].text.length).toBeGreaterThan(0);
+
+    const brfRes = await convertTool!.handler({ text: sampleTmd, format: 'brf' });
+    expect(brfRes.content[0].text.length).toBeGreaterThan(0);
+
+    const vsqRes = await convertTool!.handler({ text: sampleTmd, format: 'vsq' });
+    expect(vsqRes.content[0].text.length).toBeGreaterThan(0);
+
+    const vsqxRes = await convertTool!.handler({ text: sampleTmd, format: 'vsqx' });
+    expect(vsqxRes.content[0].text).toContain('<?xml');
   });
 
   it('loadScoreToEditor pushes score to editor and can trigger playback', async () => {
@@ -298,6 +317,25 @@ verse:Piano@|0|{
     expect(parsed.syntaxValid).toBe(false);
     expect(parsed.syntaxError).toBeDefined();
     expect(parsed.syntaxError.line).toBeGreaterThanOrEqual(1);
+
+    // Semantic error ([1 3 5]) with valid syntax and measure beats
+    const semanticBad = `::SCORE::
+** Semantic Bad **
+!= 120
+?= C
+<4/4>
+verse:Piano@|0|{
+  <4*>
+  | [1 3 5] - - - |
+}
+-> verse ->#
+`;
+    const semRes = await checkTool.handler({ text: semanticBad });
+    const semParsed = JSON.parse(semRes.content[0].text);
+    expect(semParsed.valid).toBe(false);
+    expect(semParsed.syntaxValid).toBe(true);
+    expect(semParsed.errorCount).toBe(1);
+    expect(semParsed.diagnostics.some((d: any) => d.rule === 'E-CHORD-MULTINOTE')).toBe(true);
   });
 
   it('parseTmd includes structured line, column, snippet, and expectedTokens on syntax error', async () => {

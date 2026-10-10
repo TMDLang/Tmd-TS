@@ -1,15 +1,20 @@
 import {
   TmdABCGenerator,
+  TmdBrailleEncoding,
+  TmdBrailleGenerator,
   TmdChordProGenerator,
   TmdLilyPondGenerator,
   TmdMIDIGenerator,
   TmdMusicXMLGenerator,
   TmdReaperGenerator,
+  TmdVSQGenerator,
+  TmdVSQXGenerator,
 } from "../../../src/exporters/index.js";
 import { TmdSkill } from "../../../src/skill.js";
 import { TmdParser } from "../../../src/syntax/parser.js";
 import { accidentalToSemitone, scaleDegreeLetter } from "../../../src/syntax/types.js";
 import { TmdMeasureChecker } from "../../../src/validation/measure_check.js";
+import { TmdScoreValidator } from "../../../src/validation/score_validator.js";
 import { validateTmdCode } from "../ai/validator.js";
 
 export interface TmdWebMcpContext {
@@ -197,6 +202,9 @@ export const buildTmdWebMcpTools = (
         try {
           const syntaxResult = validateTmdCode(text);
           const issues = TmdMeasureChecker.check(text);
+          const diagnostics = TmdScoreValidator.validate(text);
+          const errorCount = diagnostics.filter((d) => d.severity === "error").length;
+          const warningCount = diagnostics.filter((d) => d.severity === "warning").length;
           const syntaxError = !syntaxResult.valid
             ? {
                 message: syntaxResult.message,
@@ -210,10 +218,12 @@ export const buildTmdWebMcpTools = (
           return textContent(
             JSON.stringify(
               {
-                valid: syntaxResult.valid && issues.length === 0,
+                valid: syntaxResult.valid && errorCount === 0 && issues.length === 0,
                 syntaxValid: syntaxResult.valid,
                 ...(syntaxError ? { syntaxError } : {}),
                 issueCount: issues.length,
+                errorCount,
+                warningCount,
                 issues: issues.map((i) => ({
                   paragraph: i.paragraphName,
                   instrument: i.instrument,
@@ -225,6 +235,7 @@ export const buildTmdWebMcpTools = (
                   snippet: i.snippet,
                   description: i.description,
                 })),
+                diagnostics,
               },
               null,
               2
@@ -245,7 +256,7 @@ export const buildTmdWebMcpTools = (
     },
     {
       name: "convertTmd",
-      description: `Convert TMD score text to target music formats: midi (base64 encoded), reaper (.rpp), musicxml, lilypond, abc, or chordpro (.cho). ${TMD_PREREQUISITE_NOTE}`,
+      description: `Convert TMD score text to target music formats: midi (base64 encoded), reaper (.rpp), musicxml, lilypond, abc, chordpro (.cho), braille (.brl/.brf), vsq (base64), or vsqx. ${TMD_PREREQUISITE_NOTE}`,
       inputSchema: {
         type: "object",
         properties: {
@@ -255,34 +266,65 @@ export const buildTmdWebMcpTools = (
           },
           format: {
             type: "string",
-            enum: ["midi", "musicxml", "lilypond", "abc", "reaper", "rpp", "chordpro", "cho"],
+            enum: [
+              "midi",
+              "musicxml",
+              "lilypond",
+              "abc",
+              "reaper",
+              "rpp",
+              "chordpro",
+              "cho",
+              "braille",
+              "brl",
+              "brf",
+              "vsq",
+              "vsqx",
+            ],
             description:
-              "Target export format: midi (base64), reaper (rpp), musicxml, lilypond, abc, chordpro (cho)",
+              "Target export format: midi (base64), reaper (rpp), musicxml, lilypond, abc, chordpro (cho), braille (brl/brf), vsq (base64), vsqx",
+          },
+          section: {
+            type: "string",
+            description: "Optional section/paragraph name filter",
+          },
+          instrument: {
+            type: "string",
+            description: "Optional instrument track filter",
           },
         },
         required: ["text", "format"],
       },
-      handler: async ({ text, format }) => {
+      handler: async ({ text, format, section, instrument }) => {
         const extraBlocks = consumeAutoSkillBlocks();
         const sheet = TmdParser.parse(text);
         if (!sheet) {
           throw new Error("Invalid TMD score text");
         }
 
+        const uint8ToBase64 = (uint8: Uint8Array): string => {
+          let binary = "";
+          const len = uint8.byteLength;
+          for (let i = 0; i < len; i++) {
+            binary += String.fromCharCode(uint8[i]);
+          }
+          return typeof btoa !== "undefined"
+            ? btoa(binary)
+            : Buffer.from(uint8).toString("base64");
+        };
+
         const fmt = (format || "musicxml").toLowerCase();
         switch (fmt) {
           case "midi": {
-            const uint8 = TmdMIDIGenerator.generateMIDI(sheet);
-            let binary = "";
-            const len = uint8.byteLength;
-            for (let i = 0; i < len; i++) {
-              binary += String.fromCharCode(uint8[i]);
-            }
-            const base64 =
-              typeof btoa !== "undefined"
-                ? btoa(binary)
-                : Buffer.from(uint8).toString("base64");
-            return textContent(base64, extraBlocks);
+            const uint8 = TmdMIDIGenerator.generateMIDI(
+              sheet,
+              TmdMIDIGenerator.defaultTicksPerQuarterNote,
+              {
+                targetParagraph: section,
+                targetInstrument: instrument,
+              }
+            );
+            return textContent(uint8ToBase64(uint8), extraBlocks);
           }
           case "reaper":
           case "rpp": {
@@ -300,6 +342,26 @@ export const buildTmdWebMcpTools = (
           case "chordpro":
           case "cho": {
             return textContent(TmdChordProGenerator.generateChordPro(sheet), extraBlocks);
+          }
+          case "braille":
+          case "brl":
+          case "brf": {
+            const encoding: TmdBrailleEncoding = fmt === "brf" ? "ascii" : "unicode";
+            return textContent(
+              TmdBrailleGenerator.generateBraille(sheet, {
+                encoding,
+                targetSection: section,
+                targetInstrument: instrument,
+              }),
+              extraBlocks
+            );
+          }
+          case "vsq": {
+            const uint8 = TmdVSQGenerator.generateVSQ(sheet);
+            return textContent(uint8ToBase64(uint8), extraBlocks);
+          }
+          case "vsqx": {
+            return textContent(TmdVSQXGenerator.generateVSQX(sheet), extraBlocks);
           }
           default:
             throw new Error(`Unsupported format: ${format}`);

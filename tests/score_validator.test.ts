@@ -349,4 +349,37 @@ A:Piano@|0|{
       fs.rmSync(tmpDir, { recursive: true, force: true });
     }
   });
+
+  it("shares canonical SSOT for chord qualities (ChordSymbol) and instruments (MIDIInstrument) (#43)", async () => {
+    const {
+      ChordSymbol,
+      STANDARD_CHORD_QUALITIES,
+      EXTENDED_CHORD_QUALITIES,
+    } = await import("../src/syntax/index.js");
+    const { MIDIInstrument } = await import("../src/exporters/midi_instrument.js");
+
+    expect(STANDARD_CHORD_QUALITIES.has("major7")).toBe(true);
+    expect(EXTENDED_CHORD_QUALITIES.has("add9")).toBe(true);
+    expect(ChordSymbol.isStandardQuality("halfDiminished")).toBe(true);
+    expect(ChordSymbol.isStandardQuality("add9")).toBe(false);
+    expect(ChordSymbol.isRecognizedExtendedQuality("add9")).toBe(true);
+    expect(ChordSymbol.isRecognizedExtendedQuality("weirdquality")).toBe(false);
+
+    expect(MIDIInstrument.isRecognized("Piano")).toBe(true);
+    expect(MIDIInstrument.isRecognized("prog:40")).toBe(true);
+    expect(MIDIInstrument.isRecognized("Perc")).toBe(true);
+    expect(MIDIInstrument.isRecognized("Gtr")).toBe(true);
+    expect(MIDIInstrument.isRecognized("Uke")).toBe(true);
+    expect(MIDIInstrument.isRecognized("Vox")).toBe(true);
+    expect(MIDIInstrument.isRecognized("Unknown")).toBe(false);
+    expect(MIDIInstrument.isRecognized("UnknownMartianZorg")).toBe(false);
+
+    const validatorSrc = fs.readFileSync(
+      path.resolve(process.cwd(), "src/validation/score_validator.ts"),
+      "utf8"
+    );
+    expect(validatorSrc).not.toContain("const KNOWN_INSTRUMENT_KEYWORDS");
+    expect(validatorSrc).not.toContain("const STANDARD_CHORD_QUALITIES");
+    expect(validatorSrc).not.toContain("const EXTENDED_CHORD_QUALITIES");
+  });
 });
