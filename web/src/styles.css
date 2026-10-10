@@ -2,7 +2,10 @@
   --bg-primary: #0d1117;
   --bg-secondary: #161b22;
   --bg-tertiary: #21262d;
+  --bg-hover: #30363d;
+  --bg-subtle-hover: rgba(255, 255, 255, 0.06);
   --border-color: #30363d;
+  --border-hover: #8b949e;
   --border-subtle: rgba(240, 246, 252, 0.1);
   --text-primary: #c9d1d9;
   --text-secondary: #8b949e;
@@ -21,7 +24,10 @@
   --bg-primary: #ffffff;
   --bg-secondary: #f6f8fa;
   --bg-tertiary: #eaeef2;
+  --bg-hover: #dce3ec;
+  --bg-subtle-hover: rgba(9, 105, 218, 0.08);
   --border-color: #d0d7de;
+  --border-hover: #8c959f;
   --border-subtle: rgba(31, 35, 40, 0.1);
   --text-primary: #1f2328;
   --text-secondary: #656d76;
@@ -87,9 +93,73 @@
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
 }
 
+[data-theme="light"] .dropdown-menu {
+  background-color: #ffffff;
+  box-shadow: 0 8px 24px rgba(31, 35, 40, 0.15);
+}
+
+[data-theme="light"] .tmd-player-bar {
+  background: rgba(255, 255, 255, 0.92);
+  color: #1f2328;
+  border-color: rgba(9, 105, 218, 0.35);
+  box-shadow: 0 8px 24px rgba(31, 35, 40, 0.16);
+}
+
+[data-theme="light"] .tmd-player-bar .player-title {
+  color: var(--accent-blue);
+}
+
+[data-theme="light"] .tmd-player-bar .player-time {
+  color: var(--text-secondary);
+}
+
+[data-theme="light"] .player-slider {
+  background: rgba(31, 35, 40, 0.15);
+}
+
+[data-theme="light"] .player-slider:hover {
+  background: rgba(31, 35, 40, 0.28);
+}
+
+[data-theme="light"] .player-synth-select {
+  background: #f6f8fa;
+  color: #1f2328;
+  border-color: #d0d7de;
+}
+
+[data-theme="light"] .player-synth-select:hover,
+[data-theme="light"] .player-synth-select:focus {
+  border-color: var(--accent-blue);
+  color: var(--accent-blue);
+}
+
 [data-theme="light"] .player-synth-select option {
   background: #ffffff;
   color: #1f2328;
+}
+
+[data-theme="light"] .player-ctrl-btn {
+  background: #f6f8fa;
+  border-color: #d0d7de;
+  color: #1f2328;
+}
+
+[data-theme="light"] .player-ctrl-btn:hover:not(:disabled) {
+  background: var(--bg-hover);
+  color: var(--accent-blue);
+  border-color: var(--accent-blue);
+}
+
+[data-theme="light"] .ai-code-preview {
+  color: var(--accent-green);
+}
+
+[data-theme="light"] dialog.modal {
+  box-shadow: 0 16px 36px rgba(31, 35, 40, 0.22);
+}
+
+[data-theme="light"] dialog.modal::backdrop {
+  background: rgba(31, 35, 40, 0.4);
 }
 
 [data-theme="light"] .piano-key.white-key:hover {
@@ -207,9 +277,9 @@ html, body {
 }
 
 .btn:hover {
-  background-color: #30363d;
+  background-color: var(--bg-hover);
   color: var(--text-bright);
-  border-color: #8b949e;
+  border-color: var(--border-hover);
 }
 
 .btn-primary {
@@ -222,6 +292,7 @@ html, body {
 .btn-primary:hover {
   background-color: var(--accent-green-hover);
   border-color: rgba(240, 246, 252, 0.2);
+  color: #ffffff;
 }
 
 .btn-icon-only {
@@ -477,7 +548,13 @@ html, body {
   color: var(--text-secondary);
 }
 
-.keyboard-mode-toggle .btn.active {
+.keyboard-mode-toggle .btn:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.keyboard-mode-toggle .btn.active,
+.keyboard-mode-toggle .btn.active:hover {
   background: var(--accent-blue);
   color: #ffffff;
   font-weight: 600;
@@ -711,7 +788,7 @@ html, body {
 }
 
 .problem-item:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--bg-subtle-hover);
   border-left-color: var(--accent-blue);
 }
 
@@ -1194,7 +1271,7 @@ html, body {
 
 .library-action-btn:hover {
   color: var(--text-bright);
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--bg-hover);
 }
 
 .library-action-btn.delete:hover {
@@ -1237,7 +1314,7 @@ html, body {
   font-size: 12px;
   font-weight: 600;
   border-radius: 6px;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--bg-tertiary);
   border: 1px solid var(--border-color);
   color: var(--text-primary);
   transition: all 0.15s ease;
@@ -1317,7 +1394,7 @@ html, body {
 .ai-quick-actions .btn {
   font-size: 11px;
   padding: 4px 8px;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--bg-tertiary);
 }
 
 .ai-quick-actions .btn:hover {
@@ -1629,9 +1706,9 @@ html, body {
 }
 
 .outline-section-node {
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-subtle);
   border-radius: 6px;
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--bg-secondary);
   overflow: hidden;
 }
 
@@ -1643,7 +1720,7 @@ html, body {
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--bg-tertiary);
   user-select: none;
   list-style: none;
 }
