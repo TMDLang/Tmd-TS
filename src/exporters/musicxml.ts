@@ -53,12 +53,35 @@ export class TmdMusicXMLGenerator {
     const measures = TmdMeasureRenderer.renderMeasures(sheet, instrument);
     let xml = "";
 
+    const initialKey =
+      sheet.declaredKey ||
+      PitchMapping.tonicScaleInfo(sheet.keySignature.semitoneOffset).name;
+    let defaultKeyStepAlters = PitchMapping.keySignatureStepAlters(initialKey);
+
     for (const measure of measures) {
       let content = "";
+      const measureStepAlters = new Map<number, number[]>();
       if (measure.index === 0) {
         content += TmdMusicXMLGenerator.generateAttributesXML(sheet, instrument, divisions);
       }
       for (const directive of measure.directives) {
+        switch (directive.kind.type) {
+          case "explicitKey":
+            defaultKeyStepAlters = PitchMapping.keySignatureStepAlters(directive.kind.key);
+            measureStepAlters.clear();
+            break;
+          case "absoluteKey":
+          case "relativeKey": {
+            const newKey = PitchMapping.tonicScaleInfo(directive.state.keyOffset).name;
+            defaultKeyStepAlters = PitchMapping.keySignatureStepAlters(newKey);
+            measureStepAlters.clear();
+            break;
+          }
+          case "fixedPitch":
+            defaultKeyStepAlters = PitchMapping.keySignatureStepAlters("C");
+            measureStepAlters.clear();
+            break;
+        }
         content += TmdMusicXMLGenerator.generatePlaybackDirectiveXML(directive);
       }
 
@@ -77,7 +100,18 @@ export class TmdMusicXMLGenerator {
         const duration = durations[idx];
         const isChord = idx > 0 && Math.abs(event.startOffset - measure.events[idx - 1].startOffset) < 1e-4;
         switch (event.content.type) {
-          case "note":
+          case "note": {
+            const spelled = PitchMapping.spellNote(event.content.note, event.state.keyOffset);
+            const octaveAlters = measureStepAlters.get(spelled.octave)
+              ? [...measureStepAlters.get(spelled.octave)!]
+              : [...defaultKeyStepAlters];
+            const expectedAlter = octaveAlters[spelled.stepIndex];
+            let accidentalText: string | undefined;
+            if (spelled.alter !== expectedAlter && !event.tieStop) {
+              octaveAlters[spelled.stepIndex] = spelled.alter;
+              measureStepAlters.set(spelled.octave, octaveAlters);
+              accidentalText = TmdMusicXMLGenerator.musicXMLAccidentalName(spelled.alter);
+            }
             content += TmdMusicXMLGenerator.generateNoteXML(
               event.content.note,
               duration,
@@ -85,9 +119,11 @@ export class TmdMusicXMLGenerator {
               event.state.keyOffset,
               event.tieStart,
               event.tieStop,
-              isChord
+              isChord,
+              accidentalText
             );
             break;
+          }
           case "chord":
             content += TmdMusicXMLGenerator.generateChordXML(event.content.chord, duration, divisions, event.state.keyOffset);
             break;
@@ -133,12 +169,28 @@ export class TmdMusicXMLGenerator {
     return null;
   }
 
-  private static generateDurationElementsXML(duration: number, divisions: number): string {
+  private static musicXMLAccidentalName(alter: number): string | undefined {
+    switch (alter) {
+      case 0: return "natural";
+      case 1: return "sharp";
+      case -1: return "flat";
+      case 2: return "double-sharp";
+      case -2: return "flat-flat";
+      default: return alter > 2 ? "double-sharp" : (alter < -2 ? "flat-flat" : undefined);
+    }
+  }
+
+  private static generateDurationElementsXML(duration: number, divisions: number, accidentalText?: string): string {
     const info = TmdMusicXMLGenerator.durationInfo(duration, divisions);
-    if (!info) return "";
+    if (!info) {
+      return accidentalText ? `        <accidental>${accidentalText}</accidental>\n` : "";
+    }
     let xml = `        <type>${info.type}</type>\n`;
     for (let i = 0; i < info.dots; i++) {
       xml += `        <dot/>\n`;
+    }
+    if (accidentalText) {
+      xml += `        <accidental>${accidentalText}</accidental>\n`;
     }
     if (info.timeModification) {
       xml += `        <time-modification>\n          <actual-notes>${info.timeModification.actualNotes}</actual-notes>\n          <normal-notes>${info.timeModification.normalNotes}</normal-notes>\n        </time-modification>\n`;
@@ -297,7 +349,8 @@ export class TmdMusicXMLGenerator {
     keyOffset: number,
     tieStart = false,
     tieStop = false,
-    isChord = false
+    isChord = false,
+    accidentalText?: string
   ): string {
     const { step, alter, octave } = TmdMusicXMLGenerator.pitchToStepAlterOctave(note, keyOffset);
     let xml = `      <note>\n`;
@@ -315,7 +368,7 @@ export class TmdMusicXMLGenerator {
     if (tieStart) {
       xml += `        <tie type="start"/>\n`;
     }
-    xml += TmdMusicXMLGenerator.generateDurationElementsXML(duration, divisions);
+    xml += TmdMusicXMLGenerator.generateDurationElementsXML(duration, divisions, accidentalText);
     if (tieStart || tieStop) {
       xml += `        <notations>\n`;
       if (tieStop) {

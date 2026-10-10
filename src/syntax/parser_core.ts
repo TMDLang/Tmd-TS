@@ -166,8 +166,15 @@ export class TmdParserCore {
           this.advance();
           let key = "";
           const currType = this.currentToken().type as string;
-          if (currType === "identifier") key = this.advance().value;
-          else if (currType === "note") key = String(this.advance().value.degree);
+          if (currType === "identifier") {
+            key = this.advance().value;
+            if ((this.currentToken().type as string) === "identifier" && String(this.currentToken().value).startsWith(",")) {
+              key += String(this.advance().value);
+              if ((this.currentToken().type as string) === "identifier" && String(this.currentToken().value) === "m") {
+                key += String(this.advance().value);
+              }
+            }
+          } else if (currType === "note") key = String(this.advance().value.degree);
           keySignature = KeySignature.parse(key);
           break;
         }
@@ -175,8 +182,15 @@ export class TmdParserCore {
         case "explicitKeyPrefix": {
           this.advance();
           let key = "";
-          if (this.current.type === "identifier") key = String(this.advance().value);
-          else if (this.current.type === "note") key = String((this.advance().value as Note).degree);
+          if (this.current.type === "identifier") {
+            key = String(this.advance().value);
+            if (this.current.type === "identifier" && String(this.current.value).startsWith(",")) {
+              key += String(this.advance().value);
+              if (this.current.type === "identifier" && String(this.current.value) === "m") {
+                key += String(this.advance().value);
+              }
+            }
+          } else if (this.current.type === "note") key = String((this.advance().value as Note).degree);
           if (key) declaredKey = key;
           break;
         }
@@ -672,8 +686,12 @@ export class TmdParserCore {
     } else if (type === "explicitKeyPrefix") {
       this.advance();
       let key = "";
-      if (this.current.type === "identifier") key = String(this.advance().value);
-      else if (this.current.type === "note") key = String((this.advance().value as Note).degree);
+      while (this.current.type !== "closeBrace" && this.current.type !== "eof") {
+        const t = this.advance();
+        if (t.type === "note") key += String((t.value as Note).degree);
+        else if (typeof t.value === "string" || typeof t.value === "number") key += String(t.value);
+        else key += t.text;
+      }
       if (key) result = { position, kind: { type: "explicitKey", key } };
     } else if (type === "identifier") {
       const mark = String(this.current.value).toLowerCase();

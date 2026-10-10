@@ -1,6 +1,6 @@
 import { SheetInstrumentHelper } from "../domain/index.js";
 import { TmdMacroEvaluator, TmdMeasureRenderer } from "../playback/index.js";
-import { ChordSymbol, KeySignature, Playback, Sheet } from "../syntax/index.js";
+import { ChordSymbol, KeySignature, PitchMapping, Playback, Sheet, SpelledPitch } from "../syntax/index.js";
 
 export interface ChordProOptions {
   measuresPerLine?: number;
@@ -36,7 +36,10 @@ export class TmdChordProGenerator {
     }
 
     if (sheet.keySignature) {
-      lines.push(`{key: ${sheet.keySignature.toString()}}`);
+      const initialKeyName =
+        sheet.declaredKey ||
+        PitchMapping.tonicScaleInfo(sheet.keySignature.semitoneOffset).name;
+      lines.push(`{key: ${initialKeyName}}`);
     }
     if (sheet.beat && sheet.beat.count > 0 && sheet.beat.noteValue > 0) {
       lines.push(`{time: ${sheet.beat.count}/${sheet.beat.noteValue}}`);
@@ -95,7 +98,7 @@ export class TmdChordProGenerator {
 
         lines.push('');
         if (currentKeyOffset !== emittedKeyOffset) {
-          lines.push(`{key: ${keySignatureForOffset(currentKeyOffset).toString()}}`);
+          lines.push(`{key: ${PitchMapping.tonicScaleInfo(currentKeyOffset).name}}`);
           emittedKeyOffset = currentKeyOffset;
         }
         lines.push(`{comment: ${pName}}`);
@@ -120,8 +123,6 @@ export class TmdChordProGenerator {
         // Format into lines of measuresPerLine: | [C] | [F] |
         for (let i = 0; i < measureStrings.length; i += measuresPerLine) {
           const chunk = measureStrings.slice(i, i + measuresPerLine);
-          const chunkFormatted = chunk.map((c) => (c ? ` [${c.slice(1, -1)}] ` : ' ')).join('|');
-          // More cleanly: chunk.map(c => c ? ` ${c} ` : ' ').join('|')
           const body = chunk.map((c) => (c ? ` ${c} ` : ' ')).join('|');
           lines.push(`|${body}|`);
         }
@@ -132,22 +133,25 @@ export class TmdChordProGenerator {
   }
 }
 
-const chromaticNames = ['C', "C'", 'D', "D'", 'E', 'F', "F'", 'G', "G'", 'A', "A'", 'B'];
-
 function keySignatureForOffset(offset: number): KeySignature {
-  const normalized = ((offset % 12) + 12) % 12;
-  return KeySignature.parse(chromaticNames[normalized]);
+  return KeySignature.parse(PitchMapping.tonicScaleInfo(offset).name);
+}
+
+function formatSpelledRoot(spelled: SpelledPitch): string {
+  let acc = '';
+  if (spelled.alter === 1) acc = '#';
+  else if (spelled.alter === -1) acc = 'b';
+  else if (spelled.alter === 2) acc = '##';
+  else if (spelled.alter === -2) acc = 'bb';
+  return `${spelled.step}${acc}`;
 }
 
 function chordText(chord: ChordSymbol, keyOffset: number): string {
-  const root = chord.root.isScaleDegree
-    ? chromaticNames[((keyOffset + chord.root.semitoneOffset) % 12 + 12) % 12]
-    : chord.root.toString();
+  const root = formatSpelledRoot(PitchMapping.spellChordRoot(chord.root, keyOffset));
   const suffix = chord.toString().slice(chord.root.toString().length);
   if (!chord.bass) return root + suffix;
   const qualitySuffix = suffix.split('/', 1)[0];
-  const bass = chord.bass.isScaleDegree
-    ? chromaticNames[((keyOffset + chord.bass.semitoneOffset) % 12 + 12) % 12]
-    : chord.bass.toString();
+  const bass = formatSpelledRoot(PitchMapping.spellChordRoot(chord.bass, keyOffset));
   return `${root}${qualitySuffix}/${bass}`;
 }
+

@@ -167,4 +167,42 @@ Verse:Guitar@|0|{
       fs.rmSync(tmpDir, { recursive: true, force: true });
     }
   });
+
+  it('spells scale-degree and explicit chord roots and bass notes diatonically in flat and sharp keys', () => {
+    const tmdF = `
+::SCORE::
+** Flat Key ChordPro **
+!= 120
+?= F
+<4/4>
+
+Verse:Guitar@|0|{
+    <4*>
+    | [1] - [4] - |
+    | [1/3] - [Bb/D] - |
+}
+-> Verse ->#
+`;
+    const choF = TmdChordProGenerator.generateChordPro(TmdParser.parse(tmdF)!);
+    expect(choF).toContain('| [F] [Bb] | [F/A] [Bb/D] |');
+    expect(choF).not.toContain("[A']");
+    expect(choF).not.toContain('[A#]');
+
+    const tmdDbB = `
+::SCORE::
+** Db and B Major ChordPro **
+!= 120
+?= Db
+<4/4>
+
+Verse:Guitar@|0|{
+    <4*>
+    | [1] - [4] - |
+    | {?= B} [1] - [3m] - |
+}
+-> Verse ->#
+`;
+    const choDbB = TmdChordProGenerator.generateChordPro(TmdParser.parse(tmdDbB)!);
+    expect(choDbB).toContain('| [Db] [Gb] | [B] [D#m] |');
+  });
 });

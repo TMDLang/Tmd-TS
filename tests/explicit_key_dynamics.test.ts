@@ -184,5 +184,59 @@ A:Piano@|0|{
     const abcC = TmdABCGenerator.generateABC(TmdParser.parse(scoreC));
     expect(abcC).toContain("^c4 =c4 _c4 ^b4");
   });
+
+  it("emits MusicXML <accidental> tags using intra-measure accidental state machine", () => {
+    const scoreC = `
+::SCORE::
+** MusicXML Accidental State Machine **
+!= 120
+?= C
+<4/4>
+
+A:Piano@|0|{
+  <4*>
+  | 1' 1 1, 7' |
+}
+-> A ->#
+`;
+    const xmlC = TmdMusicXMLGenerator.generateMusicXML(TmdParser.parse(scoreC));
+    expect(xmlC).toContain("<accidental>sharp</accidental>");
+    expect(xmlC).toContain("<accidental>natural</accidental>");
+    expect(xmlC).toContain("<accidental>flat</accidental>");
+
+    const scoreD = `
+::SCORE::
+** MusicXML Key Cancellation and Re-sharp **
+!= 120
+?= D
+key= D
+<4/4>
+
+A:Piano@|0|{
+  <4*>
+  | 7_ 7,_ 7_ 1 |
+}
+-> A ->#
+`;
+    const xmlD = TmdMusicXMLGenerator.generateMusicXML(TmdParser.parse(scoreD));
+    expect((xmlD.match(/<accidental>natural<\/accidental>/g) || []).length).toBe(1);
+    expect((xmlD.match(/<accidental>sharp<\/accidental>/g) || []).length).toBe(1);
+
+    const scoreDiverge = `
+::SCORE::
+** MusicXML Key Divergence **
+!= 120
+?= D
+<4/4>
+
+A:Piano@|0|{
+  <4*>
+  | {key= F#m} 1 2 3 4 |
+}
+-> A ->#
+`;
+    const xmlDiverge = TmdMusicXMLGenerator.generateMusicXML(TmdParser.parse(scoreDiverge));
+    expect(xmlDiverge).toContain("<accidental>natural</accidental>");
+  });
 });
 
