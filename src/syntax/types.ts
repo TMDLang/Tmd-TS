@@ -713,7 +713,40 @@ export function noteToMIDIPitch(note: Note, keyOffset: number): number {
   return 60 + keyOffset + scaleDegreeSemitoneOffset(note.degree) + accidentalToSemitone(note.accidental) + note.octave * 12;
 }
 
+export function chordToMIDIPitches(chord: string | ChordSymbol, keyOffset: number): number[] {
+  const symbol = typeof chord === "string" ? ChordSymbol.parse(chord) : chord;
+  let rootPitch: number;
+  if (symbol.root.isScaleDegree) {
+    const note: Note = {
+      accidental: symbol.root.accidental,
+      degree: symbol.root.degree,
+      octave: symbol.root.octave,
+    };
+    rootPitch = noteToMIDIPitch(note, keyOffset) - 12;
+  } else {
+    rootPitch = 48 + symbol.root.semitoneOffset;
+  }
+  const intervals = chordQualityIntervals(symbol.quality);
+  const pitches = intervals.map((i) => rootPitch + i);
+  if (symbol.bass) {
+    let bassPitch: number;
+    if (symbol.bass.isScaleDegree) {
+      const bassNote: Note = {
+        accidental: symbol.bass.accidental,
+        degree: symbol.bass.degree,
+        octave: symbol.bass.octave,
+      };
+      bassPitch = noteToMIDIPitch(bassNote, keyOffset) - 24;
+    } else {
+      bassPitch = 36 + symbol.bass.semitoneOffset;
+    }
+    if (!pitches.includes(bassPitch)) {
+      pitches.unshift(bassPitch);
+    }
+  }
+  return pitches;
+}
+
 export function noteToTotalSemitones(note: Note): number {
   return scaleDegreeSemitoneOffset(note.degree) + accidentalToSemitone(note.accidental) + note.octave * 12;
 }
-

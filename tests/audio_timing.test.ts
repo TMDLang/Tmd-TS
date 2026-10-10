@@ -53,4 +53,43 @@ X S B C
     const wav = TmdWAVRenderer.renderWAV(sheet, 8000);
     expect(wavEnergy(wav)).toBeGreaterThan(0);
   });
+
+  it("renders chord qualities and letter chord roots using canonical chordToMIDIPitches (#49)", () => {
+    const majorSheet = TmdParser.parse(`::SCORE::
+!= 120
+?= C
+<4/4>
+A:Piano@|0|{
+<4*>
+[C] - - -
+}
+`);
+    const minorSheet = TmdParser.parse(`::SCORE::
+!= 120
+?= C
+<4/4>
+A:Piano@|0|{
+<4*>
+[Cm] - - -
+}
+`);
+    const letterInGKeySheet = TmdParser.parse(`::SCORE::
+!= 120
+?= G
+<4/4>
+A:Piano@|0|{
+<4*>
+[C] - - -
+}
+`);
+
+    const majorWav = TmdWAVRenderer.renderWAV(majorSheet, 8000);
+    const minorWav = TmdWAVRenderer.renderWAV(minorSheet, 8000);
+    const letterInGKeyWav = TmdWAVRenderer.renderWAV(letterInGKeySheet, 8000);
+
+    // [Cm] must produce a different waveform from [C]
+    expect(Buffer.from(minorWav).equals(Buffer.from(majorWav))).toBe(false);
+    // Explicit letter chord [C] in ?= G must produce the exact same pitches as [C] in ?= C
+    expect(Buffer.from(letterInGKeyWav).equals(Buffer.from(majorWav))).toBe(true);
+  });
 });

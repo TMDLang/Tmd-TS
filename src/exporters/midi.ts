@@ -1,6 +1,6 @@
 import { SheetInstrumentHelper } from "../domain/index.js";
-import { PlaybackTimeline, TmdMacroEvaluator, TmdPlaybackRenderer } from "../playback/index.js";
-import { Accidental, Beat, chordQualityIntervals, ChordSymbol, DEFAULT_INSTRUMENT, Note, noteToMIDIPitch, PercussionStroke, Sheet } from "../syntax/index.js";
+import { PlaybackTimeline, TmdPlaybackRenderer } from "../playback/index.js";
+import { ChordSymbol, chordToMIDIPitches, Note, noteToMIDIPitch, PercussionStroke, Sheet } from "../syntax/index.js";
 import { type MIDIEvent, type MIDIMessage,TmdMIDIEncoder } from './midi_encoder.js';
 import type { MIDIInstrumentValue } from './midi_instrument.js';
 import { MIDIInstrument } from './midi_instrument.js';
@@ -24,25 +24,8 @@ export class TmdMIDIGenerator {
     ticksPerQuarter: number = TmdMIDIGenerator.defaultTicksPerQuarterNote,
     options?: TmdMIDIGeneratorOptions
   ): Uint8Array {
-    let effectiveSheet = TmdMacroEvaluator.expandThrowing(rawSheet);
-    if (options?.targetParagraph) {
-      const filteredParagraphs = effectiveSheet.entries.filter(p => p.name === options.targetParagraph);
-      effectiveSheet = {
-        ...effectiveSheet,
-        entries: filteredParagraphs,
-        playback: [{ type: 'name', name: options.targetParagraph }],
-      };
-    }
-
-    let distinctInstruments = SheetInstrumentHelper.distinctInstruments(effectiveSheet, false);
-
-    if (options?.targetInstrument) {
-      const target = options.targetInstrument === "" ? DEFAULT_INSTRUMENT : options.targetInstrument;
-      distinctInstruments = distinctInstruments.filter(inst => inst === target);
-      if (distinctInstruments.length === 0 && (options.targetInstrument === DEFAULT_INSTRUMENT || options.targetInstrument === "")) {
-        distinctInstruments = [DEFAULT_INSTRUMENT];
-      }
-    }
+    const { sheet: effectiveSheet, instruments: distinctInstruments } =
+      SheetInstrumentHelper.preparedForExport(rawSheet, false, options);
 
     const renderOpts = { startOrderIndex: options?.startOrderIndex };
     const timeline = TmdPlaybackRenderer.renderConductor(effectiveSheet, renderOpts);
@@ -290,38 +273,7 @@ export class TmdMIDIGenerator {
     chord: string | ChordSymbol,
     keyOffset: number
   ): number[] {
-    const symbol =
-      typeof chord === 'string' ? ChordSymbol.parse(chord) : chord;
-    let rootPitch: number;
-    if (symbol.root.isScaleDegree) {
-      const note: Note = {
-        accidental: symbol.root.accidental,
-        degree: symbol.root.degree,
-        octave: symbol.root.octave,
-      };
-      rootPitch = this.noteToMIDIPitch(note, keyOffset) - 12;
-    } else {
-      rootPitch = 48 + symbol.root.semitoneOffset;
-    }
-    const intervals = chordQualityIntervals(symbol.quality);
-    const pitches = intervals.map(i => rootPitch + i);
-    if (symbol.bass) {
-      let bassPitch: number;
-      if (symbol.bass.isScaleDegree) {
-        const bassNote: Note = {
-          accidental: symbol.bass.accidental,
-          degree: symbol.bass.degree,
-          octave: symbol.bass.octave,
-        };
-        bassPitch = this.noteToMIDIPitch(bassNote, keyOffset) - 24;
-      } else {
-        bassPitch = 36 + symbol.bass.semitoneOffset;
-      }
-      if (!pitches.includes(bassPitch)) {
-        pitches.unshift(bassPitch);
-      }
-    }
-    return pitches;
+    return chordToMIDIPitches(chord, keyOffset);
   }
 
   public static generalMidiProgram(instrument: string): number {

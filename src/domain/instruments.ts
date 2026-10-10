@@ -1,5 +1,10 @@
 import { TmdMacroEvaluator } from '../playback/macro.js';
-import { Sheet } from '../syntax/types.js';
+import { DEFAULT_INSTRUMENT, Sheet } from '../syntax/types.js';
+
+export interface SheetExportPrepOptions {
+  targetParagraph?: string;
+  targetInstrument?: string;
+}
 
 /**
  * Common helper functions for querying and resolving instruments from a TMD Sheet.
@@ -25,24 +30,45 @@ export class SheetInstrumentHelper {
       )
     ).sort();
     if (distinct.length === 0 && fallbackToDefault) {
-      return ['Piano'];
+      return [DEFAULT_INSTRUMENT];
     }
     return distinct;
   }
 
   /**
-   * Expands all S-Expression macros on `rawSheet` once and returns the expanded sheet
-   * along with its sorted distinct instruments.
+   * Expands all S-Expression macros on `rawSheet` once, optionally filters by `targetParagraph`
+   * and `targetInstrument`, and returns the prepared sheet along with its active instruments.
    */
   public static preparedForExport(
     rawSheet: Sheet,
-    fallbackToDefault = false
+    fallbackToDefault = false,
+    options?: SheetExportPrepOptions
   ): { sheet: Sheet; instruments: string[] } {
-    const sheet = TmdMacroEvaluator.expandThrowing(rawSheet);
-    return {
-      sheet,
-      instruments: this.distinctInstrumentsFromExpanded(sheet, fallbackToDefault),
-    };
+    let sheet = TmdMacroEvaluator.expandThrowing(rawSheet);
+    if (options?.targetParagraph) {
+      const filteredParagraphs = sheet.entries.filter((p) => p.name === options.targetParagraph);
+      sheet = {
+        ...sheet,
+        entries: filteredParagraphs,
+        playback: [{ type: 'name', name: options.targetParagraph }],
+      };
+    }
+
+    let instruments = this.distinctInstrumentsFromExpanded(sheet, false);
+    if (options?.targetInstrument) {
+      const target = options.targetInstrument === '' ? DEFAULT_INSTRUMENT : options.targetInstrument;
+      instruments = instruments.filter((inst) => inst === target);
+      if (
+        instruments.length === 0 &&
+        (options.targetInstrument === DEFAULT_INSTRUMENT || options.targetInstrument === '')
+      ) {
+        instruments = [DEFAULT_INSTRUMENT];
+      }
+    } else if (instruments.length === 0 && fallbackToDefault) {
+      instruments = [DEFAULT_INSTRUMENT];
+    }
+
+    return { sheet, instruments };
   }
 
   /**

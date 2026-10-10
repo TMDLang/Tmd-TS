@@ -470,4 +470,75 @@ export class TmdPlaybackRenderer {
   public static measureDuration(beat: Beat): number {
     return (Math.max(1, beat.count) * 4.0) / Math.max(1, beat.noteValue);
   }
+
+  /**
+   * Builds piece-wise constant tempo/meter segments with integrated start times in seconds.
+   */
+  public static buildTempoSegments(
+    initialTempo: number,
+    initialBeat: Beat,
+    directives: PlaybackDirectiveEvent[]
+  ): TempoSegment[] {
+    const startBpm = initialTempo > 0 ? initialTempo : DEFAULT_TEMPO_BPM;
+    const segments: TempoSegment[] = [
+      {
+        quarterStart: 0,
+        secondStart: 0,
+        bpm: startBpm,
+        timeSignature: initialBeat,
+      },
+    ];
+
+    const sortedDirectives = [...directives].sort((a, b) => a.position - b.position);
+    for (const directive of sortedDirectives) {
+      if (
+        directive.kind.type === "tempo" ||
+        directive.kind.type === "relativeTempo" ||
+        directive.kind.type === "timeSignature"
+      ) {
+        const last = segments[segments.length - 1];
+        const bpm = Math.max(1, directive.state.tempo);
+        if (directive.position > last.quarterStart) {
+          const deltaQuarters = directive.position - last.quarterStart;
+          const deltaSeconds = deltaQuarters * (60.0 / last.bpm);
+          segments.push({
+            quarterStart: directive.position,
+            secondStart: last.secondStart + deltaSeconds,
+            bpm,
+            timeSignature: directive.state.timeSignature,
+          });
+        } else if (directive.position <= last.quarterStart) {
+          last.bpm = bpm;
+          last.timeSignature = directive.state.timeSignature;
+        }
+      }
+    }
+    return segments;
+  }
+
+  /**
+   * Converts a quarter-note position into elapsed seconds using precomputed tempo segments.
+   */
+  public static quarterToSeconds(quarter: number, segments: TempoSegment[]): number {
+    const first = segments[0] ?? { quarterStart: 0, secondStart: 0, bpm: DEFAULT_TEMPO_BPM, timeSignature: { count: 4, noteValue: 4 } };
+    if (quarter <= 0) {
+      return quarter * (60.0 / first.bpm);
+    }
+    let seg = first;
+    for (let i = segments.length - 1; i >= 0; i--) {
+      if (quarter >= segments[i].quarterStart) {
+        seg = segments[i];
+        break;
+      }
+    }
+    const deltaQuarters = quarter - seg.quarterStart;
+    return seg.secondStart + deltaQuarters * (60.0 / seg.bpm);
+  }
+}
+
+export interface TempoSegment {
+  quarterStart: number;
+  secondStart: number;
+  bpm: number;
+  timeSignature: Beat;
 }
