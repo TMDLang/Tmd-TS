@@ -169,6 +169,25 @@ verse:Piano@|0|{
     // Convert to ChordPro (.cho)
     const choRes = await convertTool!.handler({ text: sampleTmd, format: 'chordpro' });
     expect(choRes.content[0].text).toContain('{title: MCP Test}');
+
+    // Convert to Braille (.brl unicode and .brf ascii) and VOCALOID (.vsq / .vsqx) (#45)
+    expect(convertTool!.inputSchema.properties.format.enum).toContain('braille');
+    expect(convertTool!.inputSchema.properties.format.enum).toContain('vsq');
+    expect(convertTool!.inputSchema.properties.format.enum).toContain('vsqx');
+    expect(convertTool!.inputSchema.properties.section).toBeDefined();
+    expect(convertTool!.inputSchema.properties.instrument).toBeDefined();
+
+    const brlRes = await convertTool!.handler({ text: sampleTmd, format: 'braille' });
+    expect(brlRes.content[0].text.length).toBeGreaterThan(0);
+
+    const brfRes = await convertTool!.handler({ text: sampleTmd, format: 'brf' });
+    expect(brfRes.content[0].text.length).toBeGreaterThan(0);
+
+    const vsqRes = await convertTool!.handler({ text: sampleTmd, format: 'vsq' });
+    expect(vsqRes.content[0].text.length).toBeGreaterThan(0);
+
+    const vsqxRes = await convertTool!.handler({ text: sampleTmd, format: 'vsqx' });
+    expect(vsqxRes.content[0].text).toContain('<?xml');
   });
 
   it('loadScoreToEditor pushes score to editor and can trigger playback', async () => {

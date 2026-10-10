@@ -51,7 +51,7 @@ export class TmdMCPServer {
         );
       }
 
-      const sheet = TmdParser.parse(content);
+      const sheet = TmdParser.parseThrowing(content);
       if (!sheet) {
         return textContent(
           JSON.stringify({
@@ -69,7 +69,7 @@ export class TmdMCPServer {
         tonic = `${letter}${acc}`;
       }
 
-      const paragraphs = sheet.entries.map((p) => ({
+      const entries = sheet.entries.map((p) => ({
         name: p.name,
         assignment: p.assignment,
         start: p.start || 0,
@@ -83,23 +83,41 @@ export class TmdMCPServer {
             name: sheet.name || "Untitled",
             speed: sheet.speed || 120,
             tonic,
+            declaredKey: sheet.declaredKey ?? null,
             timeSignature: sheet.beat
               ? `${sheet.beat.count}/${sheet.beat.noteValue}`
               : "4/4",
             playback: sheet.playback,
             entryCount: sheet.entries.length,
-            paragraphs,
+            entries,
+            paragraphs: entries,
           },
           null,
           2
         )
       );
     } catch (err: any) {
+      const rawContent = text || (filePath && fs.existsSync(filePath) ? fs.readFileSync(filePath, "utf-8") : "");
+      const lines = rawContent ? rawContent.split("\n") : [];
+      const line = err?.range?.start?.line ?? 1;
+      const column = err?.range?.start?.column ?? 1;
+      const expectedTokens = err?.expectedTokens ?? [];
+      const lineIdx = Math.max(0, line - 1);
+      const snippet = lines[lineIdx] !== undefined ? lines[lineIdx].trim() : "";
+
       return textContent(
-        JSON.stringify({
-          valid: false,
-          error: err.message || String(err),
-        })
+        JSON.stringify(
+          {
+            valid: false,
+            error: err.message || String(err),
+            line,
+            column,
+            snippet,
+            expectedTokens,
+          },
+          null,
+          2
+        )
       );
     }
   }

@@ -35,14 +35,41 @@ intro:Piano@|0|{
     expect(server).toBeDefined();
   });
 
-  it("TmdMCPServer tool handlers parse TMD correctly", async () => {
-    const result = await TmdMCPServer.handleParseTmd({ text: sampleTmd });
+  it("TmdMCPServer tool handlers parse TMD correctly including declaredKey, entries, and structured syntax errors (#45)", async () => {
+    const scoreWithKey = `::SCORE::
+** MCP Test Song **
+!= 120
+?= A
+key= Am
+<4/4>
+
+intro:Piano@|0|{
+    <4*>
+    1 2 3 4
+}
+-> intro ->#
+`;
+    const result = await TmdMCPServer.handleParseTmd({ text: scoreWithKey });
     expect(result.content[0].type).toBe("text");
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed.valid).toBe(true);
     expect(parsed.name).toBe("MCP Test Song");
     expect(parsed.speed).toBe(120);
-    expect(parsed.tonic).toBe("C");
+    expect(parsed.tonic).toBe("A");
+    expect(parsed.declaredKey).toBe("Am");
+    expect(Array.isArray(parsed.entries)).toBe(true);
+    expect(parsed.entries.length).toBe(1);
+    expect(parsed.paragraphs.length).toBe(1);
+
+    const brokenResult = await TmdMCPServer.handleParseTmd({
+      text: "::SCORE::\n!= 120\n?= C\n<4/4>\nintro:Piano@|0|{\n<4*>\n| 1 2 ??? 4 |\n}\n-> intro ->#",
+    });
+    const brokenParsed = JSON.parse(brokenResult.content[0].text);
+    expect(brokenParsed.valid).toBe(false);
+    expect(brokenParsed.line).toBe(7);
+    expect(brokenParsed.column).toBeGreaterThanOrEqual(1);
+    expect(brokenParsed.snippet).toContain("???");
+    expect(Array.isArray(brokenParsed.expectedTokens)).toBe(true);
   });
 
   it("TmdMCPServer tool handlers check TMD for measure and rhythm issues", async () => {
