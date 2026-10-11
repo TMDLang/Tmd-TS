@@ -1,19 +1,12 @@
 import { SheetInstrumentHelper } from "../domain/index.js";
 import { PlaybackTimeline, TmdMacroEvaluator, TmdPlaybackRenderer } from "../playback/index.js";
-import { Beat, Playback, Sheet } from "../syntax/index.js";
+import { Playback, Sheet } from "../syntax/index.js";
 import {
   MIDIEvent,
   MIDIInstrument,
   MIDIInstrumentValue,
   TmdMIDIGenerator,
 } from './midi.js';
-
-interface TempoSegment {
-  quarterStart: number;
-  secondStart: number;
-  bpm: number;
-  timeSignature: Beat;
-}
 
 export class TmdReaperGenerator {
   public static readonly defaultPPQ = 960;
@@ -27,64 +20,19 @@ export class TmdReaperGenerator {
 
     const conductorTimeline = TmdPlaybackRenderer.renderConductor(sheet);
 
-    // Build timeline tempo segments
-    const initialBpm = sheet.speed > 0 ? sheet.speed : 120;
-    const initialTimeSig = sheet.beat;
-
-    const segments: TempoSegment[] = [
-      {
-        quarterStart: 0,
-        secondStart: 0,
-        bpm: initialBpm,
-        timeSignature: initialTimeSig,
-      },
-    ];
-
     const sortedDirectives = [...conductorTimeline.directives].sort(
       (a, b) => a.position - b.position
     );
-
-    for (const directive of sortedDirectives) {
-      if (
-        directive.kind.type === 'tempo' ||
-        directive.kind.type === 'relativeTempo' ||
-        directive.kind.type === 'timeSignature'
-      ) {
-        const last = segments[segments.length - 1];
-        if (directive.position > last.quarterStart) {
-          const deltaQuarters = directive.position - last.quarterStart;
-          const deltaSeconds = deltaQuarters * (60.0 / last.bpm);
-          const secondStart = last.secondStart + deltaSeconds;
-          segments.push({
-            quarterStart: directive.position,
-            secondStart,
-            bpm: directive.state.tempo,
-            timeSignature: directive.state.timeSignature,
-          });
-        } else if (directive.position === last.quarterStart) {
-          last.bpm = directive.state.tempo;
-          last.timeSignature = directive.state.timeSignature;
-        }
-      }
-    }
-
-    const quarterToSeconds = (quarter: number): number => {
-      if (quarter <= 0) return 0;
-      let seg = segments[0];
-      for (let i = segments.length - 1; i >= 0; i--) {
-        if (quarter >= segments[i].quarterStart) {
-          seg = segments[i];
-          break;
-        }
-      }
-      const deltaQuarters = quarter - seg.quarterStart;
-      return seg.secondStart + deltaQuarters * (60.0 / seg.bpm);
-    };
+    const segments = TmdPlaybackRenderer.buildTempoSegments(
+      sheet.speed > 0 ? sheet.speed : 120,
+      sheet.beat,
+      sortedDirectives
+    );
+    const quarterToSeconds = (quarter: number): number =>
+      TmdPlaybackRenderer.quarterToSeconds(quarter, segments);
 
     // Calculate section markers
-    const orders: Playback[] = sheet.playback.length > 0
-      ? sheet.playback
-      : Array.from(new Set(sheet.entries.map((p) => p.name))).map((n) => ({ type: "name" as const, name: n }));
+    const orders = SheetInstrumentHelper.effectivePlaybackOrders(sheet);
 
     let currentQuarter = 0.0;
     let markerId = 1;
@@ -123,29 +71,17 @@ export class TmdReaperGenerator {
 
     // Build Tracks
     const trackChunks: string[] = [];
-    let melodyChannel = 0;
+    const channelState = { nextMelodicChannel: 0 };
 
     for (const instrument of distinctInstruments) {
       const instTimeline = TmdPlaybackRenderer.render(sheet, instrument);
       if (!instTimeline.events.some((event) => event.content.type !== 'rest')) continue;
       const midiInst = MIDIInstrument.resolve(instrument);
-      let channel: number;
-      if (MIDIInstrument.isPercussion(midiInst)) {
-        channel = 9;
-      } else {
-        if (melodyChannel === 9) melodyChannel += 1;
-        channel = melodyChannel % 16;
-        melodyChannel += 1;
-      }
+      const channel = MIDIInstrument.allocateChannel(midiInst, channelState);
 
       // Pan
-      let pan = 0.0;
-      const lower = instrument.toLowerCase();
-      if (lower.includes('left') || lower.includes('-l')) {
-        pan = -0.8;
-      } else if (lower.includes('right') || lower.includes('-r')) {
-        pan = 0.8;
-      }
+      const panPos = MIDIInstrument.stereoPanHeuristic(instrument);
+      const pan = panPos === 'left' ? -0.8 : panPos === 'right' ? 0.8 : 0.0;
 
       // Color
       const color = this.getTrackColor(midiInst);

@@ -4,7 +4,6 @@ import { Sheet } from "../syntax/index.js";
 import {
   MIDIEvent,
   TmdMIDIEncoder,
-  TmdMIDIGenerator,
 } from './midi.js';
 import { VocaloidPhoneme } from './vocaloid_phoneme.js';
 import type { VocaloidExportOptions } from './vocaloid_types.js';
@@ -63,46 +62,12 @@ export class TmdVSQGenerator {
     defaultLyric: string
   ): Uint8Array {
     const preMeasureTicks = preMeasure * 4 * this.ticksPerQuarter;
-
-    interface NoteItem {
-      tick: number;
-      dur: number;
-      pitch: number;
-      lyric: string;
-      phoneme: string;
-    }
-
-    const noteItems: NoteItem[] = [];
-    let i = 0;
-    while (i < timeline.events.length) {
-      const event = timeline.events[i];
-      if (event.content.type !== 'note') {
-        i++;
-        continue;
-      }
-      let bestEvent = event;
-      let bestPitch = TmdMIDIGenerator.noteToMIDIPitch(event.content.note, event.state.keyOffset);
-      let j = i + 1;
-      while (j < timeline.events.length && Math.abs(timeline.events[j].position - event.position) < 1e-4) {
-        const nextEv = timeline.events[j];
-        if (nextEv.content.type === 'note') {
-          const p = TmdMIDIGenerator.noteToMIDIPitch(nextEv.content.note, nextEv.state.keyOffset);
-          if (p > bestPitch) {
-            bestPitch = p;
-            bestEvent = nextEv;
-          }
-        }
-        j++;
-      }
-      i = j;
-
-      if (bestPitch < 0 || bestPitch > 127) continue;
-      const tick = preMeasureTicks + this.midiTick(bestEvent.position);
-      const dur = Math.max(1, this.midiTick(bestEvent.duration));
-      const lyric = defaultLyric;
-      const phoneme = VocaloidPhoneme.resolvePhoneme(lyric);
-      noteItems.push({ tick, dur, pitch: bestPitch, lyric, phoneme });
-    }
+    const noteItems = VocaloidPhoneme.extractNotes(
+      timeline,
+      preMeasureTicks,
+      this.ticksPerQuarter,
+      defaultLyric
+    );
 
     // Build INI content
     let ini = '';
@@ -219,10 +184,5 @@ export class TmdVSQGenerator {
     }
 
     return TmdMIDIEncoder.encodeTrack(midiEvents);
-  }
-
-  private static midiTick(quarterNotes: number): number {
-    const ticks = Math.round(quarterNotes * this.ticksPerQuarter);
-    return Math.max(0, Number.isFinite(ticks) ? ticks : 0);
   }
 }

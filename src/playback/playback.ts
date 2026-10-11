@@ -4,9 +4,11 @@ import {
   DEFAULT_INSTRUMENT,
   DEFAULT_TEMPO_BPM,
   DynamicMark,
+  effectivePlaybackOrders,
   Entry,
   KeySignature,
   Note,
+  noteToMIDIPitch,
   Playback,
   SectionDirective,
   SectionDirectiveKind,
@@ -74,6 +76,40 @@ export interface TmdPlaybackRendererOptions {
 }
 
 export class TmdPlaybackRenderer {
+  /**
+   * Returns timeline events with simultaneous `note` events collapsed to the highest-pitched note,
+   * suitable for monophonic singing-synthesizer exporters (VSQ, VSQX, UST).
+   */
+  public static monophonicEvents(timeline: PlaybackTimeline): PlaybackEvent[] {
+    const result: PlaybackEvent[] = [];
+    let i = 0;
+    while (i < timeline.events.length) {
+      const ev = timeline.events[i];
+      if (ev.content.type === "note") {
+        let bestEvent = ev;
+        let bestPitch = noteToMIDIPitch(ev.content.note, ev.state.keyOffset);
+        let j = i + 1;
+        while (j < timeline.events.length && Math.abs(timeline.events[j].position - ev.position) < 1e-4) {
+          const nextEv = timeline.events[j];
+          if (nextEv.content.type === "note") {
+            const p = noteToMIDIPitch(nextEv.content.note, nextEv.state.keyOffset);
+            if (p > bestPitch) {
+              bestPitch = p;
+              bestEvent = nextEv;
+            }
+          }
+          j++;
+        }
+        result.push(bestEvent);
+        i = j;
+      } else {
+        result.push(ev);
+        i++;
+      }
+    }
+    return result;
+  }
+
   private static visitOrder(order: Playback, state: PlaybackState): { state: PlaybackState; name?: string } {
     if (order.type === "relative") {
       const delta = parseInt(order.value.replace("+", ""), 10);
@@ -86,9 +122,7 @@ export class TmdPlaybackRenderer {
   }
 
   private static ordersFor(sheet: Sheet): Playback[] {
-    if (sheet.playback.length > 0) return sheet.playback;
-    return Array.from(new Set(sheet.entries.map((entry) => entry.name)))
-      .map((name) => ({ type: "name" as const, name }));
+    return effectivePlaybackOrders(sheet);
   }
 
   private static initialStateFor(sheet: Sheet): PlaybackState {
@@ -470,4 +504,75 @@ export class TmdPlaybackRenderer {
   public static measureDuration(beat: Beat): number {
     return (Math.max(1, beat.count) * 4.0) / Math.max(1, beat.noteValue);
   }
+
+  /**
+   * Builds piece-wise constant tempo/meter segments with integrated start times in seconds.
+   */
+  public static buildTempoSegments(
+    initialTempo: number,
+    initialBeat: Beat,
+    directives: PlaybackDirectiveEvent[]
+  ): TempoSegment[] {
+    const startBpm = initialTempo > 0 ? initialTempo : DEFAULT_TEMPO_BPM;
+    const segments: TempoSegment[] = [
+      {
+        quarterStart: 0,
+        secondStart: 0,
+        bpm: startBpm,
+        timeSignature: initialBeat,
+      },
+    ];
+
+    const sortedDirectives = [...directives].sort((a, b) => a.position - b.position);
+    for (const directive of sortedDirectives) {
+      if (
+        directive.kind.type === "tempo" ||
+        directive.kind.type === "relativeTempo" ||
+        directive.kind.type === "timeSignature"
+      ) {
+        const last = segments[segments.length - 1];
+        const bpm = Math.max(1, directive.state.tempo);
+        if (directive.position > last.quarterStart) {
+          const deltaQuarters = directive.position - last.quarterStart;
+          const deltaSeconds = deltaQuarters * (60.0 / last.bpm);
+          segments.push({
+            quarterStart: directive.position,
+            secondStart: last.secondStart + deltaSeconds,
+            bpm,
+            timeSignature: directive.state.timeSignature,
+          });
+        } else if (directive.position <= last.quarterStart) {
+          last.bpm = bpm;
+          last.timeSignature = directive.state.timeSignature;
+        }
+      }
+    }
+    return segments;
+  }
+
+  /**
+   * Converts a quarter-note position into elapsed seconds using precomputed tempo segments.
+   */
+  public static quarterToSeconds(quarter: number, segments: TempoSegment[]): number {
+    const first = segments[0] ?? { quarterStart: 0, secondStart: 0, bpm: DEFAULT_TEMPO_BPM, timeSignature: { count: 4, noteValue: 4 } };
+    if (quarter <= 0) {
+      return quarter * (60.0 / first.bpm);
+    }
+    let seg = first;
+    for (let i = segments.length - 1; i >= 0; i--) {
+      if (quarter >= segments[i].quarterStart) {
+        seg = segments[i];
+        break;
+      }
+    }
+    const deltaQuarters = quarter - seg.quarterStart;
+    return seg.secondStart + deltaQuarters * (60.0 / seg.bpm);
+  }
+}
+
+export interface TempoSegment {
+  quarterStart: number;
+  secondStart: number;
+  bpm: number;
+  timeSignature: Beat;
 }

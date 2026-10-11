@@ -1,6 +1,6 @@
 import { SheetInstrumentHelper } from "../domain/index.js";
-import { PlaybackTimeline, TmdMacroEvaluator, TmdPlaybackRenderer } from "../playback/index.js";
-import { Accidental, Beat, chordQualityIntervals, ChordSymbol, DEFAULT_INSTRUMENT, Note, noteToMIDIPitch, Sheet } from "../syntax/index.js";
+import { PlaybackTimeline, TmdPlaybackRenderer } from "../playback/index.js";
+import { ChordSymbol, chordToMIDIPitches, Note, noteToMIDIPitch, PercussionStroke, Sheet } from "../syntax/index.js";
 import { type MIDIEvent, type MIDIMessage,TmdMIDIEncoder } from './midi_encoder.js';
 import type { MIDIInstrumentValue } from './midi_instrument.js';
 import { MIDIInstrument } from './midi_instrument.js';
@@ -24,25 +24,8 @@ export class TmdMIDIGenerator {
     ticksPerQuarter: number = TmdMIDIGenerator.defaultTicksPerQuarterNote,
     options?: TmdMIDIGeneratorOptions
   ): Uint8Array {
-    let effectiveSheet = TmdMacroEvaluator.expandThrowing(rawSheet);
-    if (options?.targetParagraph) {
-      const filteredParagraphs = effectiveSheet.entries.filter(p => p.name === options.targetParagraph);
-      effectiveSheet = {
-        ...effectiveSheet,
-        entries: filteredParagraphs,
-        playback: [{ type: 'name', name: options.targetParagraph }],
-      };
-    }
-
-    let distinctInstruments = SheetInstrumentHelper.distinctInstruments(effectiveSheet, false);
-
-    if (options?.targetInstrument) {
-      const target = options.targetInstrument === "" ? DEFAULT_INSTRUMENT : options.targetInstrument;
-      distinctInstruments = distinctInstruments.filter(inst => inst === target);
-      if (distinctInstruments.length === 0 && (options.targetInstrument === DEFAULT_INSTRUMENT || options.targetInstrument === "")) {
-        distinctInstruments = [DEFAULT_INSTRUMENT];
-      }
-    }
+    const { sheet: effectiveSheet, instruments: distinctInstruments } =
+      SheetInstrumentHelper.preparedForExport(rawSheet, false, options);
 
     const renderOpts = { startOrderIndex: options?.startOrderIndex };
     const timeline = TmdPlaybackRenderer.renderConductor(effectiveSheet, renderOpts);
@@ -52,29 +35,16 @@ export class TmdMIDIGenerator {
       ),
     ];
 
-    const programToMelodyChannel = new Map<number, number>();
-    let nextMelodyChannel = 0;
+    const channelState = {
+      nextMelodicChannel: 0,
+      programToMelodyChannel: new Map<number, number>(),
+    };
 
     for (const instrument of distinctInstruments) {
       const instTimeline = TmdPlaybackRenderer.render(effectiveSheet, instrument, renderOpts);
       if (!instTimeline.events.some((event) => event.content.type !== 'rest')) continue;
       const midiInst = MIDIInstrument.resolve(instrument);
-      let channel: number;
-      if (MIDIInstrument.isPercussion(midiInst)) {
-        channel = 9;
-      } else {
-        const prog = MIDIInstrument.program(midiInst);
-        if (programToMelodyChannel.has(prog)) {
-          channel = programToMelodyChannel.get(prog)!;
-        } else {
-          if (nextMelodyChannel === 9) {
-            nextMelodyChannel += 1;
-          }
-          channel = nextMelodyChannel % 16;
-          programToMelodyChannel.set(prog, channel);
-          nextMelodyChannel += 1;
-        }
-      }
+      const channel = MIDIInstrument.allocateChannel(midiInst, channelState);
 
       trackData.push(
         TmdMIDIEncoder.encodeTrack(
@@ -172,8 +142,8 @@ export class TmdMIDIGenerator {
       });
     }
 
-    const lower = instrument.toLowerCase();
-    if (lower.includes('left') || lower.includes('-l')) {
+    const panPos = MIDIInstrument.stereoPanHeuristic(instrument);
+    if (panPos === 'left') {
       events.push({
         tick: 0,
         message: {
@@ -183,7 +153,7 @@ export class TmdMIDIGenerator {
           value: 20,
         },
       });
-    } else if (lower.includes('right') || lower.includes('-r')) {
+    } else if (panPos === 'right') {
       events.push({
         tick: 0,
         message: {
@@ -222,39 +192,10 @@ export class TmdMIDIGenerator {
           const pattern = event.content.pattern;
           const step = Math.max(1, Math.floor(duration / Math.max(1, pattern.length)));
           for (let index = 0; index < pattern.length; index++) {
-            const char = pattern[index];
-            const pitch = this.percussionMIDIPitch(char);
-            if (pitch !== undefined) {
-              let velocity = 78;
-              switch (char) {
-                case 'D':
-                case 'd':
-                case 'B':
-                case 'b':
-                  velocity = 118;
-                  break;
-                case 'C':
-                case 'c':
-                  velocity = 115;
-                  break;
-                case 'S':
-                case 's':
-                  velocity = 105;
-                  break;
-                case 'T':
-                case 't':
-                  velocity = 100;
-                  break;
-                case 'O':
-                case 'o':
-                  velocity = 90;
-                  break;
-                default:
-                  velocity = 78;
-                  break;
-              }
+            const stroke = PercussionStroke.fromCharacter(pattern[index]);
+            if (stroke !== undefined) {
               const noteStart = start + index * step;
-              this.appendNote(events, noteStart, step, 9, pitch, velocity);
+              this.appendNote(events, noteStart, step, 9, stroke.midiPitch, stroke.defaultVelocity);
             }
           }
           break;
@@ -315,62 +256,11 @@ export class TmdMIDIGenerator {
     return noteToMIDIPitch(note, keyOffset);
   }
 
-  private static percussionMIDIPitch(char: string): number | undefined {
-    const map: Record<string, number> = {
-      D: 36,
-      d: 36,
-      B: 36,
-      b: 36,
-      S: 38,
-      s: 38,
-      X: 42,
-      x: 42,
-      O: 46,
-      o: 46,
-      T: 45,
-      t: 45,
-      C: 49,
-      c: 49,
-    };
-    return map[char];
-  }
-
   public static chordToMIDIPitches(
     chord: string | ChordSymbol,
     keyOffset: number
   ): number[] {
-    const symbol =
-      typeof chord === 'string' ? ChordSymbol.parse(chord) : chord;
-    let rootPitch: number;
-    if (symbol.root.isScaleDegree) {
-      const note: Note = {
-        accidental: symbol.root.accidental,
-        degree: symbol.root.degree,
-        octave: symbol.root.octave,
-      };
-      rootPitch = this.noteToMIDIPitch(note, keyOffset) - 12;
-    } else {
-      rootPitch = 48 + symbol.root.semitoneOffset;
-    }
-    const intervals = chordQualityIntervals(symbol.quality);
-    const pitches = intervals.map(i => rootPitch + i);
-    if (symbol.bass) {
-      let bassPitch: number;
-      if (symbol.bass.isScaleDegree) {
-        const bassNote: Note = {
-          accidental: symbol.bass.accidental,
-          degree: symbol.bass.degree,
-          octave: symbol.bass.octave,
-        };
-        bassPitch = this.noteToMIDIPitch(bassNote, keyOffset) - 24;
-      } else {
-        bassPitch = 36 + symbol.bass.semitoneOffset;
-      }
-      if (!pitches.includes(bassPitch)) {
-        pitches.unshift(bassPitch);
-      }
-    }
-    return pitches;
+    return chordToMIDIPitches(chord, keyOffset);
   }
 
   public static generalMidiProgram(instrument: string): number {

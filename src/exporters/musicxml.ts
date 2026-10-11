@@ -1,10 +1,10 @@
 import { SheetInstrumentHelper } from "../domain/index.js";
-import { PlaybackDirectiveEvent, TmdMacroEvaluator, TmdMeasureRenderer, TmdPlaybackRenderer } from "../playback/index.js";
-import { ChordSymbol, Note, PitchMapping, Sheet } from "../syntax/index.js";
+import { PlaybackDirectiveEvent, TmdMeasureRenderer } from "../playback/index.js";
+import { ChordSymbol, metronomeTempoForBeat, Note, PercussionStroke, PitchMapping, Sheet } from "../syntax/index.js";
 
 export class TmdMusicXMLGenerator {
   public static generateMusicXML(rawSheet: Sheet): string {
-    const sheet = TmdMacroEvaluator.expandThrowing(rawSheet);
+    const { sheet, instruments } = SheetInstrumentHelper.preparedForExport(rawSheet);
     const metaCreators = Object.keys(sheet.metadata)
       .sort()
       .map((key) => {
@@ -25,8 +25,6 @@ export class TmdMusicXMLGenerator {
     if (metaCreators.length > 0) xml += `${metaCreators}\n`;
     xml += `    <encoding>\n      <software>Tmd-TS MusicXML Exporter</software>\n    </encoding>\n`;
     xml += `  </identification>\n\n`;
-
-    const instruments = SheetInstrumentHelper.distinctInstruments(sheet, false);
 
     xml += `  <part-list>\n`;
     instruments.forEach((inst, idx) => {
@@ -208,31 +206,10 @@ export class TmdMusicXMLGenerator {
     return xml;
   }
 
-  private static isPercussionInstrument(instrument: string, sheet: Sheet): boolean {
-    const lower = instrument.toLowerCase();
-    const aliases = ["drum", "drums", "groove", "percussion", "beat", "drumkit", "cajon", "snare", "kick", "hihat"];
-    if (aliases.some((a) => lower.includes(a))) return true;
-    return sheet.entries
-      .filter((p) => p.assignment === instrument)
-      .some((p) =>
-        p.sections.some((s) =>
-          s.unitGroups.some((g) =>
-            g.units.some((u) => u.type === "percussion")
-          )
-        )
-      );
-  }
-
-  private static isBassClefInstrument(instrument: string): boolean {
-    const lower = instrument.toLowerCase();
-    const bassKeywords = ["bass", "cello", "tuba", "contrabass", "bassoon", "trombone", "baritone", "timpani"];
-    return bassKeywords.some((k) => lower.includes(k));
-  }
-
   private static generateClefXML(instrument: string, sheet: Sheet): string {
-    if (TmdMusicXMLGenerator.isPercussionInstrument(instrument, sheet)) {
+    if (SheetInstrumentHelper.isPercussionTrack(sheet, instrument)) {
       return `        <clef>\n          <sign>percussion</sign>\n        </clef>\n`;
-    } else if (TmdMusicXMLGenerator.isBassClefInstrument(instrument)) {
+    } else if (SheetInstrumentHelper.isBassClefInstrument(instrument)) {
       return `        <clef>\n          <sign>F</sign>\n          <line>4</line>\n        </clef>\n`;
     } else {
       return `        <clef>\n          <sign>G</sign>\n          <line>2</line>\n        </clef>\n`;
@@ -259,27 +236,8 @@ export class TmdMusicXMLGenerator {
   }
 
   public static resolveMetronome(beat: { count: number; noteValue: number }, quarterBPM: number): { beatUnit: string; isDotted: boolean; perMinute: number } {
-    // Compound meter: denominator is 8 and numerator is a multiple of 3 (> 3, e.g. 6/8, 9/8, 12/8)
-    if (beat.noteValue === 8 && beat.count > 3 && beat.count % 3 === 0) {
-      // Beat unit is a dotted-quarter note (value = 1.5 quarters)
-      const bpm = quarterBPM / 1.5;
-      return { beatUnit: "quarter", isDotted: true, perMinute: Math.round(bpm) };
-    }
-    // Beat unit based on time signature denominator
-    switch (beat.noteValue) {
-      case 2:
-        // Half note (value = 2.0 quarters)
-        return { beatUnit: "half", isDotted: false, perMinute: Math.round(quarterBPM / 2.0) };
-      case 8:
-        // Eighth note (value = 0.5 quarters)
-        return { beatUnit: "eighth", isDotted: false, perMinute: Math.round(quarterBPM * 2.0) };
-      case 16:
-        // 16th note (value = 0.25 quarters)
-        return { beatUnit: "16th", isDotted: false, perMinute: Math.round(quarterBPM * 4.0) };
-      default:
-        // Default: quarter note
-        return { beatUnit: "quarter", isDotted: false, perMinute: Math.round(quarterBPM) };
-    }
+    const m = metronomeTempoForBeat(beat, quarterBPM);
+    return { beatUnit: m.beatUnit, isDotted: m.isDotted, perMinute: m.perMinute };
   }
 
   private static generatePlaybackDirectiveXML(directive: PlaybackDirectiveEvent): string {
@@ -310,25 +268,18 @@ export class TmdMusicXMLGenerator {
   }
 
   private static generatePercussionXML(pattern: string, duration: number, divisions: number): string {
-    const notes: [string, number][] = [];
-    for (const c of pattern) {
-      if (c === "D" || c === "d" || c === "B" || c === "b") notes.push(["F", 4]); // Bass drum (kick)
-      else if (c === "S" || c === "s") notes.push(["D", 5]); // Snare
-      else if (c === "X" || c === "x") notes.push(["F", 5]); // Closed hi-hat
-      else if (c === "O" || c === "o") notes.push(["G", 5]); // Open hi-hat
-      else if (c === "T" || c === "t") notes.push(["A", 4]); // Tom
-      else if (c === "C" || c === "c") notes.push(["A", 5]); // Crash cymbal
-    }
-    if (notes.length === 0) {
+    const strokes = PercussionStroke.parse(pattern);
+    if (strokes.length === 0) {
       return TmdMusicXMLGenerator.generateRestXML(duration, divisions);
     }
-    const count = notes.length;
+    const count = strokes.length;
     const base = Math.floor(duration / count);
     const remainder = duration % count;
     let xml = "";
-    notes.forEach(([step, octave], i) => {
+    strokes.forEach((stroke, i) => {
+      const pos = stroke.unpitchedDisplayPosition;
       const noteDur = base + (i < remainder ? 1 : 0);
-      xml += `      <note>\n        <unpitched>\n          <display-step>${step}</display-step>\n          <display-octave>${octave}</display-octave>\n        </unpitched>\n        <duration>${noteDur}</duration>\n`;
+      xml += `      <note>\n        <unpitched>\n          <display-step>${pos.step}</display-step>\n          <display-octave>${pos.octave}</display-octave>\n        </unpitched>\n        <duration>${noteDur}</duration>\n`;
       xml += TmdMusicXMLGenerator.generateDurationElementsXML(noteDur, divisions);
       xml += `      </note>\n`;
     });

@@ -4,24 +4,16 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 
-import { TmdWAVRenderer } from "../audio.js";
 import {
-  TmdABCGenerator,
   TmdBrailleEncoding,
   TmdBrailleGenerator,
   TmdBrailleLayout,
-  TmdChordProGenerator,
-  TmdLilyPondGenerator,
-  TmdMIDIGenerator,
-  TmdMusicXMLGenerator,
-  TmdReaperGenerator,
-  TmdVSQGenerator,
-  TmdVSQXGenerator,
 } from "../exporters/index.js";
 import { TmdSkill } from "../skill.js";
-import { accidentalToSemitone, scaleDegreeLetter, TmdParser } from "../syntax/index.js";
-import { TmdMeasureChecker, TmdScoreValidator } from "../validation/index.js";
+import { TmdParser } from "../syntax/index.js";
 import { TMD_VERSION } from "../version.js";
+import { TmdMcpCore } from "./handlers.js";
+
 const textContent = (text: string) => ({
   content: [
     {
@@ -50,70 +42,17 @@ export class TmdMCPServer {
           })
         );
       }
-
-      const sheet = TmdParser.parseThrowing(content);
-      if (!sheet) {
-        return textContent(
-          JSON.stringify({
-            valid: false,
-            error: "Missing ::SCORE:: header or invalid score structure",
-          })
-        );
-      }
-
-      let tonic = "C";
-      if (sheet.keySignature) {
-        const letter = scaleDegreeLetter(sheet.keySignature.tonic);
-        const semitone = accidentalToSemitone(sheet.keySignature.accidental);
-        const acc = semitone === 1 ? "#" : semitone === -1 ? "b" : "";
-        tonic = `${letter}${acc}`;
-      }
-
-      const entries = sheet.entries.map((p) => ({
-        name: p.name,
-        assignment: p.assignment,
-        start: p.start || 0,
-        sectionCount: p.sections.length,
-      }));
-
-      return textContent(
-        JSON.stringify(
-          {
-            valid: true,
-            name: sheet.name || "Untitled",
-            speed: sheet.speed || 120,
-            tonic,
-            declaredKey: sheet.declaredKey ?? null,
-            timeSignature: sheet.beat
-              ? `${sheet.beat.count}/${sheet.beat.noteValue}`
-              : "4/4",
-            playback: sheet.playback,
-            entryCount: sheet.entries.length,
-            entries,
-            paragraphs: entries,
-          },
-          null,
-          2
-        )
-      );
+      return textContent(JSON.stringify(TmdMcpCore.parseTmdText(content), null, 2));
     } catch (err: any) {
-      const rawContent = text || (filePath && fs.existsSync(filePath) ? fs.readFileSync(filePath, "utf-8") : "");
-      const lines = rawContent ? rawContent.split("\n") : [];
-      const line = err?.range?.start?.line ?? 1;
-      const column = err?.range?.start?.column ?? 1;
-      const expectedTokens = err?.expectedTokens ?? [];
-      const lineIdx = Math.max(0, line - 1);
-      const snippet = lines[lineIdx] !== undefined ? lines[lineIdx].trim() : "";
-
       return textContent(
         JSON.stringify(
           {
             valid: false,
-            error: err.message || String(err),
-            line,
-            column,
-            snippet,
-            expectedTokens,
+            error: err?.message || String(err),
+            line: 1,
+            column: 1,
+            snippet: "",
+            expectedTokens: [],
           },
           null,
           2
@@ -137,35 +76,7 @@ export class TmdMCPServer {
       throw new Error("Either 'text' or 'filePath' must be provided");
     }
 
-    const issues = TmdMeasureChecker.check(content);
-    const diagnostics = TmdScoreValidator.validate(content);
-    const errorCount = diagnostics.filter((d) => d.severity === "error").length;
-    const warningCount = diagnostics.filter((d) => d.severity === "warning").length;
-
-    return textContent(
-      JSON.stringify(
-        {
-          valid: errorCount === 0 && issues.length === 0,
-          issueCount: issues.length,
-          errorCount,
-          warningCount,
-          issues: issues.map((i) => ({
-            paragraph: i.paragraphName,
-            instrument: i.instrument,
-            line: i.lineNumber,
-            measureIndex: i.measureIndex,
-            expectedUnits: i.expectedUnits,
-            actualUnits: i.actualUnits,
-            deltaUnits: i.deltaUnits,
-            snippet: i.snippet,
-            description: i.description,
-          })),
-          diagnostics,
-        },
-        null,
-        2
-      )
-    );
+    return textContent(JSON.stringify(TmdMcpCore.checkTmdText(content), null, 2));
   }
 
   public static async handleConvertTmd({
@@ -205,114 +116,22 @@ export class TmdMCPServer {
       throw new Error("Either 'text' or 'filePath' must be provided");
     }
 
-    const sheet = TmdParser.parse(content);
-    if (!sheet) {
-      throw new Error("Invalid TMD score content");
+    const converted = TmdMcpCore.convertTmdText(content, {
+      format,
+      defaultFormat: "midi",
+      outputPath,
+      section,
+      instrument,
+    });
+    if (outputPath) {
+      if (converted.kind === "binary") {
+        fs.writeFileSync(outputPath, converted.bytes);
+      } else {
+        fs.writeFileSync(outputPath, converted.text, "utf-8");
+      }
+      return textContent(`${converted.label} successfully written to ${outputPath}`);
     }
-
-    const fmt = (format || "midi").toLowerCase();
-    switch (fmt) {
-      case "midi": {
-        const uint8 = TmdMIDIGenerator.generateMIDI(sheet, TmdMIDIGenerator.defaultTicksPerQuarterNote, {
-          targetParagraph: section,
-          targetInstrument: instrument,
-        });
-        if (outputPath) {
-          fs.writeFileSync(outputPath, uint8);
-          return textContent(`MIDI successfully written to ${outputPath}`);
-        }
-        return textContent(Buffer.from(uint8).toString("base64"));
-      }
-      case "musicxml": {
-        const xml = TmdMusicXMLGenerator.generateMusicXML(sheet);
-        if (outputPath) {
-          fs.writeFileSync(outputPath, xml, "utf-8");
-          return textContent(`MusicXML successfully written to ${outputPath}`);
-        }
-        return textContent(xml);
-      }
-      case "lilypond": {
-        const ly = TmdLilyPondGenerator.generateLilyPond(sheet);
-        if (outputPath) {
-          fs.writeFileSync(outputPath, ly, "utf-8");
-          return textContent(`LilyPond source successfully written to ${outputPath}`);
-        }
-        return textContent(ly);
-      }
-      case "abc": {
-        const abc = TmdABCGenerator.generateABC(sheet);
-        if (outputPath) {
-          fs.writeFileSync(outputPath, abc, "utf-8");
-          return textContent(`ABC notation successfully written to ${outputPath}`);
-        }
-        return textContent(abc);
-      }
-      case "wav": {
-        const wav = TmdWAVRenderer.renderWAV(sheet, 44100, {
-          targetParagraph: section,
-          targetInstrument: instrument,
-        });
-        if (outputPath) {
-          fs.writeFileSync(outputPath, wav);
-          return textContent(`WAV audio successfully written to ${outputPath}`);
-        }
-        return textContent(Buffer.from(wav).toString("base64"));
-      }
-      case "reaper":
-      case "rpp": {
-        const rpp = TmdReaperGenerator.generateRPP(sheet);
-        if (outputPath) {
-          fs.writeFileSync(outputPath, rpp, "utf-8");
-          return textContent(`REAPER project successfully written to ${outputPath}`);
-        }
-        return textContent(rpp);
-      }
-      case "vsq": {
-        const uint8 = TmdVSQGenerator.generateVSQ(sheet);
-        if (outputPath) {
-          fs.writeFileSync(outputPath, uint8);
-          return textContent(`VOCALOID2 (.vsq) successfully written to ${outputPath}`);
-        }
-        return textContent(Buffer.from(uint8).toString("base64"));
-      }
-      case "vsqx": {
-        const xml = TmdVSQXGenerator.generateVSQX(sheet);
-        if (outputPath) {
-          fs.writeFileSync(outputPath, xml, "utf-8");
-          return textContent(`VOCALOID3/4 (.vsqx) successfully written to ${outputPath}`);
-        }
-        return textContent(xml);
-      }
-      case "chordpro":
-      case "cho": {
-        const cho = TmdChordProGenerator.generateChordPro(sheet);
-        if (outputPath) {
-          fs.writeFileSync(outputPath, cho, "utf-8");
-          return textContent(`ChordPro lead sheet successfully written to ${outputPath}`);
-        }
-        return textContent(cho);
-      }
-      case "braille":
-      case "brl":
-      case "brf": {
-        const encoding: TmdBrailleEncoding =
-          fmt === "brf" || (outputPath && outputPath.toLowerCase().endsWith(".brf"))
-            ? "ascii"
-            : "unicode";
-        const braille = TmdBrailleGenerator.generateBraille(sheet, {
-          encoding,
-          targetSection: section,
-          targetInstrument: instrument,
-        });
-        if (outputPath) {
-          fs.writeFileSync(outputPath, braille, "utf-8");
-          return textContent(`Music Braille successfully written to ${outputPath}`);
-        }
-        return textContent(braille);
-      }
-      default:
-        throw new Error(`Unsupported format: ${format}`);
-    }
+    return textContent(converted.kind === "binary" ? converted.base64 : converted.text);
   }
 
   public static async handleExportBraille({

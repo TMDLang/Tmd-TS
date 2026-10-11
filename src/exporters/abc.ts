@@ -1,10 +1,10 @@
 import { SheetInstrumentHelper } from "../domain/index.js";
-import { MeasureEvent, PlaybackDirectiveEvent, TmdMacroEvaluator, TmdMeasureRenderer } from "../playback/index.js";
-import { Entry, KeySignature, Note, PitchMapping, Sheet } from "../syntax/index.js";
+import { MeasureEvent, PlaybackDirectiveEvent, TmdMeasureRenderer } from "../playback/index.js";
+import { KeySignature, metronomeTempoForBeat, Note, PercussionStroke, PitchMapping, Sheet } from "../syntax/index.js";
 
 export class TmdABCGenerator {
   public static generateABC(rawSheet: Sheet): string {
-    const sheet = TmdMacroEvaluator.expandThrowing(rawSheet);
+    const { sheet, instruments } = SheetInstrumentHelper.preparedForExport(rawSheet);
     let abc = "";
 
     abc += "X:1\n";
@@ -17,8 +17,6 @@ export class TmdABCGenerator {
     abc += `${tempoField}\n`;
     abc += `K:${TmdABCGenerator.abcKey(sheet.declaredKey || sheet.keySignature.toString())}\n\n`;
 
-    const instruments = SheetInstrumentHelper.distinctInstruments(sheet, false);
-
     instruments.forEach((inst, idx) => {
       const vId = `V${idx + 1}`;
       abc += `V:${vId} name="${inst}" snm="${inst.slice(0, 3)}"\n`;
@@ -28,7 +26,7 @@ export class TmdABCGenerator {
     instruments.forEach((inst, idx) => {
       const vId = `V${idx + 1}`;
       abc += `[V:${vId}]\n`;
-      if (TmdABCGenerator.paragraphsContainPercussion(sheet.entries, inst)) {
+      if (SheetInstrumentHelper.containsPercussionUnits(sheet, inst)) {
         abc += "%%MIDI channel 10\n";
       }
       abc += TmdABCGenerator.generateTrackMusic(inst, sheet);
@@ -39,30 +37,8 @@ export class TmdABCGenerator {
   }
 
   public static resolveTempo(beat: { count: number; noteValue: number }, quarterBPM: number): string {
-    // Compound meter: denominator is 8 and numerator is a multiple of 3 (> 3, e.g. 6/8, 9/8, 12/8)
-    if (beat.noteValue === 8 && beat.count > 3 && beat.count % 3 === 0) {
-      // Beat unit is a dotted-quarter note (in ABC represented as 3/8)
-      const bpm = Math.round(quarterBPM / 1.5);
-      return `Q:3/8=${bpm}`;
-    }
-    switch (beat.noteValue) {
-      case 2: {
-        const bpm = Math.round(quarterBPM / 2.0);
-        return `Q:1/2=${bpm}`;
-      }
-      case 8: {
-        const bpm = Math.round(quarterBPM * 2.0);
-        return `Q:1/8=${bpm}`;
-      }
-      case 16: {
-        const bpm = Math.round(quarterBPM * 4.0);
-        return `Q:1/16=${bpm}`;
-      }
-      default: {
-        const bpm = Math.round(quarterBPM);
-        return `Q:1/4=${bpm}`;
-      }
-    }
+    const m = metronomeTempoForBeat(beat, quarterBPM);
+    return `Q:${m.abcUnit}=${m.perMinute}`;
   }
 
   private static generateTrackMusic(instrument: string, sheet: Sheet): string {
@@ -186,11 +162,9 @@ export class TmdABCGenerator {
       case "rest":
         return `z${suffix}`;
       case "percussion": {
-        const pattern = event.content.pattern;
-        const mapping: Record<string, string> = {
-          X: "^F", x: "^F", T: "A", t: "A", S: "D", s: "D"
-        };
-        const pitches = Array.from(pattern).map((c) => mapping[c]).filter(Boolean);
+        const pitches = PercussionStroke.parse(event.content.pattern)
+          .map((s) => s.abcPitch)
+          .filter((p): p is string => Boolean(p));
         if (pitches.length === 0) return `z${suffix}`;
         const count = pitches.length;
         const base = Math.floor(multiplier / count);
@@ -278,15 +252,5 @@ export class TmdABCGenerator {
       majorName = sharps[normalized];
     }
     return isMinor ? `${majorName}m` : majorName;
-  }
-
-  private static paragraphsContainPercussion(paragraphs: Entry[], instrument: string): boolean {
-    return paragraphs
-      .filter((p) => p.assignment?.toLocaleLowerCase() === instrument.toLocaleLowerCase())
-      .some((p) =>
-        p.sections.some((s) =>
-          s.unitGroups.some((g) => g.units.some((u) => u.type === "percussion"))
-        )
-      );
   }
 }

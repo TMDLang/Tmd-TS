@@ -151,27 +151,28 @@ export const STANDARD_CHORD_QUALITIES: ReadonlySet<string> = new Set([
 ]);
 
 export const EXTENDED_CHORD_QUALITIES: ReadonlySet<string> = new Set([
-  "add9",
-  "add2",
-  "add4",
-  "add11",
-  "maj9",
-  "maj11",
-  "maj13",
-  "m9",
-  "m11",
-  "m13",
-  "min9",
-  "min11",
-  "min13",
-  "9",
-  "11",
-  "13",
   "6",
   "m6",
   "min6",
   "6/9",
   "69",
+  "m6/9",
+  "9",
+  "maj9",
+  "m9",
+  "min9",
+  "add9",
+  "add2",
+  "add4",
+  "add11",
+  "11",
+  "m11",
+  "min11",
+  "maj11",
+  "13",
+  "maj13",
+  "m13",
+  "min13",
   "sus2",
   "sus4",
   "7sus4",
@@ -179,12 +180,17 @@ export const EXTENDED_CHORD_QUALITIES: ReadonlySet<string> = new Set([
   "9sus4",
   "dim7",
   "aug7",
-  "m(maj7)",
-  "mmaj7",
+  "m7b5",
   "7b5",
   "7#5",
   "7b9",
   "7#9",
+  "7#11",
+  "7b13",
+  "m(maj7)",
+  "mmaj7",
+  "maj7#11",
+  "maj7#5",
 ]);
 
 export function chordQualityIntervals(quality: ChordQualityKind): number[] {
@@ -713,7 +719,127 @@ export function noteToMIDIPitch(note: Note, keyOffset: number): number {
   return 60 + keyOffset + scaleDegreeSemitoneOffset(note.degree) + accidentalToSemitone(note.accidental) + note.octave * 12;
 }
 
+export function chordToMIDIPitches(chord: string | ChordSymbol, keyOffset: number): number[] {
+  const symbol = typeof chord === "string" ? ChordSymbol.parse(chord) : chord;
+  let rootPitch: number;
+  if (symbol.root.isScaleDegree) {
+    const note: Note = {
+      accidental: symbol.root.accidental,
+      degree: symbol.root.degree,
+      octave: symbol.root.octave,
+    };
+    rootPitch = noteToMIDIPitch(note, keyOffset) - 12;
+  } else {
+    rootPitch = 48 + symbol.root.semitoneOffset;
+  }
+  const intervals = chordQualityIntervals(symbol.quality);
+  const pitches = intervals.map((i) => rootPitch + i);
+  if (symbol.bass) {
+    let bassPitch: number;
+    if (symbol.bass.isScaleDegree) {
+      const bassNote: Note = {
+        accidental: symbol.bass.accidental,
+        degree: symbol.bass.degree,
+        octave: symbol.bass.octave,
+      };
+      bassPitch = noteToMIDIPitch(bassNote, keyOffset) - 24;
+    } else {
+      bassPitch = 36 + symbol.bass.semitoneOffset;
+    }
+    if (!pitches.includes(bassPitch)) {
+      pitches.unshift(bassPitch);
+    }
+  }
+  return pitches;
+}
+
 export function noteToTotalSemitones(note: Note): number {
   return scaleDegreeSemitoneOffset(note.degree) + accidentalToSemitone(note.accidental) + note.octave * 12;
 }
 
+export function mapUnitNotes(unit: Unit, transform: (note: Note) => Note): Unit {
+  if (unit.type === "note") {
+    return { type: "note", note: transform(unit.note) };
+  }
+  if (unit.type === "multiNote") {
+    return { type: "multiNote", notes: unit.notes.map(transform) };
+  }
+  return unit;
+}
+
+export function mapSectionsNotes(sections: Section[], transform: (note: Note) => Note): Section[] {
+  return sections.map((sec) => ({
+    noteLength: sec.noteLength,
+    directives: [...sec.directives],
+    ...(sec.barlinePositions ? { barlinePositions: [...sec.barlinePositions] } : {}),
+    unitGroups: sec.unitGroups.map((group) => ({
+      length: group.length,
+      units: group.units.map((u) => mapUnitNotes(u, transform)),
+    })),
+  }));
+}
+
+export interface MetronomeTempo {
+  beatUnit: string;
+  lilyPondUnit: string;
+  abcUnit: string;
+  isDotted: boolean;
+  perMinute: number;
+}
+
+export function metronomeTempoForBeat(beat: Beat, quarterBPM: number): MetronomeTempo {
+  if (beat.noteValue === 8 && beat.count > 3 && beat.count % 3 === 0) {
+    const bpm = Math.round(quarterBPM / 1.5);
+    return {
+      beatUnit: "quarter",
+      lilyPondUnit: "4.",
+      abcUnit: "3/8",
+      isDotted: true,
+      perMinute: bpm,
+    };
+  }
+  switch (beat.noteValue) {
+    case 2:
+      return {
+        beatUnit: "half",
+        lilyPondUnit: "2",
+        abcUnit: "1/2",
+        isDotted: false,
+        perMinute: Math.round(quarterBPM / 2.0),
+      };
+    case 8:
+      return {
+        beatUnit: "eighth",
+        lilyPondUnit: "8",
+        abcUnit: "1/8",
+        isDotted: false,
+        perMinute: Math.round(quarterBPM * 2.0),
+      };
+    case 16:
+      return {
+        beatUnit: "16th",
+        lilyPondUnit: "16",
+        abcUnit: "1/16",
+        isDotted: false,
+        perMinute: Math.round(quarterBPM * 4.0),
+      };
+    default:
+      return {
+        beatUnit: "quarter",
+        lilyPondUnit: "4",
+        abcUnit: "1/4",
+        isDotted: false,
+        perMinute: Math.round(quarterBPM),
+      };
+  }
+}
+
+export function effectivePlaybackOrders(sheet: Sheet): Playback[] {
+  if (sheet.playback.length > 0) {
+    return sheet.playback;
+  }
+  return Array.from(new Set(sheet.entries.map((entry) => entry.name))).map((name) => ({
+    type: "name" as const,
+    name,
+  }));
+}

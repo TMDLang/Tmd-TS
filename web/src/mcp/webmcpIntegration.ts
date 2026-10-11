@@ -1,21 +1,5 @@
-import {
-  TmdABCGenerator,
-  TmdBrailleEncoding,
-  TmdBrailleGenerator,
-  TmdChordProGenerator,
-  TmdLilyPondGenerator,
-  TmdMIDIGenerator,
-  TmdMusicXMLGenerator,
-  TmdReaperGenerator,
-  TmdVSQGenerator,
-  TmdVSQXGenerator,
-} from "../../../src/exporters/index.js";
+import { TmdMcpCore } from "../../../src/mcp/handlers.js";
 import { TmdSkill } from "../../../src/skill.js";
-import { TmdParser } from "../../../src/syntax/parser.js";
-import { accidentalToSemitone, scaleDegreeLetter } from "../../../src/syntax/types.js";
-import { TmdMeasureChecker } from "../../../src/validation/measure_check.js";
-import { TmdScoreValidator } from "../../../src/validation/score_validator.js";
-import { validateTmdCode } from "../ai/validator.js";
 
 export interface TmdWebMcpContext {
   getCurrentScore: () => string;
@@ -127,61 +111,7 @@ export const buildTmdWebMcpTools = (
       },
       handler: async ({ text }) => {
         const extraBlocks = consumeAutoSkillBlocks();
-        const validation = validateTmdCode(text);
-        if (!validation.valid) {
-          return textContent(
-            JSON.stringify(
-              {
-                valid: false,
-                error: validation.message,
-                line: validation.line,
-                column: validation.column,
-                snippet: validation.snippet,
-                expectedTokens: validation.expectedTokens,
-              },
-              null,
-              2
-            ),
-            extraBlocks
-          );
-        }
-
-        const sheet = validation.sheet;
-        let tonic = "C";
-        if (sheet.keySignature) {
-          const letter = scaleDegreeLetter(sheet.keySignature.tonic);
-          const semitone = accidentalToSemitone(sheet.keySignature.accidental);
-          const acc = semitone === 1 ? "#" : semitone === -1 ? "b" : "";
-          tonic = `${letter}${acc}`;
-        }
-
-        const entries = sheet.entries.map((p) => ({
-          name: p.name,
-          assignment: p.assignment,
-          start: p.start || 0,
-          sectionCount: p.sections.length,
-        }));
-
-        return textContent(
-          JSON.stringify(
-            {
-              valid: true,
-              name: sheet.name || "Untitled",
-              speed: sheet.speed || 120,
-              tonic,
-              declaredKey: sheet.declaredKey ?? null,
-              timeSignature: sheet.beat
-                ? `${sheet.beat.count}/${sheet.beat.noteValue}`
-                : "4/4",
-              playback: sheet.playback,
-              entryCount: sheet.entries.length,
-              entries,
-            },
-            null,
-            2
-          ),
-          extraBlocks
-        );
+        return textContent(JSON.stringify(TmdMcpCore.parseTmdText(text), null, 2), extraBlocks);
       },
     },
     {
@@ -200,48 +130,8 @@ export const buildTmdWebMcpTools = (
       handler: async ({ text }) => {
         const extraBlocks = consumeAutoSkillBlocks();
         try {
-          const syntaxResult = validateTmdCode(text);
-          const issues = TmdMeasureChecker.check(text);
-          const diagnostics = TmdScoreValidator.validate(text);
-          const errorCount = diagnostics.filter((d) => d.severity === "error").length;
-          const warningCount = diagnostics.filter((d) => d.severity === "warning").length;
-          const syntaxError = !syntaxResult.valid
-            ? {
-                message: syntaxResult.message,
-                line: syntaxResult.line,
-                column: syntaxResult.column,
-                snippet: syntaxResult.snippet,
-                expectedTokens: syntaxResult.expectedTokens,
-              }
-            : undefined;
-
-          return textContent(
-            JSON.stringify(
-              {
-                valid: syntaxResult.valid && errorCount === 0 && issues.length === 0,
-                syntaxValid: syntaxResult.valid,
-                ...(syntaxError ? { syntaxError } : {}),
-                issueCount: issues.length,
-                errorCount,
-                warningCount,
-                issues: issues.map((i) => ({
-                  paragraph: i.paragraphName,
-                  instrument: i.instrument,
-                  line: i.lineNumber,
-                  measureIndex: i.measureIndex,
-                  expectedUnits: i.expectedUnits,
-                  actualUnits: i.actualUnits,
-                  deltaUnits: i.deltaUnits,
-                  snippet: i.snippet,
-                  description: i.description,
-                })),
-                diagnostics,
-              },
-              null,
-              2
-            ),
-            extraBlocks
-          );
+          const result = TmdMcpCore.checkTmdText(text, { includeSyntaxCheck: true });
+          return textContent(JSON.stringify(result, null, 2), extraBlocks);
         } catch (err: any) {
           return textContent(
             JSON.stringify({
@@ -297,75 +187,16 @@ export const buildTmdWebMcpTools = (
       },
       handler: async ({ text, format, section, instrument }) => {
         const extraBlocks = consumeAutoSkillBlocks();
-        const sheet = TmdParser.parse(text);
-        if (!sheet) {
-          throw new Error("Invalid TMD score text");
-        }
-
-        const uint8ToBase64 = (uint8: Uint8Array): string => {
-          let binary = "";
-          const len = uint8.byteLength;
-          for (let i = 0; i < len; i++) {
-            binary += String.fromCharCode(uint8[i]);
-          }
-          return typeof btoa !== "undefined"
-            ? btoa(binary)
-            : Buffer.from(uint8).toString("base64");
-        };
-
-        const fmt = (format || "musicxml").toLowerCase();
-        switch (fmt) {
-          case "midi": {
-            const uint8 = TmdMIDIGenerator.generateMIDI(
-              sheet,
-              TmdMIDIGenerator.defaultTicksPerQuarterNote,
-              {
-                targetParagraph: section,
-                targetInstrument: instrument,
-              }
-            );
-            return textContent(uint8ToBase64(uint8), extraBlocks);
-          }
-          case "reaper":
-          case "rpp": {
-            return textContent(TmdReaperGenerator.generateRPP(sheet), extraBlocks);
-          }
-          case "musicxml": {
-            return textContent(TmdMusicXMLGenerator.generateMusicXML(sheet), extraBlocks);
-          }
-          case "lilypond": {
-            return textContent(TmdLilyPondGenerator.generateLilyPond(sheet), extraBlocks);
-          }
-          case "abc": {
-            return textContent(TmdABCGenerator.generateABC(sheet), extraBlocks);
-          }
-          case "chordpro":
-          case "cho": {
-            return textContent(TmdChordProGenerator.generateChordPro(sheet), extraBlocks);
-          }
-          case "braille":
-          case "brl":
-          case "brf": {
-            const encoding: TmdBrailleEncoding = fmt === "brf" ? "ascii" : "unicode";
-            return textContent(
-              TmdBrailleGenerator.generateBraille(sheet, {
-                encoding,
-                targetSection: section,
-                targetInstrument: instrument,
-              }),
-              extraBlocks
-            );
-          }
-          case "vsq": {
-            const uint8 = TmdVSQGenerator.generateVSQ(sheet);
-            return textContent(uint8ToBase64(uint8), extraBlocks);
-          }
-          case "vsqx": {
-            return textContent(TmdVSQXGenerator.generateVSQX(sheet), extraBlocks);
-          }
-          default:
-            throw new Error(`Unsupported format: ${format}`);
-        }
+        const converted = TmdMcpCore.convertTmdText(text, {
+          format,
+          defaultFormat: "musicxml",
+          section,
+          instrument,
+        });
+        return textContent(
+          converted.kind === "binary" ? converted.base64 : converted.text,
+          extraBlocks
+        );
       },
     },
     {

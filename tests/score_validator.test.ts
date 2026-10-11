@@ -363,6 +363,12 @@ A:Piano@|0|{
     expect(ChordSymbol.isStandardQuality("halfDiminished")).toBe(true);
     expect(ChordSymbol.isStandardQuality("add9")).toBe(false);
     expect(ChordSymbol.isRecognizedExtendedQuality("add9")).toBe(true);
+    expect(ChordSymbol.isRecognizedExtendedQuality("m7b5")).toBe(true);
+    expect(ChordSymbol.isRecognizedExtendedQuality("7#11")).toBe(true);
+    expect(ChordSymbol.isRecognizedExtendedQuality("7b13")).toBe(true);
+    expect(ChordSymbol.isRecognizedExtendedQuality("maj7#11")).toBe(true);
+    expect(ChordSymbol.isRecognizedExtendedQuality("maj7#5")).toBe(true);
+    expect(ChordSymbol.isRecognizedExtendedQuality("m6/9")).toBe(true);
     expect(ChordSymbol.isRecognizedExtendedQuality("weirdquality")).toBe(false);
 
     expect(MIDIInstrument.isRecognized("Piano")).toBe(true);
@@ -371,8 +377,25 @@ A:Piano@|0|{
     expect(MIDIInstrument.isRecognized("Gtr")).toBe(true);
     expect(MIDIInstrument.isRecognized("Uke")).toBe(true);
     expect(MIDIInstrument.isRecognized("Vox")).toBe(true);
+    expect(MIDIInstrument.isRecognized("Miku")).toBe(true);
+    expect(MIDIInstrument.isRecognized("鋼琴")).toBe(true);
+    expect(MIDIInstrument.isRecognized("電吉他")).toBe(true);
+    expect(MIDIInstrument.isRecognized("古箏")).toBe(true);
     expect(MIDIInstrument.isRecognized("Unknown")).toBe(false);
     expect(MIDIInstrument.isRecognized("UnknownMartianZorg")).toBe(false);
+
+    const { mapSectionsNotes, TmdParser } = await import("../src/syntax/index.js");
+    const { transposeNoteDiatonicSteps } = await import("../src/refactoring/transpose.js");
+    const parsed = TmdParser.parseThrowing(
+      "::SCORE::\n!= 120\n?= C\n<4/4>\nA:Piano@|0|{\n<4*>\n| 1 2+4 [C] 0 |\n}\n-> A ->#"
+    );
+    const transformed = mapSectionsNotes(parsed.entries[0].sections, (note) =>
+      transposeNoteDiatonicSteps(note, 2)
+    );
+    expect(transformed[0].unitGroups[0].units[0]).toEqual({
+      type: "note",
+      note: { degree: 3, accidental: "natural", octave: 0 },
+    });
 
     const validatorSrc = fs.readFileSync(
       path.resolve(process.cwd(), "src/validation/score_validator.ts"),
@@ -381,5 +404,55 @@ A:Piano@|0|{
     expect(validatorSrc).not.toContain("const KNOWN_INSTRUMENT_KEYWORDS");
     expect(validatorSrc).not.toContain("const STANDARD_CHORD_QUALITIES");
     expect(validatorSrc).not.toContain("const EXTENDED_CHORD_QUALITIES");
+  });
+
+  it("shares canonical SSOT for monophonic vocal extraction, effectivePlaybackOrders, channel/pan, and metronome tempo (#51)", async () => {
+    const { TmdParser, metronomeTempoForBeat } = await import("../src/syntax/index.js");
+    const { SheetInstrumentHelper } = await import("../src/domain/index.js");
+    const { TmdPlaybackRenderer } = await import("../src/playback/index.js");
+    const { MIDIInstrument } = await import("../src/exporters/midi_instrument.js");
+    const { VocaloidPhoneme } = await import("../src/exporters/vocaloid_phoneme.js");
+
+    // 1. effectivePlaybackOrders
+    const sheetNoOrders = TmdParser.parseThrowing(
+      "::SCORE::\n!= 120\n?= C\n<4/4>\nIntro:Piano@|0|{\n<4*>\n| 1 2 3 4 |\n}\nVerse:Piano@|0|{\n<4*>\n| 5 6 7 1^ |\n}\n->#"
+    );
+    expect(SheetInstrumentHelper.effectivePlaybackOrders(sheetNoOrders)).toEqual([
+      { type: "name", name: "Intro" },
+      { type: "name", name: "Verse" },
+    ]);
+
+    // 2. TmdPlaybackRenderer.monophonicEvents & VocaloidPhoneme.extractNotes
+    const chordSheet = TmdParser.parseThrowing(
+      "::SCORE::\n!= 120\n?= C\n<4/4>\nA:Vocal@|0|{\n<4*>\n| 1+3+5 2 3 4 |\n}\n-> A ->#"
+    );
+    const timeline = TmdPlaybackRenderer.render(chordSheet, "Vocal");
+    const mono = TmdPlaybackRenderer.monophonicEvents(timeline);
+    expect(mono).toHaveLength(4);
+    const extracted = VocaloidPhoneme.extractNotes(timeline, 0, 480, "la");
+    expect(extracted).toHaveLength(4);
+    expect(extracted[0].pitch).toBe(67); // 5 in C = G4 = 67
+
+    // 3. MIDIInstrument.allocateChannel & stereoPanHeuristic
+    const state = { nextMelodicChannel: 8 };
+    const ch1 = MIDIInstrument.allocateChannel(MIDIInstrument.Piano, state);
+    const ch2 = MIDIInstrument.allocateChannel(MIDIInstrument.Violin, state);
+    const chPerc = MIDIInstrument.allocateChannel(MIDIInstrument.Percussion, state);
+    expect(ch1).toBe(8);
+    expect(ch2).toBe(10); // Skips channel 9
+    expect(chPerc).toBe(9);
+    expect(MIDIInstrument.stereoPanHeuristic("Guitar-L")).toBe("left");
+    expect(MIDIInstrument.stereoPanHeuristic("Piano_Right")).toBe("right");
+    expect(MIDIInstrument.stereoPanHeuristic("Lead")).toBe("center");
+
+    // 4. metronomeTempoForBeat
+    const compound = metronomeTempoForBeat({ count: 6, noteValue: 8 }, 120);
+    expect(compound).toEqual({
+      beatUnit: "quarter",
+      lilyPondUnit: "4.",
+      abcUnit: "3/8",
+      isDotted: true,
+      perMinute: 80,
+    });
   });
 });

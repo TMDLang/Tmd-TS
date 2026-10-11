@@ -1,3 +1,6 @@
+import { PlaybackTimeline, TmdPlaybackRenderer } from '../playback/index.js';
+import { noteToMIDIPitch } from '../syntax/index.js';
+
 /**
  * Provides conversion between Japanese lyrics (Hiragana / Katakana / Romaji) and VOCALOID X-SAMPA phonemes.
  */
@@ -134,4 +137,37 @@ export class VocaloidPhoneme {
     if (this.table[raw]) return this.table[raw];
     return this.defaultPhoneme;
   }
+
+  /**
+   * Extracts monophonic vocal note items from a `PlaybackTimeline` with pre-measure tick offset and X-SAMPA phoneme resolution.
+   */
+  public static extractNotes(
+    timeline: PlaybackTimeline,
+    preMeasureTicks: number,
+    ticksPerQuarter: number,
+    defaultLyric: string = this.defaultLyric
+  ): VocaloidNoteItem[] {
+    const items: VocaloidNoteItem[] = [];
+    for (const event of TmdPlaybackRenderer.monophonicEvents(timeline)) {
+      if (event.content.type !== 'note') continue;
+      const pitch = noteToMIDIPitch(event.content.note, event.state.keyOffset);
+      if (pitch < 0 || pitch > 127) continue;
+      const rawTicks = Math.round(event.position * ticksPerQuarter);
+      const tick = preMeasureTicks + Math.max(0, Number.isFinite(rawTicks) ? rawTicks : 0);
+      const rawDur = Math.round(event.duration * ticksPerQuarter);
+      const dur = Math.max(1, Number.isFinite(rawDur) ? rawDur : 1);
+      const lyric = defaultLyric;
+      const phoneme = this.resolvePhoneme(lyric);
+      items.push({ tick, dur, pitch, lyric, phoneme });
+    }
+    return items;
+  }
+}
+
+export interface VocaloidNoteItem {
+  tick: number;
+  dur: number;
+  pitch: number;
+  lyric: string;
+  phoneme: string;
 }

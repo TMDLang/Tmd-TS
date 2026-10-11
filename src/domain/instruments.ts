@@ -1,5 +1,10 @@
 import { TmdMacroEvaluator } from '../playback/macro.js';
-import { Sheet } from '../syntax/types.js';
+import { DEFAULT_INSTRUMENT, effectivePlaybackOrders, Playback, Sheet } from '../syntax/types.js';
+
+export interface SheetExportPrepOptions {
+  targetParagraph?: string;
+  targetInstrument?: string;
+}
 
 /**
  * Common helper functions for querying and resolving instruments from a TMD Sheet.
@@ -7,12 +12,22 @@ import { Sheet } from '../syntax/types.js';
  */
 export class SheetInstrumentHelper {
   /**
+   * Returns `sheet.playback` when explicitly specified, or falls back to playing each distinct entry section name in appearance order.
+   */
+  public static effectivePlaybackOrders(sheet: Sheet): Playback[] {
+    return effectivePlaybackOrders(sheet);
+  }
+  /**
    * Returns a sorted array of distinct instrument names present in the sheet.
    * If the sheet has no instruments, falls back to `["Piano"]` if fallback is enabled.
    * Automatically expands S-Expression macros so dynamically generated instruments are discovered.
    */
   public static distinctInstruments(rawSheet: Sheet, fallbackToDefault = true): string[] {
     const sheet = TmdMacroEvaluator.expandThrowing(rawSheet);
+    return this.distinctInstrumentsFromExpanded(sheet, fallbackToDefault);
+  }
+
+  private static distinctInstrumentsFromExpanded(sheet: Sheet, fallbackToDefault: boolean): string[] {
     const distinct = Array.from(
       new Set(
         sheet.entries
@@ -21,9 +36,110 @@ export class SheetInstrumentHelper {
       )
     ).sort();
     if (distinct.length === 0 && fallbackToDefault) {
-      return ['Piano'];
+      return [DEFAULT_INSTRUMENT];
     }
     return distinct;
+  }
+
+  /**
+   * Expands all S-Expression macros on `rawSheet` once, optionally filters by `targetParagraph`
+   * and `targetInstrument`, and returns the prepared sheet along with its active instruments.
+   */
+  public static preparedForExport(
+    rawSheet: Sheet,
+    fallbackToDefault = false,
+    options?: SheetExportPrepOptions
+  ): { sheet: Sheet; instruments: string[] } {
+    let sheet = TmdMacroEvaluator.expandThrowing(rawSheet);
+    if (options?.targetParagraph) {
+      const filteredParagraphs = sheet.entries.filter((p) => p.name === options.targetParagraph);
+      sheet = {
+        ...sheet,
+        entries: filteredParagraphs,
+        playback: [{ type: 'name', name: options.targetParagraph }],
+      };
+    }
+
+    let instruments = this.distinctInstrumentsFromExpanded(sheet, false);
+    if (options?.targetInstrument) {
+      const target = options.targetInstrument === '' ? DEFAULT_INSTRUMENT : options.targetInstrument;
+      instruments = instruments.filter((inst) => inst === target);
+      if (
+        instruments.length === 0 &&
+        (options.targetInstrument === DEFAULT_INSTRUMENT || options.targetInstrument === '')
+      ) {
+        instruments = [DEFAULT_INSTRUMENT];
+      }
+    } else if (instruments.length === 0 && fallbackToDefault) {
+      instruments = [DEFAULT_INSTRUMENT];
+    }
+
+    return { sheet, instruments };
+  }
+
+  /**
+   * Returns `true` if any entry assigned to `instrument` (case-insensitively) contains a `percussion` unit.
+   */
+  public static containsPercussionUnits(sheet: Sheet, instrument: string): boolean {
+    const lower = instrument.toLowerCase();
+    return sheet.entries
+      .filter((p) => (p.assignment ?? '').toLowerCase() === lower)
+      .some((p) =>
+        p.sections.some((s) =>
+          s.unitGroups.some((g) => g.units.some((u) => u.type === 'percussion'))
+        )
+      );
+  }
+
+  /**
+   * Returns `true` if `instrument` is a percussion track by name keyword or by containing `percussion` units.
+   */
+  public static isPercussionTrack(sheet: Sheet, instrument: string): boolean {
+    const lower = instrument.toLowerCase();
+    const aliases = [
+      'drum',
+      'drums',
+      'groove',
+      'percussion',
+      'perc',
+      'beat',
+      'drumkit',
+      'kit',
+      'cajon',
+      'snare',
+      'kick',
+      'hihat',
+    ];
+    if (aliases.some((a) => lower.includes(a))) {
+      return true;
+    }
+    return this.containsPercussionUnits(sheet, instrument);
+  }
+
+  /**
+   * Returns `true` if `instrument` conventionally uses bass clef (`F` clef on line 4).
+   */
+  public static isBassClefInstrument(instrument: string): boolean {
+    const lower = instrument.toLowerCase();
+    const bassKeywords = [
+      'bass',
+      'cello',
+      'tuba',
+      'contrabass',
+      'bassoon',
+      'trombone',
+      'baritone',
+      'timpani',
+    ];
+    return bassKeywords.some((k) => lower.includes(k));
+  }
+
+  /**
+   * Returns `true` if `instrument` is a dedicated chord-symbol assignment (`CHORD` or `CHORDS`).
+   */
+  public static isChordSymbolTrack(instrument: string): boolean {
+    const lower = instrument.trim().toLowerCase();
+    return lower === 'chord' || lower === 'chords';
   }
 
   /**

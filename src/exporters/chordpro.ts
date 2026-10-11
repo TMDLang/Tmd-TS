@@ -1,5 +1,5 @@
 import { SheetInstrumentHelper } from "../domain/index.js";
-import { TmdMacroEvaluator, TmdMeasureRenderer } from "../playback/index.js";
+import { TmdMeasureRenderer } from "../playback/index.js";
 import { ChordSymbol, KeySignature, PitchMapping, Playback, Sheet, SpelledPitch } from "../syntax/index.js";
 
 export interface ChordProOptions {
@@ -11,7 +11,7 @@ export class TmdChordProGenerator {
     rawSheet: Sheet,
     options: ChordProOptions = {}
   ): string {
-    const sheet = TmdMacroEvaluator.expandThrowing(rawSheet);
+    const { sheet, instruments: distinctInstruments } = SheetInstrumentHelper.preparedForExport(rawSheet);
     const lines: string[] = [];
 
     // Title and Metadata directives
@@ -49,8 +49,6 @@ export class TmdChordProGenerator {
     }
 
     // Determine target track: pick guitar/chords instrument or first instrument
-    const distinctInstruments = SheetInstrumentHelper.distinctInstruments(sheet, false);
-
     const targetInstrument =
       distinctInstruments.find((inst) =>
         /guitar|chord|lead|piano/i.test(inst)
@@ -58,13 +56,7 @@ export class TmdChordProGenerator {
       distinctInstruments[0];
 
     // Group sections by order
-    const orders: Playback[] =
-      sheet.playback.length > 0
-        ? sheet.playback
-        : Array.from(new Set(sheet.entries.map((p) => p.name))).map((n) => ({
-            type: 'name' as const,
-            name: n,
-          }));
+    const orders = SheetInstrumentHelper.effectivePlaybackOrders(sheet);
 
     const measuresPerLine = options.measuresPerLine ?? 4;
     let currentKeyOffset = sheet.keySignature.semitoneOffset;

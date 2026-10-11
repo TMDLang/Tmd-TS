@@ -1,5 +1,10 @@
 import { TmdParser } from "../syntax/parser.js";
 import { TmdRefactorError } from "./errors.js";
+import {
+  matchesRefactorTarget,
+  parseGridSubdivisionLine,
+  parseParagraphHeaderLine,
+} from "./format_helpers.js";
 import { measureUnits, parseTupletToken } from "./unit_helpers.js";
 
 export interface TmdGridTarget {
@@ -23,16 +28,10 @@ export function doubleGrid(
       const trimmed = rawLine.trim();
 
       // Check paragraph header: section:instrument@...{
-      const paraMatch = trimmed.match(
-        /^([a-zA-Z0-9_\u4e00-\u9fa5-]+)\s*:\s*([a-zA-Z0-9_\u4e00-\u9fa5-]+)(@[^{]*)?\s*\{/
-      );
-      if (paraMatch) {
+      const header = parseParagraphHeaderLine(trimmed);
+      if (header) {
         insideParagraph = true;
-        const pSec = paraMatch[1];
-        const pInst = paraMatch[2];
-        inMatchingPara =
-          (!target?.section || target.section === pSec) &&
-          (!target?.instrument || target.instrument === pInst);
+        inMatchingPara = matchesRefactorTarget(target, header.section, header.instrument);
         currentNoteLength = 4;
         resultLines.push(rawLine);
         continue;
@@ -51,9 +50,9 @@ export function doubleGrid(
       }
 
       // Check section noteLength header: <4*> -> <8*>
-      const gridMatch = trimmed.match(/^<(\d+)\*>/);
-      if (gridMatch) {
-        currentNoteLength = parseInt(gridMatch[1], 10);
+      const gridValue = parseGridSubdivisionLine(trimmed);
+      if (gridValue !== undefined) {
+        currentNoteLength = gridValue;
         const newLen = currentNoteLength * 2;
         const indent = rawLine.match(/^\s*/)?.[0] || "";
         resultLines.push(`${indent}<${newLen}*>`);
@@ -88,16 +87,10 @@ export function halveGrid(
     for (const rawLine of rawLines) {
       const trimmed = rawLine.trim();
 
-      const paraMatch = trimmed.match(
-        /^([a-zA-Z0-9_\u4e00-\u9fa5-]+)\s*:\s*([a-zA-Z0-9_\u4e00-\u9fa5-]+)(@[^{]*)?\s*\{/
-      );
-      if (paraMatch) {
+      const header = parseParagraphHeaderLine(trimmed);
+      if (header) {
         insideParagraph = true;
-        const pSec = paraMatch[1];
-        const pInst = paraMatch[2];
-        inMatchingPara =
-          (!target?.section || target.section === pSec) &&
-          (!target?.instrument || target.instrument === pInst);
+        inMatchingPara = matchesRefactorTarget(target, header.section, header.instrument);
         currentNoteLength = 4;
         resultLines.push(rawLine);
         continue;
@@ -115,9 +108,9 @@ export function halveGrid(
         continue;
       }
 
-      const gridMatch = trimmed.match(/^<(\d+)\*>/);
-      if (gridMatch) {
-        currentNoteLength = parseInt(gridMatch[1], 10);
+      const gridValue = parseGridSubdivisionLine(trimmed);
+      if (gridValue !== undefined) {
+        currentNoteLength = gridValue;
         if (currentNoteLength % 2 !== 0) {
           throw new TmdRefactorError(`Cannot halve odd grid <${currentNoteLength}*>`);
         }
