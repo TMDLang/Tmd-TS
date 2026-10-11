@@ -26,10 +26,7 @@ import {
   TmdVSQXGenerator,
 } from "./exporters/index.js";
 import { readUTF8, writeUTF8 } from "./io/text_io.js";
-import { TmdJSONRPCCodec,TmdLSPServer } from "./lsp/index.js";
 import { TmdMCPInstaller,TmdMCPServer } from "./mcp/index.js";
-import { TmdOutlineGenerator, TmdOutlineNode, TmdTonalityVisualizer } from "./presentation/index.js";
-import { TmdRefactor } from "./refactoring/index.js";
 import { TmdSkill } from "./skill.js";
 import { formatSummary } from "./syntax/index.js";
 import { TmdParser } from "./syntax/index.js";
@@ -51,6 +48,7 @@ SUBCOMMANDS:
 
 OPTIONS:
   -p, --parse-only        Parse and display the score summary.
+      --inspect           Inspect the full song musical profile (legacy flag; see 'tmd inspect').
   -f, --force             Ignore measure consistency errors during export.
   -m, --midi-output PATH  Export Standard MIDI.
   -x, --musicxml-output PATH  Export MusicXML 4.0.
@@ -70,7 +68,7 @@ OPTIONS:
       --singer NAME       Vocaloid singer name (defaults to Miku).
       --soundfont PATH    SoundFont/DLS path for WAV rendering (not supported by the portable renderer).
       --section NAME      Optional section filter for MIDI export or playback.
-      --instrument NAME   Optional instrument filter for MIDI export or playback.
+      --instrument NAME   Optional instrument filter for MIDI/Vocal export or playback.
   -w, --wav-output PATH   Render portable 16-bit stereo WAV.
       --pdf-output PATH   Render PDF through lilypond.
       --play              Render and play through afplay/aplay.
@@ -381,11 +379,11 @@ export function main(argv = process.argv.slice(2)): number {
       );
     }
     if (outputs.vsq)
-      fs.writeFileSync(outputs.vsq, TmdVSQGenerator.generateVSQ(sheet, { singerName: singer }));
+      fs.writeFileSync(outputs.vsq, TmdVSQGenerator.generateVSQ(sheet, { singerName: singer }, instrument));
     if (outputs.vsqx)
-      fs.writeFileSync(outputs.vsqx, TmdVSQXGenerator.generateVSQX(sheet, { singerName: singer }));
+      fs.writeFileSync(outputs.vsqx, TmdVSQXGenerator.generateVSQX(sheet, { singerName: singer }, instrument));
     if (outputs.ust)
-      writeUTF8(outputs.ust, TmdUSTGenerator.generateUST(sheet));
+      writeUTF8(outputs.ust, TmdUSTGenerator.generateUST(sheet, instrument));
     if (outputs.pdf) {
       const temp = path.join(os.tmpdir(), `tmd-${Date.now()}.ly`);
       writeUTF8(temp, TmdLilyPondGenerator.generateLilyPond(sheet));

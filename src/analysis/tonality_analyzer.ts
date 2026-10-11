@@ -511,11 +511,6 @@ private static readonly KS_MAJOR_PROFILE: number[] = [
     return ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"].indexOf(tonic);
   }
 
-  private static keyName(tonic: number): string {
-    const names = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];
-    return names[((tonic % 12) + 12) % 12];
-  }
-
   private static circleOfFifthsStep(tonicOffset: number): number {
     switch (((tonicOffset % 12) + 12) % 12) {
       case 0: return 0;   // C

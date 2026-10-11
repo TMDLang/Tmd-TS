@@ -454,4 +454,34 @@ verse:Piano@|0|{
     expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("USAGE: tmd lsp"));
     logSpy.mockRestore();
   });
+
+  it("Issue #57: strips trailing '}' on auto-closed section directives, filters chords/instruments by prefix, and provides full 15-key major/minor diatonic chords", () => {
+    // 1. Auto-closed brace "{}" strips trailing "}"
+    const autoCloseBrace = "A:Piano@|0|{\n  <4*>\n  {}";
+    const braceItems = TmdLSPCompletionEngine.complete(autoCloseBrace, new TmdLSPPosition(2, 3));
+    const meterItem = braceItems.find((i) => i.label === "<4/4>");
+    expect(meterItem?.insertText?.endsWith("}")).toBe(false);
+
+    // 2. Prefix filtering on instruments and chords
+    const instItems = TmdLSPCompletionEngine.complete("verse:Pi", new TmdLSPPosition(0, 8));
+    expect(instItems.map((i) => i.label)).toContain("Piano");
+    expect(instItems.map((i) => i.label)).not.toContain("Violin");
+
+    const chordPrefixSource = `::SCORE::\n?= C\n<4/4>\nverse:Piano@|0|{\n  <4*>\n  [6\n}`;
+    const chordPrefixItems = TmdLSPCompletionEngine.complete(chordPrefixSource, new TmdLSPPosition(5, 4));
+    expect(chordPrefixItems.map((i) => i.label)).toContain("6m");
+    expect(chordPrefixItems.map((i) => i.label)).not.toContain("1");
+
+    // 3. Em and Dm distinct minor diatonic chords and E/Eb major diatonic chords
+    const emSource = `::SCORE::\nkey= Em\n<4/4>\nverse:Piano@|0|{\n  <4*>\n  [\n}`;
+    const emItems = TmdLSPCompletionEngine.complete(emSource, new TmdLSPPosition(5, 3));
+    expect(emItems.map((i) => i.label)).toContain("B7");
+    expect(emItems.map((i) => i.label)).toContain("F#dim");
+
+    const ebSource = `::SCORE::\n?= Eb\n<4/4>\nverse:Piano@|0|{\n  <4*>\n  [\n}`;
+    const ebItems = TmdLSPCompletionEngine.complete(ebSource, new TmdLSPPosition(5, 3));
+    expect(ebItems.map((i) => i.label)).toContain("Eb");
+    expect(ebItems.map((i) => i.label)).toContain("Fm");
+    expect(ebItems.map((i) => i.label)).toContain("Ab");
+  });
 });

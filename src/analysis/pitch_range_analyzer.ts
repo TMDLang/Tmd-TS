@@ -42,7 +42,7 @@ export class TmdSongPitchRangeAnalyzer {
           if (directive.position <= cursor || directive.position >= position) continue;
           const segment = directive.position - cursor;
           elapsedSeconds += segment * 60 / tempo;
-          elapsedMeasures += segment / this.measureDuration(meter);
+          elapsedMeasures += segment / TmdPlaybackRenderer.measureDuration(meter);
           cursor = directive.position;
           tempo = directive.state.tempo;
           meter = directive.state.timeSignature;
@@ -50,12 +50,12 @@ export class TmdSongPitchRangeAnalyzer {
         if (position > cursor) {
           const segment = position - cursor;
           elapsedSeconds += segment * 60 / tempo;
-          elapsedMeasures += segment / this.measureDuration(meter);
+          elapsedMeasures += segment / TmdPlaybackRenderer.measureDuration(meter);
         }
         measure = section.startMeasure + Math.floor(elapsedMeasures + 1e-9);
         timeSeconds = section.startSeconds + elapsedSeconds;
       } else {
-        const nominalMeasureDuration = this.measureDuration(event.state.timeSignature);
+        const nominalMeasureDuration = TmdPlaybackRenderer.measureDuration(event.state.timeSignature);
         measure = 1 + Math.floor(event.position / nominalMeasureDuration);
         timeSeconds = event.position / (event.state.tempo / 60);
       }
@@ -116,9 +116,5 @@ export class TmdSongPitchRangeAnalyzer {
   private static noteName(midiPitch: number): string {
     const names = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
     return `${names[((midiPitch % 12) + 12) % 12]}${Math.floor(midiPitch / 12) - 1}`;
-  }
-
-  private static measureDuration(beat: { count: number; noteValue: number }): number {
-    return Math.max(1, beat.count) * 4 / Math.max(1, beat.noteValue);
   }
 }
