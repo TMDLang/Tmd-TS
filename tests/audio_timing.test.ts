@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { TmdWAVRenderer } from "../src/audio.js";
+import { TmdAudioError, TmdWAVRenderer } from "../src/audio.js";
 import { TmdParser } from "../src/syntax/parser.js";
 
 function wavDurationSeconds(wav: Uint8Array, sampleRate: number): number {
@@ -14,6 +14,20 @@ function wavEnergy(wav: Uint8Array): number {
 }
 
 describe("TmdWAVRenderer timing and percussion", () => {
+  it("rejects sample rates above the portable renderer limit before allocation", () => {
+    const sheet = TmdParser.parse(`::SCORE::
+!= 120
+?= C
+<4/4>
+A:Piano@|0|{
+<4*>
+1 - - -
+}
+`);
+
+    expect(() => TmdWAVRenderer.renderWAV(sheet, 384001)).toThrow(TmdAudioError);
+  });
+
   it("converts beat positions through tempo changes instead of using one global tempo", () => {
     const sheet = TmdParser.parse(`::SCORE::
 ** Tempo map **

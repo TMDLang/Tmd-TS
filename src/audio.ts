@@ -34,8 +34,8 @@ export class TmdWAVRenderer {
       );
     }
 
-    if (!Number.isFinite(sampleRate) || sampleRate < 8000)
-      throw new TmdAudioError("Sample rate must be at least 8000 Hz");
+    if (!Number.isFinite(sampleRate) || sampleRate < 8000 || sampleRate > 384000)
+      throw new TmdAudioError("Sample rate must be finite and between 8000 Hz and 384000 Hz");
 
     const { sheet, instruments: distinctInstruments } = SheetInstrumentHelper.preparedForExport(
       rawSheet,
