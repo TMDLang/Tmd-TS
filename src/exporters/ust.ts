@@ -17,6 +17,13 @@ export interface USTExportOptions {
   ticksPerQuarter?: number;
 }
 
+export class TmdUSTError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "TmdUSTError";
+  }
+}
+
 /**
  * Exporter for UTAU sequence text (.ust) format, fully compatible with
  * original UTAU and modern cross-platform OpenUtau.
@@ -43,7 +50,10 @@ export class TmdUSTGenerator {
     const voiceDir = options.voiceDir || "";
     const defaultLyric = options.defaultLyric || "a";
     const lyrics = options.lyrics || [];
-    const ticksPerQuarter = options.ticksPerQuarter || 480;
+    const ticksPerQuarter = options.ticksPerQuarter ?? 480;
+    if (!Number.isInteger(ticksPerQuarter) || ticksPerQuarter < 1 || ticksPerQuarter > 0x7fff) {
+      throw new TmdUSTError("ticksPerQuarter must be an integer between 1 and 32767");
+    }
 
     const lines: string[] = [
       "[#SETTING]",

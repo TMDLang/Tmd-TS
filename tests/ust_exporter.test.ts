@@ -5,7 +5,7 @@ import * as path from "node:path";
 import { describe, expect,it } from "vitest";
 
 import { main } from "../src/cli.js";
-import { TmdUSTGenerator } from "../src/exporters/ust.js";
+import { TmdUSTError, TmdUSTGenerator } from "../src/exporters/ust.js";
 import { TmdParser } from "../src/syntax/index.js";
 
 describe("TmdUSTGenerator (UTAU .ust Export)", () => {
@@ -33,6 +33,18 @@ verse:Vocal@|0|{
     expect(ust).toContain("ProjectName=UTAU Test Song");
     expect(ust).toContain("Mode2=True");
     expect(ust).toContain("Charset=UTF-8");
+  });
+
+  it("validates custom ticks-per-quarter values before generating UST", () => {
+    const sheet = TmdParser.parse(sampleTmd)!;
+    const ust = TmdUSTGenerator.generateUST(sheet, "Vocal", { ticksPerQuarter: 960 });
+    expect(ust).toContain("Length=960");
+
+    for (const ticksPerQuarter of [0, -1, 480.5, Number.NaN, Number.POSITIVE_INFINITY]) {
+      expect(() => TmdUSTGenerator.generateUST(sheet, "Vocal", { ticksPerQuarter })).toThrow(
+        TmdUSTError
+      );
+    }
   });
 
   it("renders note events with Length, Lyric, NoteNum, and default parameters", () => {
