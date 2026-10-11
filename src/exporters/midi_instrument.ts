@@ -852,19 +852,19 @@ export namespace MIDIInstrument {
       if (existing !== undefined) {
         return existing;
       }
-      if (state.nextMelodicChannel === 9) {
-        state.nextMelodicChannel += 1;
+      let channel = state.nextMelodicChannel % 16;
+      if (channel === 9) {
+        channel = (channel + 1) % 16;
       }
-      const channel = state.nextMelodicChannel % 16;
       state.programToMelodyChannel.set(prog, channel);
-      state.nextMelodicChannel += 1;
+      state.nextMelodicChannel = (channel + 1) % 16;
       return channel;
     }
-    if (state.nextMelodicChannel === 9) {
-      state.nextMelodicChannel += 1;
+    let channel = state.nextMelodicChannel % 16;
+    if (channel === 9) {
+      channel = (channel + 1) % 16;
     }
-    const channel = state.nextMelodicChannel % 16;
-    state.nextMelodicChannel = (state.nextMelodicChannel + 1) % 16;
+    state.nextMelodicChannel = (channel + 1) % 16;
     return channel;
   }
 }

@@ -48,7 +48,8 @@ export class TmdVSQGenerator {
       selectedInstrument,
       singerName,
       preMeasure,
-      defaultLyric
+      defaultLyric,
+      beat
     );
 
     return TmdMIDIEncoder.encodeFile([conductorTrackData, vsqTrackData], this.ticksPerQuarter);
@@ -59,9 +60,12 @@ export class TmdVSQGenerator {
     instrumentName: string,
     singerName: string,
     preMeasure: number,
-    defaultLyric: string
+    defaultLyric: string,
+    beat: { count: number; noteValue: number }
   ): Uint8Array {
-    const preMeasureTicks = preMeasure * 4 * this.ticksPerQuarter;
+    const beatCount = beat.count > 0 ? beat.count : 4;
+    const beatNoteVal = beat.noteValue > 0 ? beat.noteValue : 4;
+    const preMeasureTicks = preMeasure * Math.floor((beatCount * 4 * this.ticksPerQuarter) / beatNoteVal);
     const noteItems = VocaloidPhoneme.extractNotes(
       timeline,
       preMeasureTicks,

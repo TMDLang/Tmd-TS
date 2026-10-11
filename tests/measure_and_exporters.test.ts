@@ -777,5 +777,113 @@ A:Cello@|0|{
       expect(matchesRefactorTarget({ instrument: 'Piano' }, 'verse', 'Piano')).toBe(true);
       expect(matchesRefactorTarget({ instrument: 'Bass' }, 'verse', 'Piano')).toBe(false);
     });
+
+    it('Issue #56: fixes lilyPondKey("bm"), MusicXML erroneous <chord/>, MIDI channel >15 wrap to Ch.9, VSQ non-4/4 preMeasure, ChordPro section fallback, and PercussiveOrgan classification', async () => {
+      const {
+        MIDIInstrument,
+        SheetInstrumentHelper,
+        TmdChordProGenerator,
+        TmdVSQGenerator,
+      } = await import('../src/index.js');
+
+      // 1. lilyPondKey("bm") and "b" should not turn B natural into bes
+      const bmSheet = TmdParser.parse(`::SCORE::
+!= 120
+?= D
+key= bm
+<4/4>
+A:Piano@|0|{
+  <4*>
+  | [C] . . . |
+}
+A:Piano@|0|{
+  <4*>
+  | 1 2 3 4 |
+}
+-> A ->#
+`)!;
+      const ly = TmdLilyPondGenerator.generateLilyPond(bmSheet);
+      expect(ly).toContain('\\key b \\minor');
+      expect(ly).not.toContain('\\key bes');
+      expect(ly).toContain('<c e g>1');
+      expect(ly).toContain("d'4");
+
+      // 2. MusicXML should not emit <chord/> on the first note after <harmony>
+      const xml = TmdMusicXMLGenerator.generateMusicXML(bmSheet);
+      expect(xml).toContain('<harmony>');
+      expect(xml).not.toContain('<chord/>');
+
+      // 3. MIDI channel allocation with programToMelodyChannel should never return channel 9 (percussion)
+      const state = { nextMelodicChannel: 0, programToMelodyChannel: new Map<number, number>() };
+      const allocatedChannels: number[] = [];
+      const instruments = [
+        'acousticGrandPiano', 'brightAcousticPiano', 'electricGrandPiano', 'honkyTonkPiano',
+        'electricPiano1', 'electricPiano2', 'harpsichord', 'clavinet',
+        'celesta', 'glockenspiel', 'musicBox', 'vibraphone',
+        'marimba', 'xylophone', 'tubularBells', 'dulcimer',
+        'drawbarOrgan', 'percussiveOrgan', 'rockOrgan', 'churchOrgan',
+      ] as const;
+      for (const inst of instruments) {
+        allocatedChannels.push(MIDIInstrument.allocateChannel(inst, state));
+      }
+      expect(allocatedChannels).not.toContain(9);
+      expect(allocatedChannels.every((ch) => ch >= 0 && ch < 16)).toBe(true);
+
+      // 4. VSQ non-4/4 preMeasureTicks (3/4 with preMeasure=4 -> 4 * 3 * 480 = 5760)
+      const waltzSheet = TmdParser.parse(`::SCORE::
+!= 120
+?= C
+<3/4>
+A:Vocal@|0|{
+  <4*>
+  | 1 2 3 |
+}
+-> A ->#
+`)!;
+      const vsqData = TmdVSQGenerator.generateVSQ(waltzSheet, { preMeasure: 4 });
+      let reconstructedIni = '';
+      for (let i = 0; i < vsqData.length - 3; i++) {
+        if (vsqData[i] === 0xff && vsqData[i + 1] === 0x01) {
+          const len = vsqData[i + 2];
+          const chunk = vsqData.slice(i + 3, i + 3 + len);
+          reconstructedIni += new TextDecoder('latin1').decode(chunk);
+        }
+      }
+      expect(reconstructedIni).toContain('5760=ID#0001');
+
+      // 5. ChordPro section fallback when global targetInstrument is missing in a section
+      const multiSectionSheet = TmdParser.parse(`::SCORE::
+!= 120
+?= C
+<4/4>
+Intro:Strings@|0|{
+  <4*>
+  | [Am] - - - |
+}
+Verse:Guitar@|0|{
+  <4*>
+  | [C] - - - |
+}
+-> Intro -> Verse ->#
+`)!;
+      const cho = TmdChordProGenerator.generateChordPro(multiSectionSheet, { measuresPerLine: 0 });
+      expect(cho).toContain('{comment: Intro}');
+      expect(cho).toContain('[Am]');
+      expect(cho).toContain('{comment: Verse}');
+      expect(cho).toContain('[C]');
+
+      // 6. PercussiveOrgan should not be classified as a percussion track
+      const organSheet = TmdParser.parse(`::SCORE::
+!= 120
+?= C
+<4/4>
+A:PercussiveOrgan@|0|{
+  <4*>
+  | 1 2 3 4 |
+}
+-> A ->#
+`)!;
+      expect(SheetInstrumentHelper.isPercussionTrack(organSheet, 'PercussiveOrgan')).toBe(false);
+    });
   });
 });

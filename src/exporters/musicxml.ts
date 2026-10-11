@@ -97,8 +97,9 @@ export class TmdMusicXMLGenerator {
 
       groups.forEach((group, groupIdx) => {
         const duration = groupDurations[groupIdx];
-        group.forEach((event, idxInGroup) => {
-          const isChord = idxInGroup > 0;
+        let emittedNoteInGroup = false;
+        group.forEach((event) => {
+          const isChord = emittedNoteInGroup;
           switch (event.content.type) {
             case "note": {
               const spelled = PitchMapping.spellNote(event.content.note, event.state.keyOffset);
@@ -122,6 +123,7 @@ export class TmdMusicXMLGenerator {
                 isChord,
                 accidentalText
               );
+              emittedNoteInGroup = true;
               break;
             }
             case "chord":

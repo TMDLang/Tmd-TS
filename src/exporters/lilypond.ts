@@ -113,7 +113,7 @@ export class TmdLilyPondGenerator {
     }
 
     const noteEvents = group.filter((ev) => ev.content.type === "note");
-    if (noteEvents.length === group.length) {
+    if (noteEvents.length === group.length && noteEvents.length > 1) {
       const decomposed = NotationDuration.decompose(group[0].duration);
       const pitches = noteEvents.map((ev) => {
         const note = (ev.content as { type: "note"; note: Note }).note;
@@ -192,9 +192,10 @@ export class TmdLilyPondGenerator {
     const trimmed = key.trim();
     if (!trimmed.length) return "c \\major";
     let pitch = trimmed[0].toLowerCase();
-    if (trimmed.includes("'") || trimmed.includes("#")) {
+    const rest = trimmed.slice(1).replace(/(?:minor|min|major|maj|m)$/i, "");
+    if (rest.includes("'") || rest.includes("#")) {
       pitch += "is";
-    } else if (trimmed.includes(",") || trimmed.includes("b")) {
+    } else if (rest.includes(",") || rest.includes("b")) {
       pitch += "es";
     }
     const mode = /(?:m|min|minor)$/i.test(trimmed) ? "minor" : "major";

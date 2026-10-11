@@ -3,7 +3,6 @@ import {
   MeasureEvent,
   NotationDuration,
   NotationDurationAtom,
-  TmdMacroEvaluator,
   TmdMeasureRenderer,
 } from "../playback/index.js";
 import {
@@ -163,16 +162,9 @@ export class TmdBrailleGenerator {
     options: TmdBrailleOptions = {}
   ): TmdBraillePreview {
     const layout: TmdBrailleLayout = options.layout ?? "partByPart";
-    let workingSheet = TmdMacroEvaluator.expandThrowing(rawSheet);
-
-    if (options.targetSection && options.targetSection.trim().length > 0) {
-      const targetSec = options.targetSection.trim().toLowerCase();
-      workingSheet = {
-        ...workingSheet,
-        entries: workingSheet.entries.filter((e) => e.name.toLowerCase() === targetSec),
-        playback: [{ type: "name", name: options.targetSection.trim() }],
-      };
-    }
+    const { sheet: workingSheet } = SheetInstrumentHelper.preparedForExport(rawSheet, false, {
+      targetParagraph: options.targetSection?.trim() || undefined,
+    });
 
     let instruments = TmdBrailleGenerator.distinctMusicalInstruments(workingSheet);
     if (options.targetInstrument && options.targetInstrument.trim().length > 0) {

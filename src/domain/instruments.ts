@@ -1,3 +1,4 @@
+import { MIDIInstrument } from '../exporters/midi_instrument.js';
 import { TmdMacroEvaluator } from '../playback/macro.js';
 import { DEFAULT_INSTRUMENT, effectivePlaybackOrders, Playback, Sheet } from '../syntax/types.js';
 
@@ -52,11 +53,13 @@ export class SheetInstrumentHelper {
   ): { sheet: Sheet; instruments: string[] } {
     let sheet = TmdMacroEvaluator.expandThrowing(rawSheet);
     if (options?.targetParagraph) {
-      const filteredParagraphs = sheet.entries.filter((p) => p.name === options.targetParagraph);
+      const targetLower = options.targetParagraph.toLowerCase();
+      const filteredParagraphs = sheet.entries.filter((p) => p.name.toLowerCase() === targetLower);
+      const matchedName = filteredParagraphs[0]?.name ?? options.targetParagraph;
       sheet = {
         ...sheet,
         entries: filteredParagraphs,
-        playback: [{ type: 'name', name: options.targetParagraph }],
+        playback: [{ type: 'name', name: matchedName }],
       };
     }
 
@@ -95,22 +98,7 @@ export class SheetInstrumentHelper {
    * Returns `true` if `instrument` is a percussion track by name keyword or by containing `percussion` units.
    */
   public static isPercussionTrack(sheet: Sheet, instrument: string): boolean {
-    const lower = instrument.toLowerCase();
-    const aliases = [
-      'drum',
-      'drums',
-      'groove',
-      'percussion',
-      'perc',
-      'beat',
-      'drumkit',
-      'kit',
-      'cajon',
-      'snare',
-      'kick',
-      'hihat',
-    ];
-    if (aliases.some((a) => lower.includes(a))) {
+    if (MIDIInstrument.isPercussion(MIDIInstrument.resolve(instrument))) {
       return true;
     }
     return this.containsPercussionUnits(sheet, instrument);

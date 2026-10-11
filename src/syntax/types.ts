@@ -71,10 +71,11 @@ export class KeySignature {
     const tonic = letterToScaleDegree(trimmed[0]);
     if (!tonic) return new KeySignature();
 
+    const rest = trimmed.slice(1);
     let accidental = Accidental.Natural;
-    if (trimmed.includes("'") || trimmed.includes("#")) {
+    if (rest.includes("'") || rest.includes("#")) {
       accidental = Accidental.Sharp;
-    } else if (trimmed.includes(",") || trimmed.includes("b")) {
+    } else if (rest.includes(",") || rest.includes("b")) {
       accidental = Accidental.Flat;
     }
     return new KeySignature(tonic, accidental);

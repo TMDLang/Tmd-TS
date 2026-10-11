@@ -58,7 +58,7 @@ export class TmdChordProGenerator {
     // Group sections by order
     const orders = SheetInstrumentHelper.effectivePlaybackOrders(sheet);
 
-    const measuresPerLine = options.measuresPerLine ?? 4;
+    const measuresPerLine = Math.max(1, options.measuresPerLine ?? 4);
     let currentKeyOffset = sheet.keySignature.semitoneOffset;
     let emittedKeyOffset = currentKeyOffset;
 
@@ -74,16 +74,30 @@ export class TmdChordProGenerator {
       }
       if (order.type === 'name') {
         const pName = order.name;
+        const sectionEntries = sheet.entries.filter((p) => p.name === pName);
         const sectionSheet: Sheet = {
           ...sheet,
-          entries: sheet.entries.filter((p) => p.name === pName),
+          entries: sectionEntries,
           playback: [{ type: 'name', name: pName }],
           keySignature: keySignatureForOffset(currentKeyOffset),
         };
 
+        const sectionInstruments = Array.from(
+          new Set(
+            sectionEntries
+              .map((p) => p.assignment)
+              .filter((inst): inst is string => Boolean(inst && inst.trim()))
+          )
+        );
+        const sectionInstrument = sectionInstruments.includes(targetInstrument)
+          ? targetInstrument
+          : sectionInstruments.find((inst) => /guitar|chord|lead|piano/i.test(inst)) ||
+            sectionInstruments[0] ||
+            targetInstrument;
+
         const sectionMeasures = TmdMeasureRenderer.renderMeasures(
           sectionSheet,
-          targetInstrument
+          sectionInstrument
         );
 
         if (sectionMeasures.length === 0) continue;
