@@ -626,11 +626,38 @@ Poly:Clarinet@|0|{
     expect(fluteTimeline.events.some((e) => Math.abs(e.position - 28.0) < 1e-6)).toBe(true);
     expect(clarinetTimeline.events.some((e) => Math.abs(e.position - 28.0) < 1e-6)).toBe(true);
 
-    // 4. Measure renderer slices Flute's M7 pickup at 24.5..<28.0 with 7/8 time signature
+    // 4. Measure renderer keeps M5's 4th bar (23.0..<28.0) in 5/4 (containing Flute's pickup in its tail)
+    // and switches all tracks (Flute, Clarinet, Oboe, Violin) to 7/8 at 28.0 with identical measure grids.
     const fluteMeasures = TmdMeasureRenderer.renderMeasures(sheet, "Flute");
-    const pickupMeasure = fluteMeasures.find((m) => Math.abs(m.startTime - 24.5) < 1e-6);
-    expect(pickupMeasure).toBeDefined();
-    expect(pickupMeasure?.timeSignature).toEqual({ count: 7, noteValue: 8 });
-    expect(pickupMeasure?.nominalDuration).toBeCloseTo(3.5, 5);
+    const clarinetMeasures = TmdMeasureRenderer.renderMeasures(sheet, "Clarinet");
+    const oboeMeasures = TmdMeasureRenderer.renderMeasures(sheet, "Oboe");
+    const violinMeasures = TmdMeasureRenderer.renderMeasures(sheet, "Violin");
+
+    expect(fluteMeasures.length).toBe(23);
+    expect(clarinetMeasures.length).toBe(23);
+    expect(oboeMeasures.length).toBe(23);
+    expect(violinMeasures.length).toBe(23);
+
+    for (let idx = 0; idx < fluteMeasures.length; idx++) {
+      expect(fluteMeasures[idx].startTime).toBeCloseTo(clarinetMeasures[idx].startTime, 5);
+      expect(fluteMeasures[idx].nominalDuration).toBeCloseTo(clarinetMeasures[idx].nominalDuration, 5);
+      expect(fluteMeasures[idx].timeSignature).toEqual(clarinetMeasures[idx].timeSignature);
+      expect(fluteMeasures[idx].timeSignature).toEqual(oboeMeasures[idx].timeSignature);
+      expect(fluteMeasures[idx].timeSignature).toEqual(violinMeasures[idx].timeSignature);
+    }
+
+    const m5LastBar = fluteMeasures[5];
+    expect(m5LastBar.startTime).toBeCloseTo(23.0, 5);
+    expect(m5LastBar.timeSignature).toEqual({ count: 5, noteValue: 4 });
+    const m5LastBarTotal = TmdMeasureRenderer.groupSimultaneousEvents(m5LastBar.events).reduce(
+      (sum, g) => sum + (g[0]?.duration ?? 0),
+      0
+    );
+    expect(m5LastBarTotal).toBeCloseTo(5.0, 5);
+
+    const m7FirstBar = fluteMeasures[6];
+    expect(m7FirstBar.startTime).toBeCloseTo(28.0, 5);
+    expect(m7FirstBar.timeSignature).toEqual({ count: 7, noteValue: 8 });
+    expect(m7FirstBar.nominalDuration).toBeCloseTo(3.5, 5);
   });
 });

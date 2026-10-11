@@ -265,8 +265,15 @@ export class TmdPlaybackRenderer {
           for (const paragraph of matchingParagraphs) {
             const entryBeat = TmdPlaybackRenderer.entryInitialBeat(paragraph, sheet, state.timeSignature);
             const start = timelinePosition + paragraph.start * TmdPlaybackRenderer.measureDuration(entryBeat);
+            const minTimeSigPos = paragraph.start < 0 && timelinePosition > 0 ? timelinePosition : start;
             const paragraphState = paragraph.pitchMode === "fixed" ? { ...state, keyOffset: 0 } : state;
-            const rendered = TmdPlaybackRenderer.renderParagraph(paragraph, start, paragraphState, paragraph.pitchMode === "fixed");
+            const rendered = TmdPlaybackRenderer.renderParagraph(
+              paragraph,
+              start,
+              paragraphState,
+              paragraph.pitchMode === "fixed",
+              minTimeSigPos
+            );
             state = {
               ...rendered.state,
               keyOffset: paragraph.pitchMode === "fixed" ? state.keyOffset : rendered.state.keyOffset,
@@ -284,8 +291,15 @@ export class TmdPlaybackRenderer {
         for (const paragraph of matchingParagraphs) {
           const entryBeat = TmdPlaybackRenderer.entryInitialBeat(paragraph, sheet, state.timeSignature);
           const start = timelinePosition + paragraph.start * TmdPlaybackRenderer.measureDuration(entryBeat);
+          const minTimeSigPos = paragraph.start < 0 && timelinePosition > 0 ? timelinePosition : start;
           const paragraphState = paragraph.pitchMode === "fixed" ? { ...state, keyOffset: 0 } : state;
-          const rendered = TmdPlaybackRenderer.renderParagraph(paragraph, start, paragraphState, paragraph.pitchMode === "fixed");
+          const rendered = TmdPlaybackRenderer.renderParagraph(
+            paragraph,
+            start,
+            paragraphState,
+            paragraph.pitchMode === "fixed",
+            minTimeSigPos
+          );
           events.push(...rendered.events);
           directives.push(...rendered.directives);
           state = {
@@ -337,23 +351,94 @@ export class TmdPlaybackRenderer {
     return timeline;
   }
 
-  /** Renders a score-level conductor timeline by merging directives from every concrete instrument. */
+  /** Renders a score-level conductor timeline by merging directives in chronological playback order. */
   public static renderConductor(inputSheet: Sheet, options?: TmdPlaybackRendererOptions): PlaybackTimeline {
     const sheet = TmdMacroEvaluator.expandThrowing(inputSheet);
     const instruments = Array.from(new Set(
       sheet.entries.map((p) => p.assignment).filter((assignment): assignment is string => Boolean(assignment && assignment.trim()))
     )).sort();
     const sourceTimelines = instruments.map((instrument) => this.render(sheet, instrument, options));
-    const merged: PlaybackDirectiveEvent[] = [];
+    const globalMin = this.globalEarliestPosition(sheet);
+    const offset = globalMin < 0.0 ? -globalMin : 0.0;
 
-    for (const timeline of sourceTimelines) {
-      for (const directive of timeline.directives) {
-        if (merged.some((existing) => existing.position === directive.position &&
-          JSON.stringify(existing.kind) === JSON.stringify(directive.kind))) {
-          continue;
+    const orders = this.ordersFor(sheet);
+    let cursorState = this.initialStateFor(sheet);
+    let timelinePosition = 0.0;
+    const startIndex = options?.startOrderIndex ?? 0;
+    const orderedDirectives: PlaybackDirectiveEvent[] = [];
+
+    for (let i = 0; i < orders.length; i++) {
+      const order = orders[i];
+      const visited = this.visitOrder(order, cursorState);
+      cursorState = visited.state;
+      if (visited.name === undefined) continue;
+
+      const matchingParagraphs = sheet.entries.filter((p) => p.name === visited.name && !p.isPrototype);
+      const paragraphDuration = this.durationOf(visited.name, sheet, cursorState.timeSignature);
+      if (i < startIndex) {
+        for (const paragraph of matchingParagraphs) {
+          const entryBeat = this.entryInitialBeat(paragraph, sheet, cursorState.timeSignature);
+          const start = timelinePosition + paragraph.start * this.measureDuration(entryBeat);
+          const minTimeSigPos = paragraph.start < 0 && timelinePosition > 0 ? timelinePosition : start;
+          const paragraphState = paragraph.pitchMode === "fixed" ? { ...cursorState, keyOffset: 0 } : cursorState;
+          const rendered = this.renderParagraph(paragraph, start, paragraphState, paragraph.pitchMode === "fixed", minTimeSigPos);
+          cursorState = {
+            ...rendered.state,
+            keyOffset: paragraph.pitchMode === "fixed" ? cursorState.keyOffset : rendered.state.keyOffset,
+            timeSignature: cursorState.timeSignature,
+          };
         }
-        merged.push(directive);
+        continue;
       }
+
+      if (matchingParagraphs.length === 0) {
+        timelinePosition += paragraphDuration;
+        continue;
+      }
+
+      const leadingAndInterior: PlaybackDirectiveEvent[] = [];
+      const trailing: PlaybackDirectiveEvent[] = [];
+      const sectionEnd = timelinePosition + paragraphDuration;
+
+      for (const paragraph of matchingParagraphs) {
+        const entryBeat = this.entryInitialBeat(paragraph, sheet, cursorState.timeSignature);
+        const start = timelinePosition + paragraph.start * this.measureDuration(entryBeat);
+        const minTimeSigPos = paragraph.start < 0 && timelinePosition > 0 ? timelinePosition : start;
+        const paragraphState = paragraph.pitchMode === "fixed" ? { ...cursorState, keyOffset: 0 } : cursorState;
+        const rendered = this.renderParagraph(paragraph, start, paragraphState, paragraph.pitchMode === "fixed", minTimeSigPos);
+        for (const dir of rendered.directives) {
+          const shifted: PlaybackDirectiveEvent = {
+            position: dir.position + offset,
+            kind: dir.kind,
+            state: dir.state,
+          };
+          if (dir.position >= sectionEnd - 1e-6) {
+            trailing.push(shifted);
+          } else {
+            leadingAndInterior.push(shifted);
+          }
+        }
+        cursorState = {
+          ...rendered.state,
+          keyOffset: paragraph.pitchMode === "fixed" ? cursorState.keyOffset : rendered.state.keyOffset,
+          timeSignature: cursorState.timeSignature,
+        };
+      }
+      orderedDirectives.push(...leadingAndInterior, ...trailing);
+      timelinePosition += paragraphDuration;
+    }
+
+    const merged: PlaybackDirectiveEvent[] = [];
+    for (const directive of orderedDirectives) {
+      const existingIdx = merged.findIndex(
+        (existing) =>
+          Math.abs(existing.position - directive.position) < 1e-6 &&
+          JSON.stringify(existing.kind) === JSON.stringify(directive.kind)
+      );
+      if (existingIdx >= 0) {
+        merged.splice(existingIdx, 1);
+      }
+      merged.push(directive);
     }
 
     let state: PlaybackState = {
@@ -364,7 +449,7 @@ export class TmdPlaybackRenderer {
     };
     const directives = merged
       .map((directive, index) => ({ directive, index }))
-      .sort((a, b) => a.directive.position - b.directive.position || a.index - b.index)
+      .sort((a, b) => (Math.abs(a.directive.position - b.directive.position) < 1e-6 ? a.index - b.index : a.directive.position - b.directive.position))
       .map(({ directive }) => directive)
       .map((directive) => {
         state = this.applyDirective(directive.kind, state);
@@ -382,12 +467,15 @@ export class TmdPlaybackRenderer {
     paragraph: Entry,
     start: number,
     initialState: PlaybackState,
-    fixedPitch = false
+    fixedPitch = false,
+    minTimeSignaturePosition?: number
   ): { events: PlaybackEvent[]; directives: PlaybackDirectiveEvent[]; state: PlaybackState; duration: number } {
     let state = { ...initialState };
     const events: PlaybackEvent[] = [];
     const directives: PlaybackDirectiveEvent[] = [];
     let position = start;
+    const effectiveMinTimeSigPos = minTimeSignaturePosition ?? start;
+    const deferredTimeSignatures: { position: number; kind: SectionDirectiveKind }[] = [];
 
     for (const section of paragraph.sections) {
       const unitDuration = 4.0 / Math.max(1, section.noteLength);
@@ -396,10 +484,19 @@ export class TmdPlaybackRenderer {
       let sectionPosition = 0;
 
       for (const group of section.unitGroups) {
+        while (deferredTimeSignatures.length > 0 && position >= effectiveMinTimeSigPos - 1e-6) {
+          const deferred = deferredTimeSignatures.shift()!;
+          state = TmdPlaybackRenderer.applyDirective(deferred.kind, state, fixedPitch);
+          directives.push({ position: deferred.position, kind: deferred.kind, state });
+        }
         while (directiveIndex < sortedDirectives.length && sortedDirectives[directiveIndex].position <= sectionPosition) {
           const dir = sortedDirectives[directiveIndex];
-          state = TmdPlaybackRenderer.applyDirective(dir.kind, state, fixedPitch);
-          directives.push({ position, kind: dir.kind, state });
+          if (dir.kind.type === "timeSignature" && position < effectiveMinTimeSigPos - 1e-6) {
+            deferredTimeSignatures.push({ position: effectiveMinTimeSigPos, kind: dir.kind });
+          } else {
+            state = TmdPlaybackRenderer.applyDirective(dir.kind, state, fixedPitch);
+            directives.push({ position, kind: dir.kind, state });
+          }
           directiveIndex++;
         }
 
@@ -457,6 +554,12 @@ export class TmdPlaybackRenderer {
 
         position += groupDuration;
         sectionPosition += group.length;
+      }
+
+      while (deferredTimeSignatures.length > 0) {
+        const deferred = deferredTimeSignatures.shift()!;
+        state = TmdPlaybackRenderer.applyDirective(deferred.kind, state, fixedPitch);
+        directives.push({ position: deferred.position, kind: deferred.kind, state });
       }
 
       while (directiveIndex < sortedDirectives.length) {
