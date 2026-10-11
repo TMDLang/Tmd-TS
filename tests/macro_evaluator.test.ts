@@ -960,6 +960,43 @@ PartA:Piano@|0|{
         expect(measures[1].keyOffset).toBe(2);
         expect(measures[1].events.every((ev) => ev.state.keyOffset === 2)).toBe(true);
       });
+
+      it('Issue #60: (layer (seq ...)) advances bar offsets across sequential child expressions', () => {
+        const sheet = TmdParser.parse(`::SCORE::
+!= 120
+?= C
+<4/4>
+WeirdMotif {
+  <8*>
+  | 6_ 1 2' 3 6 5 2' 1 | 7_ 1 2' 6_ 3 - 0 0 |
+}
+WeirdPulse {
+  <8*>
+  | 6_ 0 6'_ 0 6_ 0 5_ 1 | 2_ 0 2'_ 0 3_ - 0 0 |
+}
+-> (layer
+    (seq
+      (play (reverse WeirdMotif) Harpsichord)
+      (play (flip WeirdMotif) Flute)
+      (play (transpose WeirdMotif 5) Harpsichord))
+    (loop WeirdPulse PizzicatoStrings 3))
+->#`);
+        const expanded = TmdMacroEvaluator.expand(sheet);
+        const layerEntries = expanded.entries.filter((e) => e.name.startsWith('__layer_'));
+        expect(layerEntries).toHaveLength(4);
+
+        const harpsichords = layerEntries
+          .filter((e) => e.assignment === 'Harpsichord')
+          .sort((a, b) => a.start - b.start);
+        const flute = layerEntries.find((e) => e.assignment === 'Flute');
+        const pizz = layerEntries.find((e) => e.assignment === 'PizzicatoStrings');
+
+        expect(harpsichords).toHaveLength(2);
+        expect(harpsichords[0].start).toBe(0);
+        expect(flute?.start).toBe(2);
+        expect(harpsichords[1].start).toBe(4);
+        expect(pizz?.start).toBe(0);
+      });
     });
   });
 });
