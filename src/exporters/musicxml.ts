@@ -143,11 +143,18 @@ export class TmdMusicXMLGenerator {
 
       const expectedMeasureDuration = Math.max(1, Math.round(measure.nominalDuration * divisions));
       const groups = TmdMeasureRenderer.groupSimultaneousEvents(measure.events);
-      const groupDurations: number[] = groups.map((group) => {
+      const groupDurations: number[] = groups.map((group, idx) => {
         const nonChordEvents = group.filter((e) => e.content.type !== "chord");
         const pool = nonChordEvents.length > 0 ? nonChordEvents : group;
-        const maxDur = Math.max(...pool.map((e) => e.duration));
-        return Math.max(1, Math.round(maxDur * divisions));
+        const poolDur = Math.max(...pool.map((e) => e.duration));
+        const startOffset = group[0]?.startOffset ?? 0;
+        const nextOffset =
+          idx + 1 < groups.length
+            ? (groups[idx + 1][0]?.startOffset ?? measure.nominalDuration)
+            : measure.nominalDuration;
+        const maxSpan = Math.max(0, nextOffset - startOffset);
+        const groupDur = maxSpan > 1e-6 ? Math.min(poolDur, maxSpan) : poolDur;
+        return Math.max(1, Math.round(groupDur * divisions));
       });
       const totalDur = groupDurations.reduce((acc, d) => acc + d, 0);
       const diff = expectedMeasureDuration - totalDur;

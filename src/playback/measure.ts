@@ -230,20 +230,22 @@ export class TmdMeasureRenderer {
       }
 
       rawMeasureEvents.sort((a, b) => a.startOffset - b.startOffset);
-      for (let i = 0; i < rawMeasureEvents.length; i++) {
-        const ev = rawMeasureEvents[i];
-        if (ev.content.type === 'chord') continue;
-        const nextEv = rawMeasureEvents
-          .slice(i + 1)
-          .find((candidate) => candidate.content.type !== 'chord' && candidate.startOffset > ev.startOffset + epsilon);
-        if (nextEv) {
-          const maxDur = nextEv.startOffset - ev.startOffset;
-          if (ev.duration > maxDur + epsilon) {
-            rawMeasureEvents[i] = {
-              ...ev,
-              duration: maxDur,
-              tieStart: false,
-            };
+      const hasChordEvent = rawMeasureEvents.some((ev) => ev.content.type === 'chord');
+      if (!hasChordEvent) {
+        for (let i = 0; i < rawMeasureEvents.length; i++) {
+          const ev = rawMeasureEvents[i];
+          const nextEv = rawMeasureEvents
+            .slice(i + 1)
+            .find((candidate) => candidate.startOffset > ev.startOffset + epsilon);
+          if (nextEv) {
+            const maxDur = nextEv.startOffset - ev.startOffset;
+            if (ev.duration > maxDur + epsilon) {
+              rawMeasureEvents[i] = {
+                ...ev,
+                duration: maxDur,
+                tieStart: false,
+              };
+            }
           }
         }
       }
