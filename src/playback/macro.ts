@@ -455,9 +455,39 @@ export class TmdMacroEvaluator {
           // Evaluates all child expressions concurrently.
           // All generated paragraphs will share the same unified section name so they start at the same time.
           if (expr.length < 2) throw macroError("'layer' requires at least one child");
+          const measureDur = TmdPlaybackRenderer.measureDuration(sheet.beat);
           const childNames: string[] = [];
           for (let i = 1; i < expr.length; i++) {
             const res = evalExpr(expr[i]);
+            if (res.paragraphNames.length > 1) {
+              let cumulativeBars = 0;
+              for (const seqName of res.paragraphNames) {
+                const matching = concreteParagraphs.filter((cp) => cp.name === seqName);
+                let maxEndBeats = 0;
+                for (const p of matching) {
+                  const startBeats = p.start * measureDur;
+                  const noteBeats = p.sections.reduce(
+                    (total, sec) =>
+                      total +
+                      sec.unitGroups.reduce(
+                        (sum, g) => sum + Math.max(0, g.length) * (4 / Math.max(1, sec.noteLength)),
+                        0
+                      ),
+                    0
+                  );
+                  if (startBeats + noteBeats > maxEndBeats) {
+                    maxEndBeats = startBeats + noteBeats;
+                  }
+                }
+                const sectionBars = Math.max(0, Math.round(maxEndBeats / measureDur));
+                if (cumulativeBars !== 0) {
+                  for (const p of matching) {
+                    p.start += cumulativeBars;
+                  }
+                }
+                cumulativeBars += sectionBars;
+              }
+            }
             childNames.push(...res.paragraphNames);
           }
 
