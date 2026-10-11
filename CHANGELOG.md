@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.5] - 2026-10-11
+
+### Added
+- **Music Braille Exporter (`TmdBrailleGenerator`)**:
+  - Added 6-dot Unicode Braille (`.brl`) and North American Braille ASCII (`.brf`) export in `part-by-part` and `bar-over-bar` layouts across CLI, MCP, and Web Studio preview modal.
+- **Unified Score Validator (`TmdScoreValidator`) & Semantic Linter**:
+  - Unified syntax and semantic validation rules across CLI `tmd check` (with batch directory scan and `--json` / `--markdown` output), Web Studio Problems Panel, AI Validator, and MCP servers.
+- **MCP & WebMCP Alignment**:
+  - Extracted shared `TmdMcpCore` handlers for Node MCP and WebMCP, auto-loaded TMD Skill resources/prompts, and aligned tool schemas.
+
+### Changed
+- **Single Source of Truth (SSOT) & TmdSwift Parity**:
+  - Consolidated `prepareSheetForExport`, monophonic vocal note reduction (`extractVocalNoteItems`), extended chord quality intervals (`chordQualityIntervals`), MIDI channel/pan assignment, and shared AST note transformation helpers.
+  - Aligned LSP completion (15-key major/minor diatonic chords, prefix filtering, auto-closed `}` handling), CLI vocal `--instrument` filtering, and `ARCHITECTURE_PARITY.md` with `TmdSwift`.
+
+### Fixed
+- **Core, Playback, Validation & Exporter Correctness**:
+  - Replaced `indexOf` in `TmdLexer.tokenizeWithRanges` with single-pass offset tracking to prevent token range corruption on repeated tokens.
+  - Fixed multi-note `UnitGroup` formatting (`formatUnitGroup`), `[pitchMode=fixed]` handling across `TmdRefactor`, `TmdMeasureLexerFallback`, and `TmdSongTonalityAnalyzer`, and CJK instrument name normalization in `TmdScoreValidator`.
+  - Fixed `lilyPondKey("bm")` flat false positive, MusicXML erroneous `<chord/>` on simultaneous chord+note events, MIDI channel `> 15` wrap-around to Drum Ch.9, VSQ/VSQX non-4/4 `preMeasure`, ChordPro section fallback, and `PercussiveOrgan` classification.
+
 ## [0.2.3] - 2026-10-05
 
 ### Changed
