@@ -309,6 +309,13 @@ const GM_PROGRAMS: Record<number, MIDIInstrument> = {
 };
 
 export namespace MIDIInstrument {
+  export class ChannelAllocationError extends Error {
+    constructor() {
+      super("No melodic MIDI channel is available for another distinct GM program");
+      this.name = "ChannelAllocationError";
+    }
+  }
+
   export function resolve(name: string): MIDIInstrumentValue {
     const trimmed = name.trim().toLowerCase();
 
@@ -852,10 +859,15 @@ export namespace MIDIInstrument {
       if (existing !== undefined) {
         return existing;
       }
-      let channel = state.nextMelodicChannel % 16;
-      if (channel === 9) {
-        channel = (channel + 1) % 16;
+      let channel: number | undefined;
+      for (let offset = 0; offset < 16; offset++) {
+        const candidate = (state.nextMelodicChannel + offset) % 16;
+        if (candidate !== 9 && ![...state.programToMelodyChannel.values()].includes(candidate)) {
+          channel = candidate;
+          break;
+        }
       }
+      if (channel === undefined) throw new ChannelAllocationError();
       state.programToMelodyChannel.set(prog, channel);
       state.nextMelodicChannel = (channel + 1) % 16;
       return channel;

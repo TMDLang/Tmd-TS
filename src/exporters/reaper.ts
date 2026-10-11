@@ -71,7 +71,10 @@ export class TmdReaperGenerator {
 
     // Build Tracks
     const trackChunks: string[] = [];
-    const channelState = { nextMelodicChannel: 0 };
+    const channelState = {
+      nextMelodicChannel: 0,
+      programToMelodyChannel: new Map<number, number>(),
+    };
 
     for (const instrument of distinctInstruments) {
       const instTimeline = TmdPlaybackRenderer.render(sheet, instrument);

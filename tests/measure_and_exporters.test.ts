@@ -823,11 +823,12 @@ A:Piano@|0|{
         'marimba', 'xylophone', 'tubularBells', 'dulcimer',
         'drawbarOrgan', 'percussiveOrgan', 'rockOrgan', 'churchOrgan',
       ] as const;
-      for (const inst of instruments) {
+      for (const inst of instruments.slice(0, 15)) {
         allocatedChannels.push(MIDIInstrument.allocateChannel(inst, state));
       }
       expect(allocatedChannels).not.toContain(9);
       expect(allocatedChannels.every((ch) => ch >= 0 && ch < 16)).toBe(true);
+      expect(() => MIDIInstrument.allocateChannel(instruments[15], state)).toThrow();
 
       // 4. VSQ non-4/4 preMeasureTicks (3/4 with preMeasure=4 -> 4 * 3 * 480 = 5760)
       const waltzSheet = TmdParser.parse(`::SCORE::

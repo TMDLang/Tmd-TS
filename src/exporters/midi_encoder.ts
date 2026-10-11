@@ -17,8 +17,16 @@ export interface MIDIEvent {
   message: MIDIMessage;
 }
 
+export class TmdMIDIError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "TmdMIDIError";
+  }
+}
+
 export class TmdMIDIEncoder {
   public static encodeFile(tracks: Uint8Array[], ticksPerQuarter: number): Uint8Array {
+    this.validateTicksPerQuarter(ticksPerQuarter);
     const headerChunks: number[] = [
       0x4d, 0x54, 0x68, 0x64, // 'MThd'
       0x00, 0x00, 0x00, 0x06, // length 6
@@ -51,7 +59,15 @@ export class TmdMIDIEncoder {
   }
 
   public static encodeTrack(events: MIDIEvent[]): Uint8Array {
-    const sorted = [...events].sort((a, b) => a.tick - b.tick);
+    const sorted = events
+      .map((event, index) => ({ event, index }))
+      .sort((a, b) => {
+        const tickOrder = a.event.tick - b.event.tick;
+        if (tickOrder !== 0) return tickOrder;
+        const priorityOrder = this.eventPriority(a.event.message) - this.eventPriority(b.event.message);
+        return priorityOrder !== 0 ? priorityOrder : a.index - b.index;
+      })
+      .map(({ event }) => event);
     const lastTick = sorted.length > 0 ? sorted[sorted.length - 1].tick : 0;
     sorted.push({ tick: lastTick, message: { type: 'endOfTrack' } });
 
@@ -66,6 +82,25 @@ export class TmdMIDIEncoder {
     }
 
     return new Uint8Array(bytes);
+  }
+
+  public static validateTicksPerQuarter(ticksPerQuarter: number): void {
+    if (!Number.isInteger(ticksPerQuarter) || ticksPerQuarter < 1 || ticksPerQuarter > 0x7fff) {
+      throw new TmdMIDIError("ticksPerQuarter must be an integer between 1 and 32767");
+    }
+  }
+
+  private static eventPriority(message: MIDIMessage): number {
+    switch (message.type) {
+      case "noteOff":
+        return 0;
+      case "endOfTrack":
+        return 100;
+      case "noteOn":
+        return 20;
+      default:
+        return 10;
+    }
   }
 
   private static encodeMessage(message: MIDIMessage): number[] {

@@ -24,6 +24,7 @@ export class TmdMIDIGenerator {
     ticksPerQuarter: number = TmdMIDIGenerator.defaultTicksPerQuarterNote,
     options?: TmdMIDIGeneratorOptions
   ): Uint8Array {
+    TmdMIDIEncoder.validateTicksPerQuarter(ticksPerQuarter);
     const { sheet: effectiveSheet, instruments: distinctInstruments } =
       SheetInstrumentHelper.preparedForExport(rawSheet, false, options);
 
