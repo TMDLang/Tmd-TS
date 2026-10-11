@@ -429,4 +429,6 @@ export const zhTW = {
   problemsFixWithAi: "✨ AI 修復",
   aiPreviewProblemsWarning:
     "⚠️ 此生成樂譜仍有 {count} 個問題待修正（點擊展開查看詳情）",
+  appLoadingTitle: "TMD Studio",
+  appLoadingStatus: "正在載入工作室與樂譜環境…",
 };
