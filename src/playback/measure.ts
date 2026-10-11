@@ -361,14 +361,21 @@ export class TmdMeasureRenderer {
         continue;
       }
 
-      const interiorByPos: { position: number; beats: Beat[] }[] = [];
+      const paragraphSchedules: { position: number; beat: Beat }[][] = [];
+      const explicitSchedules: { position: number; beat: Beat }[][] = [];
+      const initialCandidates: Beat[] = [];
       const trailingBeats: Beat[] = [];
 
       for (const paragraph of matching) {
         const entryBeat = TmdPlaybackRenderer.entryInitialBeat(paragraph, sheet, currentBeat);
+        if (!initialCandidates.some((existing) => beatsEqual(existing, entryBeat))) {
+          initialCandidates.push(entryBeat);
+        }
         const pStart = sectionStart + paragraph.start * TmdPlaybackRenderer.measureDuration(entryBeat);
         const minPos = paragraph.start < 0 && sectionStart > 0 ? sectionStart : pStart;
         let pos = pStart;
+        const pSchedule: { position: number; beat: Beat }[] = [];
+        let hasExplicitInterior = false;
 
         for (const section of paragraph.sections) {
           const unitDur = 4.0 / Math.max(1, section.noteLength);
@@ -385,27 +392,56 @@ export class TmdMeasureRenderer {
                   trailingBeats.push(b);
                 }
               } else {
-                const idx = interiorByPos.findIndex((item) => Math.abs(item.position - shiftedPos) < 1e-4);
+                hasExplicitInterior = true;
+                const idx = pSchedule.findIndex((item) => Math.abs(item.position - shiftedPos) < 1e-4);
                 if (idx >= 0) {
-                  if (!interiorByPos[idx].beats.some((existing) => beatsEqual(existing, b))) {
-                    interiorByPos[idx].beats.push(b);
-                  }
+                  pSchedule[idx] = { position: shiftedPos, beat: b };
                 } else {
-                  interiorByPos.push({ position: shiftedPos, beats: [b] });
+                  pSchedule.push({ position: shiftedPos, beat: b });
+                  pSchedule.sort((a, bItem) => a.position - bItem.position);
                 }
               }
             }
           }
           pos += totalUnits * unitDur;
         }
+
+        const startShifted = minPos + offset;
+        if (!pSchedule.some((item) => Math.abs(item.position - startShifted) < 1e-4)) {
+          pSchedule.unshift({ position: startShifted, beat: entryBeat });
+        }
+        paragraphSchedules.push(pSchedule);
+        if (hasExplicitInterior) {
+          explicitSchedules.push(pSchedule);
+        }
       }
 
-      interiorByPos.sort((a, b) => a.position - b.position);
-      for (const group of interiorByPos) {
-        const remDur = Math.max(0.0, sectionEnd + offset - group.position);
-        const chosen = this.selectConductorBeat(group.beats, remDur);
-        upsertTimeSignature(group.position, chosen);
-        currentBeat = chosen;
+      const schedulesEqual = (
+        lhs: { position: number; beat: Beat }[],
+        rhs: { position: number; beat: Beat }[]
+      ): boolean => {
+        if (lhs.length !== rhs.length) return false;
+        for (let i = 0; i < lhs.length; i++) {
+          if (Math.abs(lhs[i].position - rhs[i].position) >= 1e-4 || !beatsEqual(lhs[i].beat, rhs[i].beat)) {
+            return false;
+          }
+        }
+        return true;
+      };
+
+      if (explicitSchedules.length > 0) {
+        const firstExplicit = explicitSchedules[0];
+        const explicitDisagree = explicitSchedules.slice(1).some((s) => !schedulesEqual(s, firstExplicit));
+        if (explicitDisagree) {
+          const chosen = this.selectConductorBeat(initialCandidates, secDur);
+          upsertTimeSignature(sectionStart + offset, chosen);
+          currentBeat = chosen;
+        } else {
+          for (const item of firstExplicit) {
+            upsertTimeSignature(item.position, item.beat);
+            currentBeat = item.beat;
+          }
+        }
       }
 
       if (trailingBeats.length > 0) {
