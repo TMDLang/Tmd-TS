@@ -660,4 +660,51 @@ Poly:Clarinet@|0|{
     expect(m7FirstBar.timeSignature).toEqual({ count: 7, noteValue: 8 });
     expect(m7FirstBar.nominalDuration).toBeCloseTo(3.5, 5);
   });
+
+  it("clamps out-of-range tempos to [10, 1000] BPM, bounds MIDI mpqn to 24-bit [1, 0xFFFFFF], and emits W-TEMPO-OUT-OF-RANGE warnings (Issue #66)", async () => {
+    const { TmdMIDIEncoder } = await import("../src/exporters/midi_encoder.js");
+    const { TmdParser } = await import("../src/syntax/index.js");
+    const { TmdPlaybackRenderer, TmdMeasureRenderer } = await import("../src/playback/index.js");
+    const score = `::SCORE::
+** Extreme Tempo Test **
+!= 5
+?= C
+<4/4>
+
+A:Piano@|0|{
+  <4*>
+  | 1 {!= 1500} 2 {!- 2000} 3 4 |
+}
+
+-> A ->#
+`;
+
+    // 1. Validator emits W-TEMPO-OUT-OF-RANGE warnings for != 5, {!= 1500}, and {!- 2000}
+    const diags = TmdScoreValidator.validate(score);
+    const tempoWarnings = diags.filter((d) => d.rule === "W-TEMPO-OUT-OF-RANGE");
+    expect(tempoWarnings.length).toBe(3);
+    expect(tempoWarnings.every((d) => d.severity === "warning")).toBe(true);
+
+    // 2. Playback and Measure renderers clamp effective tempos to [10.0, 1000.0] BPM
+    const sheet = TmdParser.parseThrowing(score);
+    const timeline = TmdPlaybackRenderer.render(sheet, "Piano");
+    expect(timeline.events.length).toBe(4);
+    expect(timeline.events[0].state.tempo).toBeCloseTo(10.0, 5);
+    expect(timeline.events[1].state.tempo).toBeCloseTo(1000.0, 5);
+    expect(timeline.events[2].state.tempo).toBeCloseTo(10.0, 5);
+
+    const measures = TmdMeasureRenderer.renderMeasures(sheet, "Piano");
+    expect(measures[0].tempo).toBeCloseTo(10.0, 5);
+
+    // 3. MIDI 24-bit mpqn clamps to [1, 0xFFFFFF] without truncating high bytes
+    const slowTrack = Array.from(
+      TmdMIDIEncoder.encodeTrack([{ tick: 0, message: { type: "tempo", bpm: 1.0 } }])
+    );
+    expect(slowTrack.slice(0, 7)).toEqual([0x00, 0xff, 0x51, 0x03, 0xff, 0xff, 0xff]);
+
+    const fastTrack = Array.from(
+      TmdMIDIEncoder.encodeTrack([{ tick: 0, message: { type: "tempo", bpm: 100_000_000.0 } }])
+    );
+    expect(fastTrack.slice(0, 7)).toEqual([0x00, 0xff, 0x51, 0x03, 0x00, 0x00, 0x01]);
+  });
 });

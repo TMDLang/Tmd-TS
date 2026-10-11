@@ -79,7 +79,7 @@ export class TmdMIDIGenerator {
         tick: 0,
         message: {
           type: 'tempo',
-          bpm: sheet.speed > 0 ? sheet.speed : 120,
+          bpm: sheet.speed > 0 ? TmdPlaybackRenderer.clampTempo(sheet.speed) : TmdPlaybackRenderer.defaultTempoBPM,
         },
       },
       {

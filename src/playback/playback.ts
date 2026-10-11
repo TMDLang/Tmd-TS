@@ -1,12 +1,15 @@
 import {
   Beat,
   ChordSymbol,
+  clampTempo,
   DEFAULT_INSTRUMENT,
   DEFAULT_TEMPO_BPM,
   DynamicMark,
   effectivePlaybackOrders,
   Entry,
   KeySignature,
+  MAX_TEMPO_BPM,
+  MIN_TEMPO_BPM,
   Note,
   noteToMIDIPitch,
   Playback,
@@ -125,9 +128,17 @@ export class TmdPlaybackRenderer {
     return effectivePlaybackOrders(sheet);
   }
 
+  public static readonly defaultTempoBPM = DEFAULT_TEMPO_BPM;
+  public static readonly minTempoBPM = MIN_TEMPO_BPM;
+  public static readonly maxTempoBPM = MAX_TEMPO_BPM;
+
+  public static clampTempo(bpm: number): number {
+    return clampTempo(bpm);
+  }
+
   private static initialStateFor(sheet: Sheet): PlaybackState {
     return {
-      tempo: sheet.speed > 0 ? sheet.speed : DEFAULT_TEMPO_BPM,
+      tempo: sheet.speed > 0 ? clampTempo(sheet.speed) : DEFAULT_TEMPO_BPM,
       keyOffset: sheet.keySignature.semitoneOffset,
       timeSignature: sheet.beat,
       dynamicLevel: "mf"
@@ -442,7 +453,7 @@ export class TmdPlaybackRenderer {
     }
 
     let state: PlaybackState = {
-      tempo: sheet.speed > 0 ? sheet.speed : DEFAULT_TEMPO_BPM,
+      tempo: sheet.speed > 0 ? clampTempo(sheet.speed) : DEFAULT_TEMPO_BPM,
       keyOffset: sheet.keySignature.semitoneOffset,
       timeSignature: sheet.beat,
       dynamicLevel: "mf",
@@ -590,9 +601,9 @@ export class TmdPlaybackRenderer {
     }
     switch (kind.type) {
       case "tempo":
-        return { ...state, tempo: Math.max(1, kind.bpm) };
+        return { ...state, tempo: clampTempo(kind.bpm) };
       case "relativeTempo":
-        return { ...state, tempo: Math.max(1, state.tempo + kind.deltaBpm) };
+        return { ...state, tempo: clampTempo(state.tempo + kind.deltaBpm) };
       case "absoluteKey":
         return { ...state, keyOffset: KeySignature.parse(kind.key).semitoneOffset };
       case "relativeKey":
@@ -659,7 +670,7 @@ export class TmdPlaybackRenderer {
     initialBeat: Beat,
     directives: PlaybackDirectiveEvent[]
   ): TempoSegment[] {
-    const startBpm = initialTempo > 0 ? initialTempo : DEFAULT_TEMPO_BPM;
+    const startBpm = initialTempo > 0 ? clampTempo(initialTempo) : DEFAULT_TEMPO_BPM;
     const segments: TempoSegment[] = [
       {
         quarterStart: 0,
@@ -677,7 +688,7 @@ export class TmdPlaybackRenderer {
         directive.kind.type === "timeSignature"
       ) {
         const last = segments[segments.length - 1];
-        const bpm = Math.max(1, directive.state.tempo);
+        const bpm = clampTempo(directive.state.tempo);
         if (directive.position > last.quarterStart) {
           const deltaQuarters = directive.position - last.quarterStart;
           const deltaSeconds = deltaQuarters * (60.0 / last.bpm);
