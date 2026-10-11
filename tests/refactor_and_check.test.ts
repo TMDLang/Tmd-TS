@@ -1616,4 +1616,83 @@ intro:Piano@|0|{
     const issues = TmdMeasureChecker.check(code);
     expect(issues).toHaveLength(0);
   });
+
+  it("Issue #55: Refactoring supports [pitchMode=fixed] headers, key= header formatting, and multi-section inlineOrders merging", () => {
+    const input = `::SCORE::
+!= 120
+?= C
+key=Am
+<4/4>
+
+verse:Piano [pitchMode=fixed] @|0|{
+    <4*>
+    | 1 2 3 4 |
+}
+
+verse:Bass@|0|{
+    <4*>
+    | 1_ - - - |
+}
+
+chorus:Piano [pitchMode=fixed] @|0|{
+    <4*>
+    | {!= 140} 5 6 7 1^ |
+}
+
+-> verse -> chorus ->#
+`;
+    const formatted = TmdRefactor.format(input);
+    expect(formatted).toContain("key= Am");
+    expect(formatted).toContain("verse:Piano[pitchMode=fixed]@|0|{");
+
+    const renamed = TmdRefactor.renameInstrument(input, "Piano", "Harpsichord");
+    expect(renamed).toContain("verse:Harpsichord[pitchMode=fixed]@|0|{");
+
+    const extracted = TmdRefactor.extractInstrument(input, "Piano");
+    expect(extracted).toContain("verse:Piano[pitchMode=fixed]@|0|{");
+    expect(extracted).not.toContain("Bass");
+
+    const optimized = TmdRefactor.optimizeGrid(
+      `::SCORE::
+!= 120
+?= C
+<4/4>
+
+verse:Piano [pitchMode=fixed] @|0|{
+    <4*>
+    | 1 - - - |
+}
+
+-> verse ->#
+`,
+      { section: "verse", instrument: "Piano" }
+    );
+    expect(optimized).toContain("<1*>");
+    expect(optimized).toContain("| 1 |");
+
+    const inlined = TmdRefactor.inlineOrders(input);
+    expect(inlined).toContain("linear:Piano[pitchMode=fixed]@|0|{");
+    expect(inlined).toContain("key= Am");
+    expect(inlined).toContain("{!=140}");
+  });
+
+  it("Issue #55: TmdMeasureLexerFallback handles [pitchMode=fixed], compound percussion/dot-ties, and currentBeat", () => {
+    const source = `::SCORE::
+!= 120
+?= C
+<4/4>
+
+verse:Drums [pitchMode=fixed] @|0|{
+    <4*>
+    | {<3/4>} X-X- .. |
+}
+
+-> verse -> (play ->#
+`;
+    const issues = TmdMeasureChecker.check(source);
+    expect(issues).toHaveLength(1);
+    expect(issues[0].expectedUnits).toBe(3);
+    expect(issues[0].actualUnits).toBe(6);
+    expect(issues[0].beat).toEqual({ count: 3, noteValue: 4 });
+  });
 });

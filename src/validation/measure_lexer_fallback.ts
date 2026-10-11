@@ -81,14 +81,20 @@ export class TmdMeasureLexerFallback {
         continue;
       }
 
-      // Paragraph header: identifier:identifier@...{ OR abstract paragraph: identifier{
+      // Paragraph header: identifier:identifier[optional attr]@...{ OR abstract paragraph: identifier{
+      const hasParagraphAt =
+        pos + 3 < tokensWithRanges.length &&
+        (tokensWithRanges[pos + 3].token.type === "at" ||
+          (pos + 4 < tokensWithRanges.length &&
+            tokensWithRanges[pos + 3].token.type === "chord" &&
+            tokensWithRanges[pos + 4].token.type === "at"));
       if (
         tok.token.type === "identifier" &&
         pos + 1 < tokensWithRanges.length &&
         ((tokensWithRanges[pos + 1].token.type === "colon" &&
           pos + 3 < tokensWithRanges.length &&
           tokensWithRanges[pos + 2].token.type === "identifier" &&
-          tokensWithRanges[pos + 3].token.type === "at") ||
+          hasParagraphAt) ||
          tokensWithRanges[pos + 1].token.type === "openBrace")
       ) {
         const pName = tok.token.value as string;
@@ -101,6 +107,9 @@ export class TmdMeasureLexerFallback {
           const instTok = advance();
           if (instTok && instTok.token.type === "identifier") {
             instName = instTok.token.value as string;
+          }
+          if (current()?.token.type === "chord") {
+            advance();
           }
         }
 
@@ -221,7 +230,7 @@ export class TmdMeasureLexerFallback {
                   actualUnits: currentMeasureUnits,
                   deltaUnits: delta,
                   noteLength,
-                  beat,
+                  beat: currentBeat,
                   snippet: snippetStr,
                 };
                 issues.push({
@@ -345,11 +354,20 @@ export class TmdMeasureLexerFallback {
               break;
             case "identifier": {
               const val = typeof item.token.value === "string" ? item.token.value : item.text;
-              if (val.length > 0 && /^[XxTtSsDdBbOoCc]+$/.test(val)) {
+              if (val.length > 0 && /^[XxTtSsDdBbOoCc-]+$/.test(val) && !val.startsWith("-")) {
                 advance();
-                paragraphQuarterNotes += unitQuarterNotes;
+                const count = val.length;
+                paragraphQuarterNotes += count * unitQuarterNotes;
                 if (insideBar) {
-                  currentMeasureUnits += 1;
+                  currentMeasureUnits += count;
+                  currentMeasureSnippet.push(item.text);
+                }
+              } else if (val.length > 0 && /^\.+$/.test(val)) {
+                advance();
+                const count = val.length;
+                paragraphQuarterNotes += count * unitQuarterNotes;
+                if (insideBar) {
+                  currentMeasureUnits += count;
                   currentMeasureSnippet.push(item.text);
                 }
               } else {

@@ -119,7 +119,13 @@ private static readonly KS_MAJOR_PROFILE: number[] = [
       const weights = sectionWeights[secIdx] || new Array<number>(12).fill(0.0);
       const fixedPitch = sheet.entries
         .filter((paragraph) => paragraph.name === sec.name)
-        .some((paragraph) => paragraph.sections.some((section) => section.directives.some((directive) => directive.kind.type === "fixedPitch")));
+        .some(
+          (paragraph) =>
+            paragraph.pitchMode === "fixed" ||
+            paragraph.sections.some((section) =>
+              section.directives.some((directive) => directive.kind.type === "fixedPitch")
+            )
+        );
       const secInference = this.evaluateTonality(weights);
       const secTonicOffset = secInference.tonic === null
         ? ((sec.keyOffset % 12) + 12) % 12
@@ -208,8 +214,8 @@ private static readonly KS_MAJOR_PROFILE: number[] = [
       if (this.isStableInference(current)) {
         previousTonicOffset = this.pitchClassOffset(current.tonic!);
         previousFifths = this.circleOfFifthsStep(previousTonicOffset);
+        previousInference = current;
       }
-      previousInference = current;
     }
 
     let modulationStory: string;

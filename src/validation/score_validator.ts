@@ -333,6 +333,7 @@ export class TmdScoreValidator {
     const byNormalized = new Map<string, string[]>();
     for (const raw of rawAssignments) {
       const norm = this.normalizeInstrumentKey(raw);
+      if (!norm) continue;
       const list = byNormalized.get(norm) ?? [];
       list.push(raw);
       byNormalized.set(norm, list);
@@ -596,7 +597,7 @@ export class TmdScoreValidator {
   }
 
   private static normalizeInstrumentKey(name: string): string {
-    return name.toLowerCase().replace(/[^a-z0-9]/g, "");
+    return name.toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
   }
 
   private static isRecognizedInstrument(name: string): boolean {

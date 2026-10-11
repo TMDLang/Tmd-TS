@@ -3,7 +3,7 @@ export function escapeRegex(str: string): string {
 }
 
 const PARAGRAPH_HEADER_REGEX =
-  /^([a-zA-Z0-9_\u4e00-\u9fa5-]+)\s*:\s*([a-zA-Z0-9_\u4e00-\u9fa5-]+)(@[^{]*)?\s*\{/;
+  /^([a-zA-Z0-9_\u4e00-\u9fa5-]+)\s*:\s*([a-zA-Z0-9_\u4e00-\u9fa5-]+)(?:\s*\[[^\]]*\])?\s*(@[^{]*)?\s*\{/;
 const GRID_SUBDIVISION_REGEX = /^<(\d+)\*>/;
 
 export function parseParagraphHeaderLine(
@@ -120,18 +120,23 @@ export function formatLine(line: string, indent = 0): string {
     const value = (trimmed.startsWith("? =") ? trimmed.slice(3) : trimmed.slice(2)).trim();
     return `?= ${value}` + commentSuffix;
   }
+  if (/^key\s*=/i.test(trimmed)) {
+    const eqIdx = trimmed.indexOf("=");
+    const value = trimmed.slice(eqIdx + 1).trim();
+    return `key= ${value}` + commentSuffix;
+  }
   if (trimmed.startsWith("<") && trimmed.endsWith(">") && trimmed.includes("/")) {
     return trimmed + commentSuffix;
   }
 
-  // Paragraph header line: e.g. intro:Piano@|0|{
+  // Paragraph header line: e.g. intro:Piano[pitchMode=fixed]@|0|{
   if (trimmed.includes(":") && trimmed.includes("@") && trimmed.endsWith("{")) {
     const colonIdx = trimmed.indexOf(":");
     const pName = trimmed.slice(0, colonIdx).trim();
     const rest = trimmed.slice(colonIdx + 1).trim();
     const atIdx = rest.indexOf("@");
     if (atIdx !== -1) {
-      const inst = rest.slice(0, atIdx).trim();
+      const inst = rest.slice(0, atIdx).trim().replace(/\s*\[/g, "[");
       const timing = rest.slice(atIdx + 1).trim();
       return `${pName}:${inst}@${timing}` + commentSuffix;
     }

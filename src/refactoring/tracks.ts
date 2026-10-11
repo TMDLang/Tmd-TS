@@ -28,11 +28,11 @@ export function renameInstrument(
     const pattern = new RegExp(
       "([A-Za-z0-9_\\-\\u4e00-\\u9fa5]+)\\s*:\\s*" +
         escapeRegex(oldInstrument) +
-        "\\s*@",
+        "\\s*(\\[[^\\]]*\\])?\\s*@",
       "g"
     );
 
-    const replaced = source.replace(pattern, `$1:${newInstrument}@`);
+    const replaced = source.replace(pattern, `$1:${newInstrument}$2@`);
     if (replaced === source) {
       // Check if score even parses
       TmdParser.parseThrowing(source);

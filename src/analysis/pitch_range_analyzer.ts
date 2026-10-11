@@ -28,7 +28,14 @@ export class TmdSongPitchRangeAnalyzer {
         const position = Math.max(section.startPositionQuarterNotes, event.position);
         let cursor = section.startPositionQuarterNotes;
         let tempo = section.tempo;
-        let meter = event.state.timeSignature;
+        let meter = sheet.beat;
+        for (const directive of timelineDirectives) {
+          if (directive.position <= cursor) {
+            meter = directive.state.timeSignature;
+          } else {
+            break;
+          }
+        }
         let elapsedSeconds = 0;
         let elapsedMeasures = 0;
         for (const directive of timelineDirectives) {

@@ -455,4 +455,72 @@ A:Piano@|0|{
       perMinute: 80,
     });
   });
+
+  it("Issue #55: does not emit false W-INSTRUMENT-INCONSISTENT on CJK instruments, exposes TmdParseError.hints, and fixes Tonality/PitchRange analyzers", async () => {
+    const cjkScore = `::SCORE::
+!= 120
+?= C
+<4/4>
+
+A:主唱@|0|{
+  <4*>
+  | 1 2 3 4 |
+}
+
+A:木吉他@|0|{
+  <4*>
+  | 1 3 5 1^ |
+}
+
+-> A ->#
+`;
+    const diags = TmdScoreValidator.validate(cjkScore);
+    expect(diags.some((d) => d.rule === "W-INSTRUMENT-INCONSISTENT")).toBe(false);
+
+    const { TmdParser, TmdParseError } = await import("../src/syntax/index.js");
+    try {
+      TmdParser.parseThrowing("::SCORE::\n!= 120\n?= C\n<4/4>\nA:Piano@|0|{\n  1 2 3 4\n}\n-> A ->#");
+      expect.unreachable("Should have thrown TmdParseError");
+    } catch (err) {
+      expect(err).toBeInstanceOf(TmdParseError);
+      const parseErr = err as InstanceType<typeof TmdParseError>;
+      expect(Array.isArray(parseErr.hints)).toBe(true);
+      expect(parseErr.hints.length).toBeGreaterThan(0);
+      expect(parseErr.hints[0]).toContain("time grid directive");
+    }
+
+    const { TmdSongInspector } = await import("../src/analysis/index.js");
+    const modSheet = TmdParser.parseThrowing(`::SCORE::
+!= 120
+?= C
+<2/4>
+
+secA:Piano [pitchMode=fixed] @|0|{
+    <4*>
+    | 1 3 | 5 1^ | 1 3 | 5 1^ |
+}
+
+secEmpty:Piano [pitchMode=fixed] @|0|{
+    <4*>
+    | 0 0 |
+}
+
+secB:Piano@|0|{
+    <4*>
+    | {?= G} 1 3 | 5 1^ | 1 3 | 5 1^ |
+}
+
+secMeter:Piano@|0|{
+    <4*>
+    | 1 2 | {<4/4>} 1 2 1^^ 4 |
+}
+
+-> secA -> secEmpty -> secB -> secMeter ->#
+`);
+    const profile = TmdSongInspector.inspect(modSheet);
+    expect(profile.tonality?.sections[0].playbackContext.fixedPitch).toBe(true);
+    expect(profile.tonality?.narrative?.transitions.some((t) => t.sectionName === "secB" && t.tonic === "G")).toBe(true);
+    const pianoRange = profile.instrumentRanges.find((r) => r.assignment === "Piano");
+    expect(pianoRange?.highestNote.measure).toBe(11);
+  });
 });

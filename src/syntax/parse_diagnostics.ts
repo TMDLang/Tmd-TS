@@ -3,6 +3,7 @@ import { FULLWIDTH_PUNCT_MAP, type SourceRange, type Token } from "./tokens.js";
 export class TmdParseError extends Error {
   public readonly expectedTokens: string[];
   public readonly source?: string;
+  public readonly hints: string[];
 
   constructor(
     public readonly rawMessage: string,
@@ -12,16 +13,36 @@ export class TmdParseError extends Error {
     expectedTokens: string[] = [],
     source?: string
   ) {
+    const computedHints = TmdParseError.computeHints(token, text, expectedTokens);
     let fullMessage = `${rawMessage} at ${range.start.line}:${range.start.column}: \`${text}\``;
     if (expectedTokens.length > 0) {
       fullMessage += ` (expected ${expectedTokens.join(", ")})`;
     }
+    for (const hint of computedHints) {
+      fullMessage += `\n${hint}`;
+    }
+
+    super(fullMessage);
+    this.name = "TmdParseError";
+    this.expectedTokens = expectedTokens;
+    this.source = source;
+    this.hints = computedHints;
+  }
+
+  private static computeHints(
+    token: Token,
+    text: string,
+    expectedTokens: string[]
+  ): string[] {
+    const result: string[] = [];
 
     // Diagnostic Hint 1: Fullwidth punctuation typo
     const fullwidthMatch = Object.keys(FULLWIDTH_PUNCT_MAP).find((fw) => text.includes(fw));
     if (fullwidthMatch) {
       const half = FULLWIDTH_PUNCT_MAP[fullwidthMatch];
-      fullMessage += `\nHint: Fullwidth punctuation detected: \`${fullwidthMatch}\` -> replace with halfwidth \`${half}\``;
+      result.push(
+        `Hint: Fullwidth punctuation detected: \`${fullwidthMatch}\` -> replace with halfwidth \`${half}\``
+      );
     }
 
     // Diagnostic Hint 2: Accidental typo like 1#, 7b, #, b
@@ -36,7 +57,9 @@ export class TmdParseError extends Error {
         /^[1-7][bB]$/.test(text) ||
         text === "b"
       ) {
-        fullMessage += `\nHint: For sharp/flat accidentals in TMD, use \`'\` for sharp (e.g. \`1'\`) and \`,\` for flat (e.g. \`7,\`)`;
+        result.push(
+          "Hint: For sharp/flat accidentals in TMD, use `'` for sharp (e.g. `1'`) and `,` for flat (e.g. `7,`)"
+        );
       }
     }
 
@@ -46,18 +69,19 @@ export class TmdParseError extends Error {
       expectedTokens[0] === "<" &&
       (token.type === "number" || token.type === "note" || text === "1" || token.type === "identifier")
     ) {
-      fullMessage += `\nHint: Each section inside \`{ ... }\` must start with a time grid directive like \`<4*>\` or \`<8*>\` before note events`;
+      result.push(
+        "Hint: Each section inside `{ ... }` must start with a time grid directive like `<4*>` or `<8*>` before note events"
+      );
     }
 
     // Diagnostic Hint 4: Percussion / drum valid symbols
     if (expectedTokens.includes("percussion") && /[A-Za-z]/.test(text)) {
-      fullMessage += `\nHint: If writing percussion/drums, valid symbols are: X/x (Hi-Hat), S/s (Snare), B/b/D/d (Bass Drum), T/t (Tom), C/c (Crash), O/o (Open Hi-Hat)`;
+      result.push(
+        "Hint: If writing percussion/drums, valid symbols are: X/x (Hi-Hat), S/s (Snare), B/b/D/d (Bass Drum), T/t (Tom), C/c (Crash), O/o (Open Hi-Hat)"
+      );
     }
 
-    super(fullMessage);
-    this.name = "TmdParseError";
-    this.expectedTokens = expectedTokens;
-    this.source = source;
+    return result;
   }
 
   get description(): string {
