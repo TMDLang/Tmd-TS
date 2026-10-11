@@ -997,6 +997,52 @@ WeirdPulse {
         expect(harpsichords[1].start).toBe(4);
         expect(pizz?.start).toBe(0);
       });
+
+      it('Issue #69: supports both (transpose <theme> <semitones>) and (transpose <semitones> <theme>) argument orders', () => {
+        const sheet = TmdParser.parse(`::SCORE::
+!= 120
+?= C
+<4/4>
+WeirdMotif {
+  <4*>
+  | 1 2 3 4 |
+}
+-> (layer
+    (play (transpose +7 WeirdMotif) TenorSax)
+    (play (transpose WeirdMotif 5) Clarinet)
+    (transpose -12 (play WeirdMotif Bassoon)))
+->#`);
+        const expanded = TmdMacroEvaluator.expandThrowing(sheet);
+        const tenor = TmdPlaybackRenderer.render(expanded, 'TenorSax');
+        const clarinet = TmdPlaybackRenderer.render(expanded, 'Clarinet');
+        const bassoon = TmdPlaybackRenderer.render(expanded, 'Bassoon');
+
+        const toPitches = (events: typeof tenor.events) =>
+          events.map((e) =>
+            e.content.type === 'note'
+              ? TmdMIDIGenerator.noteToMIDIPitch(e.content.note, e.state.keyOffset)
+              : -1
+          );
+
+        // 1 2 3 4 in C major = 60, 62, 64, 65
+        // TenorSax (+7 semitones): 67, 69, 71, 72
+        expect(toPitches(tenor.events)).toEqual([67, 69, 71, 72]);
+        // Clarinet (+5 semitones): 65, 67, 69, 70
+        expect(toPitches(clarinet.events)).toEqual([65, 67, 69, 70]);
+        // Bassoon (-12 semitones): 48, 50, 52, 53
+        expect(toPitches(bassoon.events)).toEqual([48, 50, 52, 53]);
+
+        // Invalid non-integer offset still throws TmdMacroError
+        const invalidSheet = TmdParser.parse(`::SCORE::
+!= 120
+?= C
+<4/4>
+WeirdMotif { <4*> | 1 2 3 4 | }
+-> (play (transpose WeirdMotif nope) TenorSax) ->#`);
+        expect(() => TmdMacroEvaluator.expandThrowing(invalidSheet)).toThrow(
+          /Transpose offset must be an integer/
+        );
+      });
     });
   });
 });

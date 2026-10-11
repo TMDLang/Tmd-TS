@@ -116,10 +116,15 @@ export class TmdMacroEvaluator {
             throw macroError(`'transpose' requires theme and semitones offset, e.g. (transpose Theme 7)`);
           }
           let target = themeArg[1];
-          let semitones = integer(themeArg[2], "Transpose offset");
-          if (typeof target === "number" || (!isNaN(Number(target)) && typeof themeArg[2] === "string")) {
+          let semitones: number;
+          if (
+            typeof target === "number" ||
+            (!isNaN(Number(target)) && typeof themeArg[2] !== "number")
+          ) {
             semitones = integer(target, "Transpose offset");
             target = themeArg[2];
+          } else {
+            semitones = integer(themeArg[2], "Transpose offset");
           }
           const sub = getThemeSections(target);
           return {
@@ -626,10 +631,15 @@ export class TmdMacroEvaluator {
             throw macroError(`'transpose' requires theme and semitones offset, e.g. (transpose Theme 7)`);
           }
           let target = expr[1];
-          let semitones = Number(expr[2]) || 0;
-          if (typeof target === "number" || (!isNaN(Number(target)) && typeof expr[2] !== "number")) {
-            semitones = Number(target) || 0;
+          let semitones: number;
+          if (
+            typeof target === "number" ||
+            (!isNaN(Number(target)) && typeof expr[2] !== "number")
+          ) {
+            semitones = integer(target, "Transpose offset");
             target = expr[2];
+          } else {
+            semitones = integer(expr[2], "Transpose offset");
           }
           const innerRes = evalExpr(target);
           const innerParagraphs = concreteParagraphs.filter((cp) => innerRes.paragraphNames.includes(cp.name));
