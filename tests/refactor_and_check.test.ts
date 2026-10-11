@@ -1695,4 +1695,69 @@ verse:Drums [pitchMode=fixed] @|0|{
     expect(issues[0].actualUnits).toBe(6);
     expect(issues[0].beat).toEqual({ count: 3, noteValue: 4 });
   });
+
+  it("Issue #59: refactor CLI supports negative and quoted integer options (--interval, --octave, --semitones, --diatonic) and rejects missing/invalid integer values", async () => {
+    const { main } = await import("../src/cli.js");
+    const { tmpdir } = await import("node:os");
+    const { join } = await import("node:path");
+    const { mkdtempSync, writeFileSync, readFileSync, rmSync } = await import("node:fs");
+
+    const tempDir = mkdtempSync(join(tmpdir(), "tmd-cli-issue59-"));
+    try {
+      const file = join(tempDir, "score.tmd");
+      writeFileSync(
+        file,
+        `::SCORE::
+!= 120
+?= C
+<4/4>
+
+verse:Vocal@|0|{
+    <4*>
+    | 3 4 5 6 |
+}
+
+-> verse ->#
+`
+      );
+
+      // 1. Space-separated negative --interval -2
+      expect(
+        main(["refactor", "generate-harmony", file, "--source", "Vocal", "--target", "HarmonyDown", "--interval", "-2", "-i"])
+      ).toBe(0);
+      let content = readFileSync(file, "utf-8");
+      expect(content).toContain("verse:HarmonyDown@|0|{");
+      expect(content).toContain("1 2 3 4");
+
+      // 2. Quoted negative --interval '"-2"' and "' -2 '"
+      expect(
+        main(["refactor", "generate-harmony", file, "--source", "Vocal", "--target", "HarmonyQuoted", "--interval", '"-2"', "-i"])
+      ).toBe(0);
+      content = readFileSync(file, "utf-8");
+      expect(content).toContain("verse:HarmonyQuoted@|0|{\n    <4*>\n    | 1 2 3 4 |");
+
+      // 3. Quoted negative --octave "'-1'"
+      expect(
+        main(["refactor", "duplicate-track", file, "--source", "Vocal", "--target", "VocalLow", "--octave", "'-1'", "-i"])
+      ).toBe(0);
+      content = readFileSync(file, "utf-8");
+      expect(content).toContain("verse:VocalLow@|0|{\n    <4*>\n    | 3_ 4_ 5_ 6_ |");
+
+      // 4. Missing or non-integer value for --interval / --octave / --semitones returns exit code 2
+      expect(
+        main(["refactor", "generate-harmony", file, "--source", "Vocal", "--target", "Bad", "--interval"])
+      ).toBe(2);
+      expect(
+        main(["refactor", "generate-harmony", file, "--source", "Vocal", "--target", "Bad", "--interval", "not-an-int"])
+      ).toBe(2);
+      expect(
+        main(["refactor", "duplicate-track", file, "--source", "Vocal", "--target", "Bad", "--octave", "abc"])
+      ).toBe(2);
+      expect(
+        main(["refactor", "transpose", file, "--semitones", "abc"])
+      ).toBe(2);
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
 });

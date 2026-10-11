@@ -280,12 +280,26 @@ SUBCOMMANDS:
     });
   }
 
+function parseSignedIntOption(raw: string | undefined, optionName: string): number | null {
+  if (raw === undefined) {
+    console.error(`Error: Missing value for '${optionName}'`);
+    return null;
+  }
+  const cleaned = raw.trim().replace(/^['"]+|['"]+$/g, "").trim();
+  if (!/^[+-]?\d+$/.test(cleaned)) {
+    console.error(`Error: Invalid integer value '${raw}' for '${optionName}'`);
+    return null;
+  }
+  return parseInt(cleaned, 10);
+}
+
   if (sub === "duplicate-track" || sub === "generate-harmony") {
     let source: string | undefined;
     let target: string | undefined;
     let section: string | undefined;
     let octaveShift = 0;
     let intervalSteps = 2;
+    let hasInvalidOption = false;
 
     const parsed = parseSubcommandArgs(
       rest,
@@ -310,13 +324,23 @@ SUBCOMMANDS:
         if (sub === "duplicate-track") {
           opt = matchOption(arg, args, i, undefined, "--octave");
           if (opt.matched) {
-            octaveShift = parseInt(opt.value ?? "", 10) || 0;
+            const parsedInt = parseSignedIntOption(opt.value, "--octave");
+            if (parsedInt === null) {
+              hasInvalidOption = true;
+            } else {
+              octaveShift = parsedInt;
+            }
             return { matched: true, nextI: opt.nextI };
           }
         } else {
           opt = matchOption(arg, args, i, undefined, "--interval");
           if (opt.matched) {
-            intervalSteps = parseInt(opt.value ?? "", 10) || 0;
+            const parsedInt = parseSignedIntOption(opt.value, "--interval");
+            if (parsedInt === null) {
+              hasInvalidOption = true;
+            } else {
+              intervalSteps = parsedInt;
+            }
             return { matched: true, nextI: opt.nextI };
           }
         }
@@ -324,7 +348,7 @@ SUBCOMMANDS:
       }
     );
     if (parsed.status === "help") return 0;
-    if (parsed.status === "error") return 2;
+    if (parsed.status === "error" || hasInvalidOption) return 2;
     if (!parsed.inputPath || !source || !target) {
       console.error(`Error: ${sub} requires <input-path>, --source, and --target`);
       return 2;
@@ -378,6 +402,7 @@ SUBCOMMANDS:
     let updateKeySignature = false;
     let section: string | undefined;
     let instrument: string | undefined;
+    let hasInvalidOption = false;
 
     const transposeUsage = `USAGE: tmd refactor transpose [<options>] <input-path>
 
@@ -396,12 +421,22 @@ OPTIONS:
     const parsed = parseSubcommandArgs(rest, transposeUsage, true, (arg, args, i) => {
       let opt = matchOption(arg, args, i, "-s", "--semitones");
       if (opt.matched) {
-        semitones = parseInt(opt.value ?? "", 10) || 0;
+        const parsedInt = parseSignedIntOption(opt.value, "--semitones");
+        if (parsedInt === null) {
+          hasInvalidOption = true;
+        } else {
+          semitones = parsedInt;
+        }
         return { matched: true, nextI: opt.nextI };
       }
       opt = matchOption(arg, args, i, "-d", "--diatonic");
       if (opt.matched) {
-        diatonicSteps = parseInt(opt.value ?? "", 10) || 0;
+        const parsedInt = parseSignedIntOption(opt.value, "--diatonic");
+        if (parsedInt === null) {
+          hasInvalidOption = true;
+        } else {
+          diatonicSteps = parsedInt;
+        }
         return { matched: true, nextI: opt.nextI };
       }
       if (arg === "-k" || arg === "--update-key") {
@@ -422,7 +457,7 @@ OPTIONS:
     });
 
     if (parsed.status === "help") return 0;
-    if (parsed.status === "error") return 2;
+    if (parsed.status === "error" || hasInvalidOption) return 2;
     if (!parsed.inputPath) {
       console.error("Error: transpose requires <input-path>");
       return 2;
