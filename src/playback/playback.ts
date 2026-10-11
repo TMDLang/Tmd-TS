@@ -172,8 +172,8 @@ export class TmdPlaybackRenderer {
     for (const entries of grouped.values()) {
       for (let i = 0; i < entries.length; i++) {
         for (let j = i + 1; j < entries.length; j++) {
-          const first = this.entryRange(entries[i], sheet.beat);
-          const second = this.entryRange(entries[j], sheet.beat);
+          const first = this.entryRange(entries[i], sheet.beat, sheet);
+          const second = this.entryRange(entries[j], sheet.beat, sheet);
           if (Math.max(first.start, second.start) < Math.min(first.end, second.end)) {
             const entry = entries[i];
             const assignment = entry.assignment!;
@@ -191,12 +191,43 @@ export class TmdPlaybackRenderer {
     return issues;
   }
 
-  private static entryRange(entry: Entry, beat: Beat): { start: number; end: number } {
+  /**
+   * Resolves the initial time signature for an entry, checking the entry's own leading
+   * timeSignature directive at position 0 first, then any sibling entry in the same section,
+   * and finally falling back to `fallback`.
+   */
+  public static entryInitialBeat(entry: Entry, sheet: Sheet | undefined, fallback: Beat): Beat {
+    const firstSec = entry.sections[0];
+    if (firstSec) {
+      for (const dir of firstSec.directives) {
+        if (dir.position === 0 && dir.kind.type === "timeSignature") {
+          return dir.kind.beat;
+        }
+      }
+    }
+    if (sheet) {
+      for (const sibling of sheet.entries) {
+        if (sibling.name !== entry.name) continue;
+        const sibSec = sibling.sections[0];
+        if (sibSec) {
+          for (const dir of sibSec.directives) {
+            if (dir.position === 0 && dir.kind.type === "timeSignature") {
+              return dir.kind.beat;
+            }
+          }
+        }
+      }
+    }
+    return fallback;
+  }
+
+  private static entryRange(entry: Entry, beat: Beat, sheet?: Sheet): { start: number; end: number } {
     const duration = entry.sections.reduce((total, section) => {
       const unitDuration = 4.0 / Math.max(1, section.noteLength);
       return total + section.unitGroups.reduce((sum, group) => sum + Math.max(0, group.length) * unitDuration, 0);
     }, 0);
-    const start = entry.start * this.measureDuration(beat);
+    const effectiveBeat = this.entryInitialBeat(entry, sheet, beat);
+    const start = entry.start * this.measureDuration(effectiveBeat);
     return { start, end: start + duration };
   }
 
@@ -232,7 +263,8 @@ export class TmdPlaybackRenderer {
         if (i < startIndex) {
           // If before startOrderIndex, accumulate directives and key/tempo/meter state from paragraph
           for (const paragraph of matchingParagraphs) {
-            const start = timelinePosition + paragraph.start * TmdPlaybackRenderer.measureDuration(state.timeSignature);
+            const entryBeat = TmdPlaybackRenderer.entryInitialBeat(paragraph, sheet, state.timeSignature);
+            const start = timelinePosition + paragraph.start * TmdPlaybackRenderer.measureDuration(entryBeat);
             const paragraphState = paragraph.pitchMode === "fixed" ? { ...state, keyOffset: 0 } : state;
             const rendered = TmdPlaybackRenderer.renderParagraph(paragraph, start, paragraphState, paragraph.pitchMode === "fixed");
             state = {
@@ -250,7 +282,8 @@ export class TmdPlaybackRenderer {
         }
 
         for (const paragraph of matchingParagraphs) {
-          const start = timelinePosition + paragraph.start * TmdPlaybackRenderer.measureDuration(state.timeSignature);
+          const entryBeat = TmdPlaybackRenderer.entryInitialBeat(paragraph, sheet, state.timeSignature);
+          const start = timelinePosition + paragraph.start * TmdPlaybackRenderer.measureDuration(entryBeat);
           const paragraphState = paragraph.pitchMode === "fixed" ? { ...state, keyOffset: 0 } : state;
           const rendered = TmdPlaybackRenderer.renderParagraph(paragraph, start, paragraphState, paragraph.pitchMode === "fixed");
           events.push(...rendered.events);
@@ -479,7 +512,8 @@ export class TmdPlaybackRenderer {
 
     return Math.max(
       ...matching.map((p) => {
-        const lead = p.start * TmdPlaybackRenderer.measureDuration(beat);
+        const paragraphBeat = TmdPlaybackRenderer.entryInitialBeat(p, sheet, beat);
+        const lead = p.start * TmdPlaybackRenderer.measureDuration(paragraphBeat);
         const sectionsDuration = p.sections.reduce((tot, sec) => {
           const unitDuration = 4.0 / Math.max(1, sec.noteLength);
           return tot + sec.unitGroups.reduce((acc, g) => acc + Math.max(0, g.length) * unitDuration, 0);
@@ -501,7 +535,8 @@ export class TmdPlaybackRenderer {
       if (visited.name === undefined) continue;
       const matching = sheet.entries.filter((p) => p.name === visited.name);
       for (const paragraph of matching) {
-        earliest = Math.min(earliest, timelinePosition + paragraph.start * TmdPlaybackRenderer.measureDuration(state.timeSignature));
+        const entryBeat = TmdPlaybackRenderer.entryInitialBeat(paragraph, sheet, state.timeSignature);
+        earliest = Math.min(earliest, timelinePosition + paragraph.start * TmdPlaybackRenderer.measureDuration(entryBeat));
         state = TmdPlaybackRenderer.renderParagraph(paragraph, timelinePosition, state).state;
       }
       timelinePosition += TmdPlaybackRenderer.durationOf(visited.name, sheet, state.timeSignature);

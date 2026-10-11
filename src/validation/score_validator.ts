@@ -408,11 +408,13 @@ export class TmdScoreValidator {
         const spanByInstrument: Array<{
           instrument: string;
           span: number;
+          endBeats: number;
           entry: Entry;
         }> = [];
         for (const inst of instOrder) {
           const entriesForInst = byInstrument.get(inst) ?? [];
           let maxEndMeasure = 0;
+          let maxEndBeats = 0.0;
           for (const e of entriesForInst) {
             const beatDur = e.sections.reduce((total, section) => {
               const unitDur = 4.0 / Math.max(1, section.noteLength);
@@ -424,16 +426,27 @@ export class TmdScoreValidator {
                 )
               );
             }, 0);
-            const measuresCount = Math.round(beatDur / measureDur);
+            const entryBeat = TmdPlaybackRenderer.entryInitialBeat(
+              e,
+              sheet,
+              sheet.beat
+            );
+            const entryMeasureDur = TmdPlaybackRenderer.measureDuration(entryBeat);
+            const measuresCount = Math.round(beatDur / entryMeasureDur);
             const endMeasure = e.start + measuresCount;
+            const endBeats = e.start * entryMeasureDur + beatDur;
             if (endMeasure > maxEndMeasure) {
               maxEndMeasure = endMeasure;
+            }
+            if (endBeats > maxEndBeats) {
+              maxEndBeats = endBeats;
             }
           }
           if (maxEndMeasure > 0 && entriesForInst.length > 0) {
             spanByInstrument.push({
               instrument: inst,
               span: maxEndMeasure,
+              endBeats: maxEndBeats,
               entry: entriesForInst[0],
             });
           }
@@ -453,9 +466,14 @@ export class TmdScoreValidator {
               referenceSpan = span;
             }
           }
+          const referenceEndBeats =
+            spanByInstrument.find((s) => s.span === referenceSpan)?.endBeats ?? 0.0;
 
           for (const item of spanByInstrument) {
-            if (item.span !== referenceSpan) {
+            if (
+              item.span !== referenceSpan &&
+              Math.abs(item.endBeats - referenceEndBeats) > 1e-4
+            ) {
               const line =
                 this.findEntryLine(secName, item.instrument, lines) + lineOffset;
               diagnostics.push({

@@ -523,4 +523,114 @@ secMeter:Piano@|0|{
     const pianoRange = profile.instrumentRanges.find((r) => r.assignment === "Piano");
     expect(pianoRange?.highestNote.measure).toBe(11);
   });
+
+  it("Issue #61: resolves entry-local timeSignature for @|-N|/@|+N| start offsets in TmdPlaybackRenderer, TmdMeasureRenderer, and TmdScoreValidator", async () => {
+    const { TmdParser } = await import("../src/syntax/index.js");
+    const { TmdPlaybackRenderer, TmdMeasureRenderer } = await import("../src/playback/index.js");
+
+    const score = `::SCORE::
+** Odd Meter Pickups & Polymeter **
+!= 120
+?= C
+<4/4>
+
+Intro:Flute@|0|{
+    <4*>
+    | 1 2 3 4 | 1 2 3 4 |
+}
+Intro:Clarinet@|0|{
+    <4*>
+    | 1 2 3 4 | 1 2 3 4 |
+}
+
+M5:Clarinet@|-1|{
+    <4*>
+    | {<5/4>} 0 0 0 0 5, |
+    | 1 2 3 4 5 | 5 4 3 2 1 |
+    | 1 3 5 3 1 | 2 5, 1 - - |
+}
+M5:Flute@|0|{
+    <4*>
+    | {<5/4>} 3 4 5 6 7 | 1^ 7 6 5 4 |
+    | 3 5 1^ 5 3 | 4 2 3 - - |
+}
+
+M7:Flute@|-1|{
+    <8*>
+    | {<7/8>} 0 0 0 0 5 6 7 |
+    | 1 2 3 4 5 6 7 | 1^ 7 6 5 4 3 2 |
+    | 1 3 5 1^ 7 5 3 | 2 4 3 2 1 - - |
+}
+M7:Clarinet@|0|{
+    <8*>
+    | {<7/8>} 1, - 5, - 1 - 5, | 4, - 1 - 4 - 1 |
+    | 5, - 2 - 5 - 2 | 1, - 5, - 1 - - |
+}
+
+M11:Oboe@|-1|{
+    <8*>
+    | {<11/8>} 0 0 0 0 0 0 0 0 5 6 7 |
+    | 1 2 3 4 5 6 7 1^ 2^ 3^ 2^ | 1^ 7 6 5 4 3 2 1 2 3 4 |
+    | 5 6 7 1^ 2^ 1^ 7 6 5 4 3 | 2 3 4 5 3 1 5, 1 - - - |
+}
+M11:Flute@|0|{
+    <8*>
+    | {<11/8>} 3 4 5 6 7 1^ 2^ 3^ 4^ 5^ 4^ | 3^ 2^ 1^ 7 6 5 4 3 4 5 6 |
+    | 7 1^ 2^ 3^ 4^ 3^ 2^ 1^ 7 6 5 | 4 5 6 7 5 3 2 3 - - - |
+}
+
+M13:Violin@|-1|{
+    <8*>
+    | {<13/8>} 0 0 0 0 0 0 0 0 0 5 6 7 2^ |
+    | 1^ 7 6 5 4 3 2 1 2 3 4 5 6 | 5 6 7 1^ 2^ 3^ 4^ 5^ 4^ 3^ 2^ 1^ 7 |
+    | 1^ 5 3 1 6 4 2 7, 5 3 1 2 7, | 1 - - 5, - - 1 - - - - - - |
+}
+M13:Flute@|0|{
+    <8*>
+    | {<13/8>} 3^ 2^ 1^ 7 6 5 4 3 4 5 6 7 1^ | 7 1^ 2^ 3^ 4^ 5^ 6^ 7^ 6^ 5^ 4^ 3^ 2^ |
+    | 3^ 1^ 5 3 1^ 6 4 2 7 5 3 4 2 | 3 - - 1 - - 3 - - - - - - |
+}
+
+Poly:Flute@|0|{
+    <8*>
+    | {<5/8>} 1 2 3 4 5 | 6 5 4 3 2 | 1 3 5 3 1 | 2 4 6 4 2 |
+    | 3 5 1^ 5 3 | 4 6 2^ 6 4 | 5 4 3 2 1 |
+}
+Poly:Clarinet@|0|{
+    <8*>
+    | {<7/8>} 1, 5, 1 3 5 3 1 | 4, 1 4 6 1^ 6 4 |
+    | 5, 2 5 7 2^ 7 5 | 6, 3 6 1^ 3^ 1^ 6 |
+    | 5, 2 5 7 1^ - - |
+}
+
+-> Intro -> M5 -> M7 -> M11 -> M13 -> Poly ->#
+`;
+
+    // 1. Validator emits 0 errors and 0 W-SECTION-LENGTH-MISMATCH warnings
+    const diags = TmdScoreValidator.validate(score);
+    expect(diags.filter((d) => d.rule === "W-SECTION-LENGTH-MISMATCH")).toEqual([]);
+    expect(diags.filter((d) => d.severity === "error")).toEqual([]);
+
+    // 2. Section durations reflect entry-local time signatures
+    const sheet = TmdParser.parseThrowing(score);
+    expect(TmdPlaybackRenderer.durationOf("M5", sheet)).toBeCloseTo(20.0, 5);
+    expect(TmdPlaybackRenderer.durationOf("M7", sheet)).toBeCloseTo(14.0, 5);
+    expect(TmdPlaybackRenderer.durationOf("M11", sheet)).toBeCloseTo(22.0, 5);
+    expect(TmdPlaybackRenderer.durationOf("M13", sheet)).toBeCloseTo(26.0, 5);
+
+    // 3. Playback timeline downbeat alignment:
+    // Intro (8.0) + M5 (20.0) = 28.0 downbeat for M7. Flute M7 pickup starts at 24.5.
+    const fluteTimeline = TmdPlaybackRenderer.render(sheet, "Flute");
+    const clarinetTimeline = TmdPlaybackRenderer.render(sheet, "Clarinet");
+    expect(fluteTimeline.events.some((e) => Math.abs(e.position - 24.5) < 1e-6)).toBe(true);
+    expect(fluteTimeline.events.some((e) => Math.abs(e.position - 28.0) < 1e-6)).toBe(true);
+    expect(clarinetTimeline.events.some((e) => Math.abs(e.position - 28.0) < 1e-6)).toBe(true);
+
+    // 4. Measure renderer slices Flute's M7 pickup at 24.5..<28.0 with 7/8 time signature
+    const fluteMeasures = TmdMeasureRenderer.renderMeasures(sheet, "Flute");
+    const pickupMeasure = fluteMeasures.find((m) => Math.abs(m.startTime - 24.5) < 1e-6);
+    expect(pickupMeasure).toBeDefined();
+    expect(pickupMeasure?.timeSignature).toEqual({ count: 7, noteValue: 8 });
+    expect(pickupMeasure?.nominalDuration).toBeCloseTo(3.5, 5);
+  });
 });

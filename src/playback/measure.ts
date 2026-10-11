@@ -96,7 +96,7 @@ export class TmdMeasureRenderer {
     while (curStart < totalDuration - 1e-6 || intervals.length === 0) {
       while (
         nextDirectiveIndex < timeSigDirectives.length &&
-        timeSigDirectives[nextDirectiveIndex].position <= curStart
+        timeSigDirectives[nextDirectiveIndex].position <= curStart + 1e-6
       ) {
         const d = timeSigDirectives[nextDirectiveIndex];
         if (d.kind.type === 'timeSignature') {
@@ -104,8 +104,15 @@ export class TmdMeasureRenderer {
         }
         nextDirectiveIndex++;
       }
-      const dur = (Math.max(1, curBeat.count) * 4.0) / Math.max(1, curBeat.noteValue);
-      const curEnd = curStart + dur;
+      let dur = (Math.max(1, curBeat.count) * 4.0) / Math.max(1, curBeat.noteValue);
+      let curEnd = curStart + dur;
+      if (nextDirectiveIndex < timeSigDirectives.length) {
+        const nextPos = timeSigDirectives[nextDirectiveIndex].position;
+        if (nextPos > curStart + 1e-6 && nextPos < curEnd - 1e-6) {
+          curEnd = nextPos;
+          dur = curEnd - curStart;
+        }
+      }
       intervals.push({ start: curStart, end: curEnd, duration: dur, beat: curBeat });
       curStart = curEnd;
     }
