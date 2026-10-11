@@ -21,6 +21,7 @@ import { AppDOMElements,initAppDOMElements } from "./ui/dom.js";
 import { setupExportMenu } from "./ui/exportMenu.js";
 import { renderInspectorView, setupInspectorPanelEvents } from "./ui/inspector.js";
 import { TmdLibraryDrawerController } from "./ui/libraryDrawer.js";
+import { dismissLoadingOverlay, updateLoadingStatus } from "./ui/loadingOverlay.js";
 import { setupBrailleModal } from "./ui/modals/brailleModal.js";
 import { setupHumModal, tryReloadOnChunkError } from "./ui/modals/humModal.js";
 import { setupInsertSectionModal } from "./ui/modals/insertSectionModal.js";
@@ -623,99 +624,104 @@ function initEvents() {
 }
 
 async function init() {
-  dom = initAppDOMElements();
-  const container = document.getElementById("editor-container")!;
-  const defaultSample = SAMPLES[0]; // 《三天三夜》
-  let initialContent = defaultSample.content;
-
-  applyI18n(detectLanguage());
-
-  let initialScoreId: string | null = null;
-  let initialIsTemplate = true;
-  let initialTemplateId: string | null = defaultSample.id;
-
   try {
-    const sharedHash = await TmdScoreService.importSharedScore();
-    const sharedGist = sharedHash ? null : await TmdScoreService.importGistScore();
-    const shared = sharedHash ?? sharedGist;
-    if (shared) {
-      TmdStorage.setActiveScoreId(shared.id);
-      if (sharedGist) {
-        showToast(t("importGistSuccess").replace("{title}", sharedGist.title));
+    dom = initAppDOMElements();
+    const container = document.getElementById("editor-container")!;
+    const defaultSample = SAMPLES[0]; // 《三天三夜》
+    let initialContent = defaultSample.content;
+
+    applyI18n(detectLanguage());
+    updateLoadingStatus(t("appLoadingStatus"));
+
+    let initialScoreId: string | null = null;
+    let initialIsTemplate = true;
+    let initialTemplateId: string | null = defaultSample.id;
+
+    try {
+      const sharedHash = await TmdScoreService.importSharedScore();
+      const sharedGist = sharedHash ? null : await TmdScoreService.importGistScore();
+      const shared = sharedHash ?? sharedGist;
+      if (shared) {
+        TmdStorage.setActiveScoreId(shared.id);
+        if (sharedGist) {
+          showToast(t("importGistSuccess").replace("{title}", sharedGist.title));
+        }
       }
-    }
-    const activeId = TmdStorage.getActiveScoreId();
-    if (activeId) {
-      const saved = shared ?? (await TmdStorage.getScore(activeId));
-      if (saved) {
-        initialContent = saved.content;
-        initialScoreId = saved.id;
-        initialIsTemplate = false;
-        initialTemplateId = null;
+      const activeId = TmdStorage.getActiveScoreId();
+      if (activeId) {
+        const saved = shared ?? (await TmdStorage.getScore(activeId));
+        if (saved) {
+          initialContent = saved.content;
+          initialScoreId = saved.id;
+          initialIsTemplate = false;
+          initialTemplateId = null;
+        }
       }
+    } catch (e) {
+      console.warn("Could not restore active score from storage:", e);
     }
-  } catch (e) {
-    console.warn("Could not restore active score from storage:", e);
-  }
 
-  editor = createTmdEditor(
-    container,
-    initialContent,
-    handleEditorChange,
-    (line, col) => {
-      if (dom.sbCursor) {
-        dom.sbCursor.textContent = `Ln ${line}, Col ${col}`;
-      }
-    },
-    () => {
-      toolsAndContextController?.handleFormatDocument();
-    },
-    (section, instrument) => {
-      playerController?.playSectionOrTrack(section, instrument);
-    }
-  );
-
-  new TmdPaletteController(dom.tmdPalette, editor);
-
-  const initialTheme = initTheme();
-  editor.setTheme(initialTheme);
-  if (dom.themeToggleIcon) {
-    dom.themeToggleIcon.textContent = initialTheme === "light" ? "🌙" : "☀️";
-  }
-
-  initEvents();
-  applyPanelsState({
-    libraryDrawer: dom.libraryDrawer,
-    aiDrawer: dom.aiDrawer,
-    inspectorPanel: dom.inspectorPanel,
-    problemsPanel: dom.problemsPanel,
-    btnToggleProblems: dom.btnToggleProblems,
-    virtualKeyboard: dom.virtualKeyboard,
-    btnToggleKeyboard: dom.btnToggleKeyboard,
-  });
-
-  libraryController.setActiveScore(initialScoreId, initialIsTemplate, initialTemplateId);
-  if (!dom.libraryDrawer.classList.contains("hidden")) {
-    libraryController.refreshLibraryScores();
-  }
-
-  updateInspector(initialContent);
-  updateProblems(initialContent);
-
-  // Initialize Web MCP service
-  try {
-    initTmdWebMcp(window, {
-      getCurrentScore: () => editor.getContent(),
-      loadScoreToEditor: (text: string) => {
-        editor.setContent(text);
-        handleScoreUpdated(text);
+    editor = createTmdEditor(
+      container,
+      initialContent,
+      handleEditorChange,
+      (line, col) => {
+        if (dom.sbCursor) {
+          dom.sbCursor.textContent = `Ln ${line}, Col ${col}`;
+        }
       },
-      startPlayback: () => {
-        playerController?.startPlayback(editor.getContent());
+      () => {
+        toolsAndContextController?.handleFormatDocument();
       },
+      (section, instrument) => {
+        playerController?.playSectionOrTrack(section, instrument);
+      }
+    );
+
+    new TmdPaletteController(dom.tmdPalette, editor);
+
+    const initialTheme = initTheme();
+    editor.setTheme(initialTheme);
+    if (dom.themeToggleIcon) {
+      dom.themeToggleIcon.textContent = initialTheme === "light" ? "🌙" : "☀️";
+    }
+
+    initEvents();
+    applyPanelsState({
+      libraryDrawer: dom.libraryDrawer,
+      aiDrawer: dom.aiDrawer,
+      inspectorPanel: dom.inspectorPanel,
+      problemsPanel: dom.problemsPanel,
+      btnToggleProblems: dom.btnToggleProblems,
+      virtualKeyboard: dom.virtualKeyboard,
+      btnToggleKeyboard: dom.btnToggleKeyboard,
     });
-  } catch (err) {
-    console.warn("Failed to initialize Web MCP:", err);
+
+    libraryController.setActiveScore(initialScoreId, initialIsTemplate, initialTemplateId);
+    if (!dom.libraryDrawer.classList.contains("hidden")) {
+      libraryController.refreshLibraryScores();
+    }
+
+    updateInspector(initialContent);
+    updateProblems(initialContent);
+
+    // Initialize Web MCP service
+    try {
+      initTmdWebMcp(window, {
+        getCurrentScore: () => editor.getContent(),
+        loadScoreToEditor: (text: string) => {
+          editor.setContent(text);
+          handleScoreUpdated(text);
+        },
+        startPlayback: () => {
+          playerController?.startPlayback(editor.getContent());
+        },
+      });
+    } catch (err) {
+      console.warn("Failed to initialize Web MCP:", err);
+    }
+  } finally {
+    dismissLoadingOverlay();
   }
 }
 

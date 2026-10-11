@@ -403,4 +403,6 @@ export const en = {
   problemsFixAllWithAi: "✨ Fix All with AI",
   problemsFixWithAi: "✨ Fix with AI",
   aiPreviewProblemsWarning: "⚠️ Generated score still has {count} issues to resolve (click to inspect)",
+  appLoadingTitle: "TMD Studio",
+  appLoadingStatus: "Loading Studio & Score Environment…",
 };
