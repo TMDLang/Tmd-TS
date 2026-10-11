@@ -17,7 +17,8 @@ export type TmdValidationRule =
   | "W-UNUSED-PROTOTYPE"
   | "W-INSTRUMENT-INCONSISTENT"
   | "W-INSTRUMENT-UNKNOWN"
-  | "W-SECTION-LENGTH-MISMATCH";
+  | "W-SECTION-LENGTH-MISMATCH"
+  | "W-TEMPO-OUT-OF-RANGE";
 
 export interface TmdScoreDiagnostic {
   file?: string;
@@ -183,6 +184,91 @@ export class TmdScoreValidator {
         });
       }
     } catch (_) {}
+
+    // 2d. Tempo bounds check (W-TEMPO-OUT-OF-RANGE: [10, 1000] BPM)
+    if (
+      sheet.speed > 0 &&
+      (sheet.speed < TmdPlaybackRenderer.minTempoBPM ||
+        sheet.speed > TmdPlaybackRenderer.maxTempoBPM)
+    ) {
+      const speedIdx = lines.findIndex((l) => {
+        const t = l.trim();
+        return !t.startsWith("//") && t.startsWith("!=");
+      });
+      const speedLine = (speedIdx >= 0 ? speedIdx + 1 : 1) + lineOffset;
+      const clamped = TmdPlaybackRenderer.clampTempo(sheet.speed);
+      diagnostics.push({
+        file,
+        line: speedLine,
+        column: 1,
+        endLine: speedLine,
+        endColumn: 2,
+        severity: "warning",
+        rule: "W-TEMPO-OUT-OF-RANGE",
+        message: `Tempo '!= ${sheet.speed}' is outside the supported range [10, 1000] BPM (will be clamped to ${clamped} BPM).`,
+        suggestion: "Specify a tempo between 10 and 1000 BPM.",
+      });
+    }
+
+    for (const entry of sheet.entries) {
+      let currentTempo =
+        sheet.speed > 0
+          ? TmdPlaybackRenderer.clampTempo(sheet.speed)
+          : TmdPlaybackRenderer.defaultTempoBPM;
+      const entryLine =
+        (entry.line ?? this.findEntryLine(entry.name, entry.assignment, lines)) +
+        lineOffset;
+      for (const section of entry.sections) {
+        const sortedDirectives = [...section.directives].sort(
+          (a, b) => a.position - b.position
+        );
+        for (const directive of sortedDirectives) {
+          if (directive.kind.type === "tempo") {
+            const bpm = directive.kind.bpm;
+            if (
+              bpm < TmdPlaybackRenderer.minTempoBPM ||
+              bpm > TmdPlaybackRenderer.maxTempoBPM
+            ) {
+              const clamped = TmdPlaybackRenderer.clampTempo(bpm);
+              diagnostics.push({
+                file,
+                line: entryLine,
+                column: 1,
+                endLine: entryLine,
+                endColumn: 2,
+                severity: "warning",
+                rule: "W-TEMPO-OUT-OF-RANGE",
+                message: `Tempo directive '{!= ${bpm}}' in '${entry.name}' is outside the supported range [10, 1000] BPM (will be clamped to ${clamped} BPM).`,
+                suggestion: "Specify a tempo between 10 and 1000 BPM.",
+              });
+            }
+            currentTempo = TmdPlaybackRenderer.clampTempo(bpm);
+          } else if (directive.kind.type === "relativeTempo") {
+            const delta = directive.kind.deltaBpm;
+            const targetTempo = currentTempo + delta;
+            if (
+              targetTempo < TmdPlaybackRenderer.minTempoBPM ||
+              targetTempo > TmdPlaybackRenderer.maxTempoBPM
+            ) {
+              const clamped = TmdPlaybackRenderer.clampTempo(targetTempo);
+              const op = delta >= 0 ? "!+" : "!-";
+              diagnostics.push({
+                file,
+                line: entryLine,
+                column: 1,
+                endLine: entryLine,
+                endColumn: 2,
+                severity: "warning",
+                rule: "W-TEMPO-OUT-OF-RANGE",
+                message: `Relative tempo directive '{${op} ${Math.abs(delta)}}' in '${entry.name}' results in ${targetTempo} BPM, outside [10, 1000] BPM (will be clamped to ${clamped} BPM).`,
+                suggestion: "Keep effective tempo within 10 to 1000 BPM.",
+              });
+            }
+            currentTempo = TmdPlaybackRenderer.clampTempo(targetTempo);
+          }
+        }
+      }
+    }
 
     // Stage 3: Chord Symbol Linter (E-CHORD-MULTINOTE, W-CHORD-CUSTOM)
     for (const entry of sheet.entries) {

@@ -1,6 +1,6 @@
 import { TmdMacroEvaluator } from '../playback/macro.js';
 import { PlaybackContent, PlaybackDirectiveEvent, PlaybackEvent, PlaybackState, TmdPlaybackRenderer } from '../playback/playback.js';
-import { Beat, DEFAULT_TEMPO_BPM, effectivePlaybackOrders, Sheet } from '../syntax/types.js';
+import { Beat, clampTempo, DEFAULT_TEMPO_BPM, effectivePlaybackOrders, Sheet } from '../syntax/types.js';
 
 export interface NotationDurationAtom {
   baseDenominator: number; // 1, 2, 4, 8, 16, 32, 64
@@ -119,7 +119,7 @@ export class TmdMeasureRenderer {
 
     const measures: Measure[] = [];
     let activeState: PlaybackState = {
-      tempo: sheet.speed > 0 ? sheet.speed : DEFAULT_TEMPO_BPM,
+      tempo: sheet.speed > 0 ? clampTempo(sheet.speed) : DEFAULT_TEMPO_BPM,
       keyOffset: sheet.keySignature.semitoneOffset,
       timeSignature: defaultBeat,
       dynamicLevel: 'mf',

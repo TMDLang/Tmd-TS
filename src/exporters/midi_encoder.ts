@@ -76,7 +76,7 @@ export class TmdMIDIEncoder {
         return this.metaEvent(0x03, data);
       }
       case 'tempo': {
-        const mpqn = Math.min(0xffffffff, Math.max(0, Math.round(60_000_000.0 / Math.max(1, message.bpm))));
+        const mpqn = Math.min(0xffffff, Math.max(1, Math.round(60_000_000.0 / Math.max(1e-6, message.bpm))));
         const data = [(mpqn >> 16) & 0xff, (mpqn >> 8) & 0xff, mpqn & 0xff];
         return this.metaEvent(0x51, data);
       }

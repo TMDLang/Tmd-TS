@@ -370,6 +370,13 @@ export type EntryPitchMode = "transposing" | "fixed";
 
 export const DEFAULT_INSTRUMENT = "Piano";
 export const DEFAULT_TEMPO_BPM = 120;
+export const MIN_TEMPO_BPM = 10;
+export const MAX_TEMPO_BPM = 1000;
+
+export function clampTempo(bpm: number): number {
+  if (!Number.isFinite(bpm)) return DEFAULT_TEMPO_BPM;
+  return Math.min(MAX_TEMPO_BPM, Math.max(MIN_TEMPO_BPM, bpm));
+}
 
 export interface Entry {
   name: string;

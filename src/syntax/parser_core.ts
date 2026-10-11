@@ -158,6 +158,8 @@ export class TmdParserCore {
           const currType = this.currentToken().type as string;
           if (currType === "double" || currType === "number" || currType === "positiveNumber") {
             speed = Number(this.advance().value);
+          } else if (currType === "note") {
+            speed = Number((this.advance().value as Note).degree);
           }
           break;
         }
@@ -628,8 +630,27 @@ export class TmdParserCore {
 
     if (type === "relativeTempoPrefix") {
       this.advance();
-      if (this.current.type === "number" || this.current.type === "double") {
-        result = { position, kind: { type: "relativeTempo", deltaBpm: Number(this.advance().value) } };
+      let sign = 1;
+      if ((this.currentToken().type as string) === "tie") {
+        this.advance();
+        sign = -1;
+      }
+      const nextType = this.currentToken().type as string;
+      if (nextType === "number" || nextType === "double") {
+        result = { position, kind: { type: "relativeTempo", deltaBpm: sign * Number(this.advance().value) } };
+      } else if (nextType === "note") {
+        result = { position, kind: { type: "relativeTempo", deltaBpm: sign * Number((this.advance().value as Note).degree) } };
+      }
+    } else if (type === "identifier" && this.current.value === "!") {
+      this.advance();
+      if ((this.currentToken().type as string) === "tie") {
+        this.advance();
+        const nextType = this.currentToken().type as string;
+        if (nextType === "number" || nextType === "double") {
+          result = { position, kind: { type: "relativeTempo", deltaBpm: -Number(this.advance().value) } };
+        } else if (nextType === "note") {
+          result = { position, kind: { type: "relativeTempo", deltaBpm: -Number((this.advance().value as Note).degree) } };
+        }
       }
     } else if (type === "speedPrefix") {
       this.advance();
@@ -637,6 +658,8 @@ export class TmdParserCore {
         result = { position, kind: { type: "tempo", bpm: Number(this.advance().value) } };
       } else if (this.current.type === "positiveNumber") {
         result = { position, kind: { type: "relativeTempo", deltaBpm: Number(this.advance().value) } };
+      } else if (this.current.type === "note") {
+        result = { position, kind: { type: "tempo", bpm: Number((this.advance().value as Note).degree) } };
       }
     } else if (type === "relativeOrderPrefix") {
       this.advance();
