@@ -885,5 +885,117 @@ A:PercussiveOrgan@|0|{
 `)!;
       expect(SheetInstrumentHelper.isPercussionTrack(organSheet, 'PercussiveOrgan')).toBe(false);
     });
+
+    it('exports odd-meter pickups, polymeters, quintuplets, and compound durations to MusicXML with aligned measures and valid types (Issues #62-#65)', () => {
+      const tmd = `
+::SCORE::
+** Odd Meter Pickup Polymeter Quintuplets **
+!= 120
+?= C
+key= Am
+<4/4>
+
+A:Piano@|0|{
+    <8*>
+    | 6_ 6_ 1 2 1 7_ 6_ 5_ | [6m] - [6m] - (6 7 1^ 7 6)%(--) 6 6 |
+}
+A:Clarinet@|0|{
+    <4*>
+    | 1^ - 7 - | 1^ - 0 0 |
+}
+
+M5:Clarinet@|-1|{
+    <4*>
+    {<5/4>}
+    | 0 0 0 {mp} 5_ 5'_ |
+    | {f} 6_ 1 2 3 2' |
+    {<4/4>}
+}
+M5:Piano@|0|{
+    <4*>
+    {<5/4>}
+    | 6_ 1 2 3 4 |
+    {<4/4>}
+}
+
+M7:Flute@|-1|{
+    <8*>
+    {<7/8>}
+    | 0 0 0 0 {mf} 3^ 4'^ 5'^ |
+    | {f} 6^ 1^^ 7^ 2^^ 1^^ 7^ 6'^ |
+    {<4/4>}
+}
+M7:Piano@|0|{
+    <8*>
+    {<7/8>}
+    | 6_ 1 7_ 2 1 7_ 6'_ |
+    {<4/4>}
+}
+
+Poly:Flute@|0|{
+    <8*>
+    {<5/8>}
+    | 6_ 1 3 2' 3 | 6_ 1 3 2' 3 | 5'_ 7_ 2 1 2 | 5'_ 7_ 2 1 2 |
+    | 4'_ 6_ 1 7_ 1 | 3_ 5'_ 7_ 2 3 | 6_ 6'_ 6_ 6^ - |
+    {<4/4>}
+}
+Poly:Piano@|0|{
+    <8*>
+    {<7/8>}
+    | 6 5 3 2' 3 1 6_ | 7 6 4' 3 4' 2 7_ | 1^ 7 5' 4' 5' 3 1 |
+    | 2^ 1^ 6 5' 4' 3 2' | 6^ 3^ 1^ 6 6' 6 0 |
+    {<4/4>}
+}
+
+-> A -> M5 -> M7 -> Poly ->#
+`;
+      const sheet = TmdParser.parseThrowing(tmd);
+      const xml = TmdMusicXMLGenerator.generateMusicXML(sheet);
+
+      expect(xml).toContain('<actual-notes>5</actual-notes>');
+      expect(xml).toContain('<normal-notes>4</normal-notes>');
+      expect(xml).toContain('<words>[5/8]</words>');
+
+      const partMatches = Array.from(xml.matchAll(/<part id="P\d+">([\s\S]*?)<\/part>/g));
+      expect(partMatches.length).toBe(3);
+
+      for (const partMatch of partMatches) {
+        const partBody = partMatch[1];
+        const measureMatches = Array.from(partBody.matchAll(/<measure number="\d+">([\s\S]*?)<\/measure>/g));
+        expect(measureMatches.length).toBe(9);
+
+        let currentDivisions = 48;
+        let currentBeats = 4;
+        let currentBeatType = 4;
+        for (const mMatch of measureMatches) {
+          const mBody = mMatch[1];
+          const timeMatches = Array.from(mBody.matchAll(/<time>[\s\S]*?<\/time>/g));
+          expect(timeMatches.length).toBeLessThanOrEqual(1);
+
+          const divMatch = mBody.match(/<divisions>(\d+)<\/divisions>/);
+          if (divMatch) {
+            currentDivisions = parseInt(divMatch[1], 10);
+          }
+          const bMatch = mBody.match(/<beats>(\d+)<\/beats>\s*<beat-type>(\d+)<\/beat-type>/);
+          if (bMatch) {
+            currentBeats = parseInt(bMatch[1], 10);
+            currentBeatType = parseInt(bMatch[2], 10);
+          }
+          const expectedDur = (currentBeats * 4 * currentDivisions) / currentBeatType;
+          const noteMatches = Array.from(mBody.matchAll(/<note>([\s\S]*?)<\/note>/g));
+          let actualDur = 0;
+          for (const nMatch of noteMatches) {
+            const nBody = nMatch[1];
+            expect(nBody).toContain('<type>');
+            if (nBody.includes('<chord/>')) continue;
+            const dMatch = nBody.match(/<duration>(\d+)<\/duration>/);
+            if (dMatch) {
+              actualDur += parseInt(dMatch[1], 10);
+            }
+          }
+          expect(actualDur).toBe(expectedDur);
+        }
+      }
+    });
   });
 });
