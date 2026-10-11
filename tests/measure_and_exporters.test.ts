@@ -997,5 +997,149 @@ Poly:Piano@|0|{
         }
       }
     });
+
+    it('exports mid-section polymeters, coprime tuplets (5:3, 7:5, 11:7), sub-64th grids (<256*>, <1024*>), and extreme octaves (Issue #67)', () => {
+      const oneLine256 = new Array(64).fill('1 2 3 5').join(' ');
+      const oneLine1024 = new Array(256).fill('1 2 3 5').join(' ');
+      const tmd = `
+::SCORE::
+** Issue 67 Stress **
+!= 68
+?= C
+<4/4>
+
+TupletLab:Piano@|0| {
+    <4*>
+    {<4/4>}
+    | (6_ 1 3)%(-) (1 2 3 4 5)%(---) |
+    <8*>
+    | (6_ 7_ 1 2 3 4' 5')%(-----) (6 5' 4' 3 2')%(---) |
+    | (6_ 7_ 1 2 3 4' 5' 6 7 1^ 6^)%(-------) 0 |
+}
+
+MicroMacro:Flute@|0| {
+    <64*>
+    {<1/64>}
+    | 6_ | 7_ | 1 | 2' | 3 | 5' |
+    {<59/64>}
+    | ${new Array(59).fill('6').join(' ')} |
+    {<127/64>}
+    | ${new Array(127).fill('6').join(' ')} |
+    <4*>
+    {<4/4>}
+}
+
+MicroMacro:Piano@|0| {
+    <64*>
+    {<4/4>}
+    | ${new Array(64).fill('1').join(' ')} |
+    <256*>
+    | ${oneLine256} |
+    <1024*>
+    | ${oneLine1024} |
+    <4*>
+}
+
+ExtremeRange:Piano@|0| {
+    <4*>
+    {<4/4>}
+    | 1_____ 5^^^^^ 1^^^^^^ 0 |
+}
+
+-> TupletLab
+-> MicroMacro
+-> ExtremeRange
+->#
+`;
+      const sheet = TmdParser.parseThrowing(tmd);
+      const xml = TmdMusicXMLGenerator.generateMusicXML(sheet);
+
+      expect(xml).toContain('<actual-notes>5</actual-notes>\n          <normal-notes>3</normal-notes>');
+      expect(xml).toContain('<actual-notes>7</actual-notes>\n          <normal-notes>5</normal-notes>');
+      expect(xml).toContain('<actual-notes>11</actual-notes>\n          <normal-notes>7</normal-notes>');
+      expect(xml).toContain('<type>256th</type>');
+      expect(xml).toContain('<type>1024th</type>');
+      expect(xml).not.toContain('<octave>-1</octave>');
+      expect(xml).not.toContain('<octave>10</octave>');
+      expect(xml).toContain('<words>[1/64]</words>');
+      expect(xml).toContain('<words>[59/64]</words>');
+      expect(xml).toContain('<words>[127/64]</words>');
+
+      const typeMap: Record<string, number> = {
+        whole: 4.0,
+        half: 2.0,
+        quarter: 1.0,
+        eighth: 0.5,
+        '16th': 0.25,
+        '32nd': 0.125,
+        '64th': 0.0625,
+        '128th': 0.03125,
+        '256th': 0.015625,
+        '512th': 0.0078125,
+        '1024th': 0.00390625,
+      };
+
+      const partMatches = Array.from(xml.matchAll(/<part id="P\d+">([\s\S]*?)<\/part>/g));
+      expect(partMatches.length).toBe(2);
+
+      for (const partMatch of partMatches) {
+        const partBody = partMatch[1];
+        const measureMatches = Array.from(partBody.matchAll(/<measure number="\d+">([\s\S]*?)<\/measure>/g));
+        expect(measureMatches.length).toBe(7);
+
+        let currentDivisions = 48;
+        let currentBeats = 4;
+        let currentBeatType = 4;
+        for (const mMatch of measureMatches) {
+          const mBody = mMatch[1];
+          const divMatch = mBody.match(/<divisions>(\d+)<\/divisions>/);
+          if (divMatch) {
+            currentDivisions = parseInt(divMatch[1], 10);
+          }
+          const bMatch = mBody.match(/<beats>(\d+)<\/beats>\s*<beat-type>(\d+)<\/beat-type>/);
+          if (bMatch) {
+            currentBeats = parseInt(bMatch[1], 10);
+            currentBeatType = parseInt(bMatch[2], 10);
+          }
+          const expectedDur = (currentBeats * 4 * currentDivisions) / currentBeatType;
+          const noteMatches = Array.from(mBody.matchAll(/<note>([\s\S]*?)<\/note>/g));
+          let actualDur = 0;
+          for (const nMatch of noteMatches) {
+            const nBody = nMatch[1];
+            const dMatch = nBody.match(/<duration>(\d+)<\/duration>/);
+            expect(dMatch).not.toBeNull();
+            const dur = parseInt(dMatch![1], 10);
+            if (!nBody.includes('<chord/>')) {
+              actualDur += dur;
+            }
+            const octMatch = nBody.match(/<octave>(-?\d+)<\/octave>/);
+            if (octMatch) {
+              const oct = parseInt(octMatch[1], 10);
+              expect(oct).toBeGreaterThanOrEqual(0);
+              expect(oct).toBeLessThanOrEqual(9);
+            }
+            const tMatch = nBody.match(/<type>([^<]+)<\/type>/);
+            expect(tMatch).not.toBeNull();
+            const baseQ = typeMap[tMatch![1]];
+            expect(baseQ).toBeDefined();
+            const dots = Array.from(nBody.matchAll(/<dot\/>/g)).length;
+            let mult = 1.0;
+            let add = 0.5;
+            for (let i = 0; i < dots; i++) {
+              mult += add;
+              add /= 2.0;
+            }
+            let q = baseQ * mult;
+            const tmMatch = nBody.match(/<actual-notes>(\d+)<\/actual-notes>\s*<normal-notes>(\d+)<\/normal-notes>/);
+            if (tmMatch) {
+              q = (q * parseInt(tmMatch[2], 10)) / parseInt(tmMatch[1], 10);
+            }
+            expect(dur).toBe(Math.round(q * currentDivisions));
+          }
+          expect(actualDur).toBe(expectedDur);
+        }
+      }
+    });
   });
 });
+
