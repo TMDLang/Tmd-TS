@@ -97,22 +97,22 @@ export class TmdABCGenerator {
       case "tempo":
       case "relativeTempo": {
         const cmd = TmdABCGenerator.resolveTempo(directive.state.timeSignature, directive.state.tempo);
-        return `${cmd} `;
+        return `[${cmd}] `;
       }
       case "timeSignature":
-        return `M:${k.beat.count}/${k.beat.noteValue} `;
+        return `[M:${k.beat.count}/${k.beat.noteValue}] `;
       case "absoluteKey":
-        return `K:${TmdABCGenerator.abcKey(k.key)} `;
+        return `[K:${TmdABCGenerator.abcKey(k.key)}] `;
       case "explicitKey":
-        return `K:${TmdABCGenerator.abcKey(k.key)} `;
+        return `[K:${TmdABCGenerator.abcKey(k.key)}] `;
       case "dynamics":
         return `!${k.mark}! `;
       case "relativeKey": {
         const key = PitchMapping.tonicScaleInfo(directive.state.keyOffset).name;
-        return `K:${key} `;
+        return `[K:${key}] `;
       }
       case "fixedPitch":
-        return `K:C `;
+        return `[K:C] `;
     }
   }
 
@@ -129,9 +129,7 @@ export class TmdABCGenerator {
     const noteEvents = group.filter((ev) => ev.content.type === "note");
     if (noteEvents.length === group.length) {
       // Form an ABC chord: [c4e4g4] or [ceg]4
-      const duration = group[0].duration;
-      const multiplier = Math.max(1, Math.round(duration * 4));
-      const suffix = multiplier > 1 ? String(multiplier) : "";
+      const suffix = TmdABCGenerator.formatDurationSuffix(group[0].duration);
       const pitches = noteEvents.map((ev) => {
         const note = (ev.content as { type: "note"; note: Note }).note;
         return TmdABCGenerator.noteToABCPitch(note, ev.state.keyOffset, defaultKeyStepAlters, measureStepAlters);
@@ -149,8 +147,7 @@ export class TmdABCGenerator {
     defaultKeyStepAlters: number[],
     measureStepAlters: Map<number, number[]>
   ): string {
-    const multiplier = Math.max(1, Math.round(event.duration * 4));
-    const suffix = multiplier > 1 ? String(multiplier) : "";
+    const suffix = TmdABCGenerator.formatDurationSuffix(event.duration);
 
     switch (event.content.type) {
       case "note": {
@@ -167,16 +164,54 @@ export class TmdABCGenerator {
           .filter((p): p is string => Boolean(p));
         if (pitches.length === 0) return `z${suffix}`;
         const count = pitches.length;
-        const base = Math.floor(multiplier / count);
-        const remainder = multiplier % count;
-        return pitches
-          .map((p, i) => {
-            const dur = base + (i < remainder ? 1 : 0);
-            const s = dur > 1 ? String(dur) : "";
-            return `${p}${s}`;
-          })
-          .join(" ");
+        const strokeDuration = event.duration / count;
+        const strokeSuffix = TmdABCGenerator.formatDurationSuffix(strokeDuration);
+        return pitches.map((p) => `${p}${strokeSuffix}`).join(" ");
       }
+    }
+  }
+
+  private static gcd(a: number, b: number): number {
+    let x = Math.abs(a);
+    let y = Math.abs(b);
+    while (y !== 0) {
+      const t = x % y;
+      x = y;
+      y = t;
+    }
+    return Math.max(1, x);
+  }
+
+  private static formatDurationSuffix(quarterNotes: number): string {
+    const units = Math.max(0, quarterNotes * 4);
+    let bestNum = Math.max(1, Math.round(units));
+    let bestDen = 1;
+    let bestErr = Math.abs(units - bestNum);
+
+    if (bestErr > 1e-4) {
+      for (let den = 2; den <= 64; den++) {
+        const num = Math.round(units * den);
+        if (num < 1) continue;
+        const err = Math.abs(units - num / den);
+        if (err + 1e-7 < bestErr) {
+          bestNum = num;
+          bestDen = den;
+          bestErr = err;
+          if (err < 1e-5) break;
+        }
+      }
+    }
+
+    const divisor = TmdABCGenerator.gcd(bestNum, bestDen);
+    const num = Math.floor(bestNum / divisor);
+    const den = Math.floor(bestDen / divisor);
+
+    if (den === 1) {
+      return num === 1 ? "" : String(num);
+    } else if (num === 1) {
+      return `/${den}`;
+    } else {
+      return `${num}/${den}`;
     }
   }
 
@@ -234,15 +269,20 @@ export class TmdABCGenerator {
     if (!trimmed) return "C";
     let isMinor = false;
     let root = trimmed;
-    if (root.endsWith("m") && !root.toLowerCase().endsWith("maj")) {
-      isMinor = true;
-      root = root.slice(0, -1).trim();
-    } else if (root.toLowerCase().endsWith("minor")) {
+    const lowerRoot = root.toLowerCase();
+    if (lowerRoot.endsWith("minor")) {
       isMinor = true;
       root = root.slice(0, -5).trim();
-    } else if (root.toLowerCase().endsWith("min")) {
+    } else if (lowerRoot.endsWith("min")) {
       isMinor = true;
       root = root.slice(0, -3).trim();
+    } else if (lowerRoot.endsWith("major")) {
+      root = root.slice(0, -5).trim();
+    } else if (lowerRoot.endsWith("maj")) {
+      root = root.slice(0, -3).trim();
+    } else if (root.endsWith("m")) {
+      isMinor = true;
+      root = root.slice(0, -1).trim();
     }
     const keySig = KeySignature.parse(root);
     const normalized = ((keySig.semitoneOffset % 12) + 12) % 12;

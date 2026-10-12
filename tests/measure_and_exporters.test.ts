@@ -1,3 +1,6 @@
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+
 import { describe, expect,it } from 'vitest';
 
 import {
@@ -1138,6 +1141,92 @@ ExtremeRange:Piano@|0| {
             expect(dur).toBe(Math.round(q * currentDivisions));
           }
           expect(actualDur).toBe(expectedDur);
+        }
+      }
+    });
+  });
+
+  describe('ABC Sub-16th Durations, Tuplets, Inline Brackets, and Golden Case Conservation (Issue #73)', () => {
+    it('preserves sub-16th durations, tuplets, bracketed inline directives, major key suffixes, and golden_case measure conservation', () => {
+      const tmd = `
+::SCORE::
+** Sub-16th & Tuplet ABC Test **
+!= 120
+?= C
+key= Cmaj
+<4/4>
+
+A:Piano@|0|{
+    <32*>
+    1 2 3 4
+    <64*>
+    1 2 3 4 5 6 7 1^
+    <4*>
+    1 2 3
+    | (1 2 3)%(-) (1 2 3 4 5)%(---) |
+    | {<5/4>} {!= 150} {?= D} 1 2 3 4 5 |
+}
+-> A ->#
+`;
+      const sheet = TmdParser.parse(tmd)!;
+      const abc = TmdABCGenerator.generateABC(sheet);
+
+      expect(abc).toContain('K:C');
+      expect(abc).toContain('c/2 d/2 e/2 f/2');
+      expect(abc).toContain('c/4 d/4 e/4 f/4 g/4 a/4 b/4');
+      expect(abc).toContain('c4/3 d4/3 e4/3');
+      expect(abc).toContain('c12/5 d12/5 e12/5 f12/5 g12/5');
+      expect(abc).toContain('[M:5/4]');
+      expect(abc).toContain('[Q:1/4=150]');
+      expect(abc).toContain('[K:D]');
+
+      const goldenPath = path.join(process.cwd(), 'sample/golden_case/golden_case.tmd');
+      const goldenSource = fs.readFileSync(goldenPath, 'utf-8');
+      const goldenSheet = TmdParser.parse(goldenSource)!;
+      const goldenABC = TmdABCGenerator.generateABC(goldenSheet);
+
+      const voiceBlocks = goldenABC.split('[V:').slice(1);
+      expect(voiceBlocks.length).toBeGreaterThan(0);
+
+      const eventRegex = /(?:\[[A-Ga-gz^=_',]+\]|"[^"]*"z|[A-Ga-gz^=_',]+)(\d+)?(?:\/(\d+))?-?/g;
+      const meterRegex = /\[M:(\d+)\/(\d+)\]/g;
+      const inlineFieldRegex = /\[[A-Za-z]:[^\]]*\]/g;
+      const decorationRegex = /![^!]+!/g;
+
+      for (const block of voiceBlocks) {
+        const lines = block.split(/\r?\n/);
+        const musicBody = lines
+          .slice(1)
+          .filter((l) => !l.startsWith('%%'))
+          .join(' ');
+        const measures = musicBody
+          .split('|')
+          .map((m) => m.trim())
+          .filter((m) => m.length > 0);
+
+        let expectedSixteenths = 16.0;
+        for (let mIdx = 0; mIdx < measures.length; mIdx++) {
+          const measureStr = measures[mIdx];
+          for (const mMatch of measureStr.matchAll(meterRegex)) {
+            const num = parseFloat(mMatch[1]);
+            const den = parseFloat(mMatch[2]);
+            if (den > 0) {
+              expectedSixteenths = (num * 16.0) / den;
+            }
+          }
+
+          const stripped = measureStr
+            .replace(inlineFieldRegex, ' ')
+            .replace(decorationRegex, ' ');
+
+          let totalSixteenths = 0.0;
+          for (const evMatch of stripped.matchAll(eventRegex)) {
+            const num = evMatch[1] ? parseFloat(evMatch[1]) : 1.0;
+            const den = evMatch[2] ? parseFloat(evMatch[2]) : 1.0;
+            totalSixteenths += num / den;
+          }
+
+          expect(Math.abs(totalSixteenths - expectedSixteenths)).toBeLessThan(0.05);
         }
       }
     });
