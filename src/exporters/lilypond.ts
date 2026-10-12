@@ -1,5 +1,5 @@
 import { SheetInstrumentHelper } from "../domain/index.js";
-import { MeasureEvent, NotationDuration, PlaybackDirectiveEvent, TmdMeasureRenderer } from "../playback/index.js";
+import { MeasureEvent, PlaybackDirectiveEvent, TmdMeasureRenderer } from "../playback/index.js";
 import { ChordSymbol, metronomeTempoForBeat, Note, PercussionStroke, PitchMapping, Sheet } from "../syntax/index.js";
 
 export class TmdLilyPondGenerator {
@@ -62,13 +62,42 @@ export class TmdLilyPondGenerator {
     let result = "  ";
 
     for (const measure of measures) {
+      const pendingDirectives: Array<{ offset: number; directive: PlaybackDirectiveEvent }> = [];
       for (const directive of measure.directives) {
-        result += TmdLilyPondGenerator.formatDirective(directive);
+        if (directive.kind.type === "timeSignature") {
+          result += TmdLilyPondGenerator.formatDirective(directive);
+        } else {
+          const relOffset = Math.max(0.0, directive.position - measure.startTime);
+          pendingDirectives.push({ offset: relOffset, directive });
+        }
       }
       const groups = TmdMeasureRenderer.groupSimultaneousEvents(measure.events);
-      for (const group of groups) {
-        result += TmdLilyPondGenerator.formatEventGroup(group, percussion);
+      let dirIdx = 0;
+      for (let gIdx = 0; gIdx < groups.length; gIdx++) {
+        const group = groups[gIdx];
+        const nextGroupStart =
+          gIdx + 1 < groups.length
+            ? (groups[gIdx + 1][0]?.startOffset ?? Number.POSITIVE_INFINITY)
+            : Number.POSITIVE_INFINITY;
+        let activeDynamic: string | undefined;
+        while (dirIdx < pendingDirectives.length && pendingDirectives[dirIdx].offset < nextGroupStart - 1e-4) {
+          const d = pendingDirectives[dirIdx].directive;
+          if (d.kind.type === "dynamics") {
+            activeDynamic = d.kind.mark;
+          } else {
+            result += TmdLilyPondGenerator.formatDirective(d);
+          }
+          dirIdx += 1;
+        }
+        result += TmdLilyPondGenerator.formatEventGroup(group, percussion, activeDynamic);
         result += " ";
+      }
+      while (dirIdx < pendingDirectives.length) {
+        const d = pendingDirectives[dirIdx].directive;
+        if (d.kind.type !== "dynamics") {
+          result += TmdLilyPondGenerator.formatDirective(d);
+        }
+        dirIdx += 1;
       }
       result += "|\n  ";
     }
@@ -107,74 +136,171 @@ export class TmdLilyPondGenerator {
     }
   }
 
-  private static formatEventGroup(group: MeasureEvent[], percussion: boolean): string {
+  private static formatEventGroup(group: MeasureEvent[], percussion: boolean, dynamic?: string): string {
     if (group.length === 1) {
-      return TmdLilyPondGenerator.formatMeasureEvent(group[0], percussion);
+      return TmdLilyPondGenerator.formatMeasureEvent(group[0], percussion, dynamic);
     }
 
     const noteEvents = group.filter((ev) => ev.content.type === "note");
     if (noteEvents.length === group.length && noteEvents.length > 1) {
-      const decomposed = NotationDuration.decompose(group[0].duration);
       const pitches = noteEvents.map((ev) => {
         const note = (ev.content as { type: "note"; note: Note }).note;
         return TmdLilyPondGenerator.noteToLilyPondPitch(note, ev.state.keyOffset);
       });
       const chordBody = `<${pitches.join(" ")}>`;
       const tieStart = group.some((ev) => ev.tieStart);
-      const parts: string[] = [];
-      decomposed.forEach((d, idx) => {
-        const durStr = `${d.baseDenominator}${d.isDotted ? "." : ""}`;
-        const isLast = idx === decomposed.length - 1;
-        const tie = isLast ? (tieStart ? "~" : "") : "~";
-        parts.push(`${chordBody}${durStr}${tie}`);
-      });
-      return parts.join(" ");
+      return TmdLilyPondGenerator.formatLilyPondTokens(group[0].duration, chordBody, tieStart, dynamic);
     }
 
-    return group.map((ev) => TmdLilyPondGenerator.formatMeasureEvent(ev, percussion)).join(" ");
+    return group
+      .map((ev, idx) => TmdLilyPondGenerator.formatMeasureEvent(ev, percussion, idx === 0 ? dynamic : undefined))
+      .join(" ");
   }
 
-  private static formatMeasureEvent(event: MeasureEvent, percussion: boolean): string {
-    const decomposed = NotationDuration.decompose(event.duration);
+  private static formatMeasureEvent(event: MeasureEvent, percussion: boolean, dynamic?: string): string {
     switch (event.content.type) {
       case "note": {
         const pitch = TmdLilyPondGenerator.noteToLilyPondPitch(event.content.note, event.state.keyOffset);
-        const parts: string[] = [];
-        decomposed.forEach((d, idx) => {
-          const durStr = `${d.baseDenominator}${d.isDotted ? "." : ""}`;
-          const isLast = idx === decomposed.length - 1;
-          const tie = isLast ? (event.tieStart ? "~" : "") : "~";
-          parts.push(`${pitch}${durStr}${tie}`);
-        });
-        return parts.join(" ");
+        return TmdLilyPondGenerator.formatLilyPondTokens(event.duration, pitch, event.tieStart, dynamic);
       }
       case "chord": {
         const pitches = TmdLilyPondGenerator.chordToLilyPondPitches(event.content.chord, event.state.keyOffset);
         const chordBody = `<${pitches.join(" ")}>`;
-        const parts: string[] = [];
-        decomposed.forEach((d, idx) => {
-          const durStr = `${d.baseDenominator}${d.isDotted ? "." : ""}`;
-          const isLast = idx === decomposed.length - 1;
-          const tie = isLast ? (event.tieStart ? "~" : "") : "~";
-          parts.push(`${chordBody}${durStr}${tie}`);
-        });
-        return parts.join(" ");
+        return TmdLilyPondGenerator.formatLilyPondTokens(event.duration, chordBody, event.tieStart, dynamic);
       }
       case "rest":
-        return decomposed.map((d) => `r${d.baseDenominator}${d.isDotted ? "." : ""}`).join(" ");
+        return TmdLilyPondGenerator.formatLilyPondTokens(event.duration, "r", false, dynamic, false);
       case "percussion": {
         const names = PercussionStroke.parse(event.content.pattern).map((s) => s.lilyPondDrumName);
         if (names.length === 0) {
-          return decomposed.map((d) => `r${d.baseDenominator}${d.isDotted ? "." : ""}`).join(" ");
+          return TmdLilyPondGenerator.formatLilyPondTokens(event.duration, "r", false, dynamic, false);
         }
-        return decomposed
-          .map((d) => {
-            const durStr = `${d.baseDenominator}${d.isDotted ? "." : ""}`;
-            return names.map((n) => `${n}${durStr}`).join(" ");
-          })
+        const strokeDuration = event.duration / names.length;
+        return names
+          .map((n, idx) =>
+            TmdLilyPondGenerator.formatLilyPondTokens(
+              strokeDuration,
+              n,
+              false,
+              idx === 0 ? dynamic : undefined,
+              false
+            )
+          )
           .join(" ");
       }
     }
+  }
+
+  private static formatLilyPondTokens(
+    quarterNotes: number,
+    body: string,
+    tieStart: boolean,
+    dynamic?: string,
+    tieInternal = true
+  ): string {
+    const durations = TmdLilyPondGenerator.decomposeLilyPondDurations(quarterNotes);
+    const dynSuffix = dynamic ? `\\${dynamic}` : "";
+    return durations
+      .map((durStr, idx) => {
+        const isFirst = idx === 0;
+        const isLast = idx === durations.length - 1;
+        const tie = isLast ? (tieStart ? "~" : "") : tieInternal ? "~" : "";
+        return `${body}${durStr}${isFirst ? dynSuffix : ""}${tie}`;
+      })
+      .join(" ");
+  }
+
+  private static decomposeLilyPondDurations(quarterNotes: number): string[] {
+    if (quarterNotes <= 0) return ["64"];
+    const candidates: Array<{ den: number; dotted: boolean; q: number }> = [
+      { den: 1, dotted: false, q: 4.0 },
+      { den: 2, dotted: true, q: 3.0 },
+      { den: 2, dotted: false, q: 2.0 },
+      { den: 4, dotted: true, q: 1.5 },
+      { den: 4, dotted: false, q: 1.0 },
+      { den: 8, dotted: true, q: 0.75 },
+      { den: 8, dotted: false, q: 0.5 },
+      { den: 16, dotted: true, q: 0.375 },
+      { den: 16, dotted: false, q: 0.25 },
+      { den: 32, dotted: true, q: 0.1875 },
+      { den: 32, dotted: false, q: 0.125 },
+      { den: 64, dotted: false, q: 0.0625 },
+      { den: 128, dotted: false, q: 0.03125 },
+      { den: 256, dotted: false, q: 0.015625 },
+      { den: 512, dotted: false, q: 0.0078125 },
+      { den: 1024, dotted: false, q: 0.00390625 },
+    ];
+    const atoms: string[] = [];
+    let remaining = quarterNotes;
+    const epsilon = 1e-6;
+    while (remaining >= 0.00390625 - epsilon) {
+      let matched = false;
+      for (const c of candidates) {
+        if (remaining >= c.q - epsilon) {
+          atoms.push(`${c.den}${c.dotted ? "." : ""}`);
+          remaining -= c.q;
+          matched = true;
+          break;
+        }
+      }
+      if (!matched) break;
+    }
+    if (atoms.length > 0 && Math.abs(remaining) <= 1e-5) {
+      return atoms;
+    }
+
+    let qNum = 1;
+    let qDen = 1;
+    let foundRational = false;
+    for (let den = 1; den <= 2048; den++) {
+      const approxNum = Math.round(quarterNotes * den);
+      if (approxNum > 0 && Math.abs(quarterNotes - approxNum / den) <= 1e-5) {
+        const g = TmdLilyPondGenerator.gcd(approxNum, den);
+        qNum = Math.trunc(approxNum / g);
+        qDen = Math.trunc(den / g);
+        foundRational = true;
+        break;
+      }
+    }
+    if (!foundRational) {
+      const scaled = Math.max(1, Math.round(quarterNotes * 1920));
+      const g = TmdLilyPondGenerator.gcd(scaled, 1920);
+      qNum = Math.trunc(scaled / g);
+      qDen = Math.trunc(1920 / g);
+    }
+
+    const powerDenominators = [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024];
+    let baseDen = 4;
+    for (const d of powerDenominators) {
+      if (4.0 / d >= quarterNotes - 1e-6) {
+        baseDen = d;
+      } else {
+        break;
+      }
+    }
+    const rawNum = qNum * baseDen;
+    const rawDen = qDen * 4;
+    const g = TmdLilyPondGenerator.gcd(rawNum, rawDen);
+    const mNum = Math.trunc(rawNum / g);
+    const mDen = Math.trunc(rawDen / g);
+    if (mNum === mDen) {
+      return [`${baseDen}`];
+    } else if (mDen === 1) {
+      return [`${baseDen}*${mNum}`];
+    } else {
+      return [`${baseDen}*${mNum}/${mDen}`];
+    }
+  }
+
+  private static gcd(a: number, b: number): number {
+    let x = Math.abs(Math.trunc(a));
+    let y = Math.abs(Math.trunc(b));
+    while (y !== 0) {
+      const t = y;
+      y = x % y;
+      x = t;
+    }
+    return Math.max(1, x);
   }
 
   private static noteToLilyPondPitch(note: Note, keyOffset: number): string {

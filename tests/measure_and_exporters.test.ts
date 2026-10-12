@@ -1231,5 +1231,103 @@ A:Piano@|0|{
       }
     });
   });
-});
 
+  describe('LilyPond Postfix Dynamics, Multi-Stroke Percussion, Sub-64th/Tuplets, and Golden Case Conservation (Issue #74)', () => {
+    it('attaches postfix dynamics, divides multi-stroke percussion durations, and conserves sub-64th/tuplet measure durations across golden_case', () => {
+      const oneLine256 = new Array(64).fill('1 2 3 5').join(' ');
+      const tmd = `
+::SCORE::
+** LilyPond Precision Test **
+!= 120
+?= C
+<4/4>
+
+A:Piano@|0|{
+    <4*>
+    | {p} 1 2 {f} 3 {ff} 4 |
+    | (1 2 3)%(-) (1 2 3 4 5)%(---) |
+    <256*>
+    | ${oneLine256} |
+}
+A:Drums@|0|{
+    <4*>
+    | (BS) (XxTS) D S |
+    | 0 0 0 0 |
+    | 0 0 0 0 |
+}
+-> A ->#
+`;
+      const sheet = TmdParser.parse(tmd)!;
+      const ly = TmdLilyPondGenerator.generateLilyPond(sheet);
+
+      // 1. Postfix dynamics attached directly to note tokens (not standalone prefix \p)
+      expect(ly).toContain("c'4\\p d'4 e'4\\f f'4\\ff");
+      expect(ly).not.toContain("\\p c'4");
+
+      // 2. Multi-stroke percussion divides beat duration across strokes
+      expect(ly).toContain('bd8 sn8 hh16 hh16 toml16 sn16 bd4 sn4');
+
+      // 3. Tuplets use exact rational multipliers and <256*> uses 256th notes
+      expect(ly).toContain("c'8*2/3 d'8*2/3 e'8*2/3");
+      expect(ly).toContain("c'4*3/5 d'4*3/5 e'4*3/5 f'4*3/5 g'4*3/5");
+      expect(ly).toContain("c'256 d'256 e'256 g'256");
+
+      // 4. Full golden_case.tmd measure duration conservation across all tracks and measures
+      const goldenPath = path.join(process.cwd(), 'sample/golden_case/golden_case.tmd');
+      const goldenSource = fs.readFileSync(goldenPath, 'utf-8');
+      const goldenSheet = TmdParser.parse(goldenSource)!;
+      const goldenLy = TmdLilyPondGenerator.generateLilyPond(goldenSheet);
+
+      const blockRegex = /([A-Za-z][A-Za-z0-9_]*)\s*=\s*(?:\\drummode\s*)?\{\s*\\global\s*([\s\S]*?)\n\}/g;
+      const blockMatches = Array.from(goldenLy.matchAll(blockRegex));
+      expect(blockMatches.length).toBeGreaterThan(0);
+
+      const timeRegex = /\\time\s+(\d+)\/(\d+)/g;
+      const tokenRegex = /(?:<[^>]+>|[a-z]+[,']*)\s*(\d+)(\.*)(?:\*(\d+)\/(\d+))?/g;
+      const stripDirectivesRegex = /\\(?:time\s+\d+\/\d+|tempo\s+\S+\s*=\s*\d+|key\s+[a-z]+\s+\\[a-z]+|ppp|pp|mp|mf|fff|ff|p|f)\b/g;
+
+      for (const match of blockMatches) {
+        const body = match[2];
+        const rawMeasures = body
+          .split('|')
+          .map((m) => m.trim())
+          .filter((m) => m.length > 0);
+
+        let expectedQuarters = 4.0;
+        for (let mIdx = 0; mIdx < rawMeasures.length; mIdx++) {
+          const measureStr = rawMeasures[mIdx];
+          for (const tMatch of measureStr.matchAll(timeRegex)) {
+            const num = parseFloat(tMatch[1]);
+            const den = parseFloat(tMatch[2]);
+            if (den > 0) {
+              expectedQuarters = (num * 4.0) / den;
+            }
+          }
+
+          const stripped = measureStr.replace(stripDirectivesRegex, ' ');
+          let totalQuarters = 0.0;
+          for (const tok of stripped.matchAll(tokenRegex)) {
+            const baseDen = parseFloat(tok[1]);
+            const dots = tok[2].length;
+            let q = 4.0 / baseDen;
+            let dotAdd = q / 2.0;
+            for (let i = 0; i < dots; i++) {
+              q += dotAdd;
+              dotAdd /= 2.0;
+            }
+            if (tok[3] && tok[4]) {
+              const mNum = parseFloat(tok[3]);
+              const mDen = parseFloat(tok[4]);
+              if (mDen > 0) {
+                q *= mNum / mDen;
+              }
+            }
+            totalQuarters += q;
+          }
+
+          expect(Math.abs(totalQuarters - expectedQuarters)).toBeLessThan(1e-4);
+        }
+      }
+    });
+  });
+});
