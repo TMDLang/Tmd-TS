@@ -1,7 +1,6 @@
 import { SheetInstrumentHelper } from "../domain/index.js";
 import {
   MeasureEvent,
-  NotationDuration,
   NotationDurationAtom,
   TmdMeasureRenderer,
 } from "../playback/index.js";
@@ -25,6 +24,11 @@ export interface TmdBrailleOptions {
   layout?: TmdBrailleLayout;
   targetSection?: string;
   targetInstrument?: string;
+  /**
+   * Maximum cells per line (`40` by default per standard Braille page width).
+   * Pass `null` or `0` to disable line wrapping.
+   */
+  lineWidth?: number | null;
 }
 
 export interface TmdBrailleMeasurePreview {
@@ -58,6 +62,7 @@ interface RenderedBrailleMeasure {
   hasLeadingKeyOrMeterChange: boolean;
   preMeasureDirectivesAscii: string;
   ascii: string;
+  groupTokens: string[];
   sightedSummary: string;
   endsWithCrossBarTie: boolean;
   startsWithCrossBarTie: boolean;
@@ -67,6 +72,41 @@ interface RenderedBrailleTrack {
   instrument: string;
   measures: RenderedBrailleMeasure[];
 }
+
+interface PreparedMeasure {
+  measure: ReturnType<typeof TmdMeasureRenderer.renderMeasures>[number];
+  preDirectives: string[];
+  preSighted: string[];
+  inlineDirectivesByOffset: Array<{
+    offset: number;
+    ascii: string;
+    label: string;
+  }>;
+  defaultKeyStepAlters: number[];
+  activeBeat: Beat;
+  isFullMeasureRest: boolean;
+  groups: MeasureEvent[][];
+  startsWithTie: boolean;
+  endsWithTie: boolean;
+}
+
+interface BrailleDurationSpec {
+  atoms: NotationDurationAtom[];
+  tuplet: { actual: number; normal: number } | null;
+}
+
+interface MeasureRhythmicItem {
+  groupIndex: number;
+  atomIndex: number;
+  baseDenominator: number;
+  isDotted: boolean;
+  quarterValue: number;
+  startOffset: number;
+  isRest: boolean;
+  tuplet: { actual: number; normal: number } | null;
+}
+
+type ValueDistinctionHint = "^<1" | ",<1";
 
 const ASCII_TO_UNICODE_MAP: Record<string, string> = {
   "!": "⠮",
@@ -140,6 +180,23 @@ const QUARTER_OR_64TH_CELLS = ["?", ":", "$", "]", "\\", "[", "W"];
 const EIGHTH_OR_128TH_CELLS = ["D", "E", "F", "G", "H", "I", "J"];
 const DOTS_456_ONLY = new Set(["@", "^", "_", "\"", ".", ";", ",", " "]);
 
+const BRAILLE_STANDARD_VALUES: NotationDurationAtom[] = [
+  { baseDenominator: 1, isDotted: false, quarterValue: 4.0 },
+  { baseDenominator: 2, isDotted: true, quarterValue: 3.0 },
+  { baseDenominator: 2, isDotted: false, quarterValue: 2.0 },
+  { baseDenominator: 4, isDotted: true, quarterValue: 1.5 },
+  { baseDenominator: 4, isDotted: false, quarterValue: 1.0 },
+  { baseDenominator: 8, isDotted: true, quarterValue: 0.75 },
+  { baseDenominator: 8, isDotted: false, quarterValue: 0.5 },
+  { baseDenominator: 16, isDotted: true, quarterValue: 0.375 },
+  { baseDenominator: 16, isDotted: false, quarterValue: 0.25 },
+  { baseDenominator: 32, isDotted: true, quarterValue: 0.1875 },
+  { baseDenominator: 32, isDotted: false, quarterValue: 0.125 },
+  { baseDenominator: 64, isDotted: true, quarterValue: 0.09375 },
+  { baseDenominator: 64, isDotted: false, quarterValue: 0.0625 },
+  { baseDenominator: 128, isDotted: false, quarterValue: 0.03125 },
+];
+
 /**
  * International Music Braille Code (1996 New International Manual / BANA 2015) exporter for TMD Sheets.
  */
@@ -162,6 +219,13 @@ export class TmdBrailleGenerator {
     options: TmdBrailleOptions = {}
   ): TmdBraillePreview {
     const layout: TmdBrailleLayout = options.layout ?? "partByPart";
+    const effectiveLineWidth: number | null =
+      options.lineWidth === undefined
+        ? 40
+        : options.lineWidth !== null && options.lineWidth > 0
+          ? options.lineWidth
+          : null;
+
     const { sheet: workingSheet } = SheetInstrumentHelper.preparedForExport(rawSheet, false, {
       targetParagraph: options.targetSection?.trim() || undefined,
     });
@@ -172,10 +236,18 @@ export class TmdBrailleGenerator {
       instruments = instruments.filter((inst) => inst.toLowerCase() === targetInst);
     }
 
+    const isSoloExport = layout === "partByPart" && instruments.length === 1;
+
     const asciiLines: string[] = [];
     const title = (workingSheet.name || "").trim();
     if (title.length > 0) {
-      asciiLines.push(TmdBrailleGenerator.encodeLiteraryText(title));
+      const titleAscii = TmdBrailleGenerator.encodeLiteraryText(title);
+      if (isSoloExport && effectiveLineWidth !== null) {
+        asciiLines.push(TmdBrailleGenerator.centerBrailleHeader(titleAscii, effectiveLineWidth));
+        asciiLines.push("");
+      } else {
+        asciiLines.push(titleAscii);
+      }
     }
 
     const bpm = Math.round(workingSheet.speed > 0 ? workingSheet.speed : 120);
@@ -185,18 +257,31 @@ export class TmdBrailleGenerator {
       PitchMapping.tonicScaleInfo(workingSheet.keySignature.semitoneOffset).name;
     const keySigAscii = TmdBrailleGenerator.encodeKeySignature(initialKey);
     const timeSigAscii = TmdBrailleGenerator.encodeTimeSignature(workingSheet.beat);
-    asciiLines.push(`${metronomeAscii} ${keySigAscii}${timeSigAscii}`);
+    const headerLine = `${metronomeAscii} ${keySigAscii}${timeSigAscii}`;
+    if (isSoloExport && effectiveLineWidth !== null) {
+      asciiLines.push(TmdBrailleGenerator.centerBrailleHeader(headerLine, effectiveLineWidth));
+    } else {
+      asciiLines.push(headerLine);
+    }
 
     const renderedTracks = instruments.map((inst) =>
-      TmdBrailleGenerator.renderTrackMeasures(inst, workingSheet)
+      TmdBrailleGenerator.renderTrackMeasures(inst, workingSheet, isSoloExport)
     );
 
     if (instruments.length > 0) {
       if (layout === "partByPart") {
-        for (const track of renderedTracks) {
-          const prefix = TmdBrailleGenerator.partPrefixAscii(track.instrument);
-          const body = TmdBrailleGenerator.joinTrackMeasuresAscii(track.measures);
-          asciiLines.push(`${prefix} ${body}<K`);
+        for (const inst of instruments) {
+          const initialPrefix = isSoloExport
+            ? "#A"
+            : TmdBrailleGenerator.partPrefixAscii(inst);
+          const wrappedLines = TmdBrailleGenerator.renderPartByPartTrackLines(
+            inst,
+            workingSheet,
+            isSoloExport,
+            initialPrefix,
+            effectiveLineWidth
+          );
+          asciiLines.push(...wrappedLines);
         }
       } else {
         for (const track of renderedTracks) {
@@ -226,7 +311,9 @@ export class TmdBrailleGenerator {
     const unicodeText = TmdBrailleGenerator.asciiToUnicodeBraille(asciiText);
 
     const trackPreviews: TmdBrailleTrackPreview[] = renderedTracks.map((track) => {
-      const prefixAscii = TmdBrailleGenerator.partPrefixAscii(track.instrument);
+      const prefixAscii = isSoloExport
+        ? "#A"
+        : TmdBrailleGenerator.partPrefixAscii(track.instrument);
       const prefixUnicode = TmdBrailleGenerator.asciiToUnicodeBraille(prefixAscii);
       return {
         instrument: track.instrument,
@@ -271,6 +358,12 @@ export class TmdBrailleGenerator {
     return out;
   }
 
+  private static centerBrailleHeader(line: string, width: number): string {
+    if (line.length >= width) return line;
+    const pad = Math.max(3, Math.floor((width - line.length) / 2));
+    return " ".repeat(pad) + line;
+  }
+
   private static distinctMusicalInstruments(sheet: Sheet): string[] {
     const result: string[] = [];
     const seen = new Set<string>();
@@ -307,10 +400,41 @@ export class TmdBrailleGenerator {
     return result;
   }
 
-  private static renderTrackMeasures(
+  private static isBassClefInstrument(assignment: string): boolean {
+    const lower = assignment.trim().toLowerCase();
+    const bassInstruments = new Set([
+      "pianolh",
+      "lefthand",
+      "organpedal",
+      "cello",
+      "violoncello",
+      "contrabass",
+      "doublebass",
+      "bass",
+      "electricbass",
+      "acousticbass",
+      "fretlessbass",
+      "synthbass",
+      "bassoon",
+      "contrabassoon",
+      "trombone",
+      "basstrombone",
+      "tuba",
+      "euphonium",
+      "baritone",
+      "timpani",
+    ]);
+    return bassInstruments.has(lower);
+  }
+
+  private static prepareTrackMeasures(
     instrument: string,
     sheet: Sheet
-  ): RenderedBrailleTrack {
+  ): {
+    measures: PreparedMeasure[];
+    isChordTrack: boolean;
+    isPercussion: boolean;
+  } {
     const measures = TmdMeasureRenderer.renderMeasures(sheet, instrument);
     const isFixedPitchTrack = sheet.entries.some(
       (e) =>
@@ -334,18 +458,9 @@ export class TmdBrailleGenerator {
       PitchMapping.keySignatureStepAlters(activeWrittenKey);
     let activeBeat: Beat = { ...sheet.beat };
 
-    const pitchState: {
-      lastPitch: { octave: number; stepIndex: number } | null;
-      forceOctave: boolean;
-    } = {
-      lastPitch: null,
-      forceOctave: true,
-    };
-
-    const outMeasures: RenderedBrailleMeasure[] = [];
+    const prepared: PreparedMeasure[] = [];
 
     for (const measure of measures) {
-      const measureStepAlters = new Map<number, number[]>();
       const preDirectives: string[] = [];
       const preSighted: string[] = [];
       const inlineDirectivesByOffset: Array<{
@@ -360,15 +475,16 @@ export class TmdBrailleGenerator {
           case "explicitKey":
           case "absoluteKey":
             if (!isFixedPitchTrack && k.key !== activeWrittenKey) {
+              const ks = TmdBrailleGenerator.encodeKeySignatureChange(
+                activeWrittenKey,
+                k.key
+              );
               activeWrittenKey = k.key;
               defaultKeyStepAlters = PitchMapping.keySignatureStepAlters(k.key);
-              measureStepAlters.clear();
-              const ks = TmdBrailleGenerator.encodeKeySignature(k.key);
               if (ks.length > 0) {
                 preDirectives.push(ks);
               }
               preSighted.push(`Key: ${k.key}`);
-              pitchState.forceOctave = true;
             }
             break;
           case "relativeKey":
@@ -377,24 +493,24 @@ export class TmdBrailleGenerator {
                 directive.state.keyOffset
               ).name;
               if (newKey !== activeWrittenKey) {
+                const ks = TmdBrailleGenerator.encodeKeySignatureChange(
+                  activeWrittenKey,
+                  newKey
+                );
                 activeWrittenKey = newKey;
                 activeKeyOffset = directive.state.keyOffset;
                 defaultKeyStepAlters =
                   PitchMapping.keySignatureStepAlters(newKey);
-                measureStepAlters.clear();
-                const ks = TmdBrailleGenerator.encodeKeySignature(newKey);
                 if (ks.length > 0) {
                   preDirectives.push(ks);
                 }
                 preSighted.push(`Key: ${newKey}`);
-                pitchState.forceOctave = true;
               }
             }
             break;
           case "fixedPitch":
             activeWrittenKey = "C";
             defaultKeyStepAlters = [0, 0, 0, 0, 0, 0, 0];
-            measureStepAlters.clear();
             break;
           case "timeSignature":
             if (
@@ -406,7 +522,6 @@ export class TmdBrailleGenerator {
                 TmdBrailleGenerator.encodeTimeSignature(k.beat)
               );
               preSighted.push(`${k.beat.count}/${k.beat.noteValue}`);
-              pitchState.forceOctave = true;
             }
             break;
           case "tempo":
@@ -414,7 +529,6 @@ export class TmdBrailleGenerator {
             const bpm = Math.round(directive.state.tempo);
             preDirectives.push(`?7#${TmdBrailleGenerator.encodeUpperDigits(bpm)}`);
             preSighted.push(`♩=${bpm}`);
-            pitchState.forceOctave = true;
             break;
           }
           case "dynamics": {
@@ -443,99 +557,451 @@ export class TmdBrailleGenerator {
         activeKeyOffset = nonRestEvents[0].state.keyOffset;
         const newKey = PitchMapping.tonicScaleInfo(activeKeyOffset).name;
         if (newKey !== activeWrittenKey) {
+          const ks = TmdBrailleGenerator.encodeKeySignatureChange(
+            activeWrittenKey,
+            newKey
+          );
           activeWrittenKey = newKey;
           defaultKeyStepAlters = PitchMapping.keySignatureStepAlters(newKey);
-          measureStepAlters.clear();
-          const ks = TmdBrailleGenerator.encodeKeySignature(newKey);
           if (ks.length > 0) {
             preDirectives.push(ks);
           }
           preSighted.push(`Key: ${newKey}`);
-          pitchState.forceOctave = true;
         }
       }
 
-      if (nonRestEvents.length === 0 && inlineDirectivesByOffset.length === 0) {
-        outMeasures.push({
-          index: measure.index,
-          isFullMeasureRest: true,
-          hasLeadingKeyOrMeterChange: preDirectives.length > 0,
-          preMeasureDirectivesAscii: preDirectives.join(" "),
-          ascii: "M",
-          sightedSummary:
-            preSighted.length > 0
-              ? `${preSighted.join(", ")} · Full-measure rest`
-              : "Full-measure rest",
-          endsWithCrossBarTie: false,
-          startsWithCrossBarTie: false,
-        });
-        continue;
-      }
-
-      const groups = TmdMeasureRenderer.groupSimultaneousEvents(measure.events);
-
-      let measureCells = "";
-      const sightedTokens: string[] = [...preSighted];
-      const consumedDirectives = new Set<number>();
+      const isFullRest =
+        nonRestEvents.length === 0 && inlineDirectivesByOffset.length === 0;
+      const groups = isFullRest
+        ? []
+        : TmdMeasureRenderer.groupSimultaneousEvents(measure.events);
       const startsWithTie = groups[0]?.some((e) => e.tieStop) ?? false;
       const endsWithTie =
         groups[groups.length - 1]?.some((e) => e.tieStart) ?? false;
 
-      for (const group of groups) {
-        const primary = group[0];
-        if (!primary) continue;
-
-        let pendingDynamicAscii = "";
-        for (let dIdx = 0; dIdx < inlineDirectivesByOffset.length; dIdx++) {
-          const item = inlineDirectivesByOffset[dIdx];
-          if (
-            !consumedDirectives.has(dIdx) &&
-            item.offset <= primary.startOffset + 1e-4
-          ) {
-            consumedDirectives.add(dIdx);
-            pendingDynamicAscii += item.ascii;
-            sightedTokens.push(item.label);
-            pitchState.forceOctave = true;
-          }
-        }
-
-        const { ascii: groupAscii, sighted } =
-          TmdBrailleGenerator.renderEventGroup(
-            group,
-            isChordTrack,
-            defaultKeyStepAlters,
-            measureStepAlters,
-            pitchState
-          );
-        if (sighted) {
-          sightedTokens.push(sighted);
-        }
-
-        if (pendingDynamicAscii.length > 0) {
-          const firstChar = groupAscii[0];
-          if (firstChar && TmdBrailleGenerator.cellUsesDots123(firstChar)) {
-            measureCells += `${pendingDynamicAscii}'${groupAscii}`;
-          } else {
-            measureCells += `${pendingDynamicAscii}${groupAscii}`;
-          }
-        } else {
-          measureCells += groupAscii;
-        }
-      }
-
-      outMeasures.push({
-        index: measure.index,
-        isFullMeasureRest: false,
-        hasLeadingKeyOrMeterChange: preDirectives.length > 0,
-        preMeasureDirectivesAscii: preDirectives.join(" "),
-        ascii: measureCells,
-        sightedSummary: sightedTokens.join(" "),
-        endsWithCrossBarTie: endsWithTie,
-        startsWithCrossBarTie: startsWithTie,
+      prepared.push({
+        measure,
+        preDirectives,
+        preSighted,
+        inlineDirectivesByOffset,
+        defaultKeyStepAlters: [...defaultKeyStepAlters],
+        activeBeat: { ...activeBeat },
+        isFullMeasureRest: isFullRest,
+        groups,
+        startsWithTie,
+        endsWithTie,
       });
     }
 
+    return { measures: prepared, isChordTrack, isPercussion };
+  }
+
+  private static renderSinglePreparedMeasure(
+    prep: PreparedMeasure,
+    isChordTrack: boolean,
+    isPercussion: boolean,
+    useTopDownIntervals: boolean,
+    pitchState: {
+      lastPitch: { octave: number; stepIndex: number } | null;
+      forceOctave: boolean;
+    }
+  ): RenderedBrailleMeasure {
+    if (prep.preDirectives.length > 0) {
+      pitchState.forceOctave = true;
+    }
+
+    if (prep.isFullMeasureRest) {
+      return {
+        index: prep.measure.index,
+        isFullMeasureRest: true,
+        hasLeadingKeyOrMeterChange: prep.preDirectives.length > 0,
+        preMeasureDirectivesAscii: prep.preDirectives.join(" "),
+        ascii: "M",
+        groupTokens: ["M"],
+        sightedSummary:
+          prep.preSighted.length > 0
+            ? `${prep.preSighted.join(", ")} · Full-measure rest`
+            : "Full-measure rest",
+        endsWithCrossBarTie: false,
+        startsWithCrossBarTie: false,
+      };
+    }
+
+    const groupSpecs = prep.groups.map((g) =>
+      TmdBrailleGenerator.resolveBrailleDuration(g[0]?.duration ?? 0)
+    );
+
+    const flatItems: MeasureRhythmicItem[] = [];
+    const flatIndexByGroupAtom = new Map<string, number>();
+    for (let gIdx = 0; gIdx < prep.groups.length; gIdx++) {
+      const group = prep.groups[gIdx];
+      const primary = group[0];
+      if (!primary) continue;
+      const isRest = primary.content.type === "rest";
+      const spec = groupSpecs[gIdx];
+      let subOffset = primary.startOffset;
+      for (let aIdx = 0; aIdx < spec.atoms.length; aIdx++) {
+        const atom = spec.atoms[aIdx];
+        const fIdx = flatItems.length;
+        flatIndexByGroupAtom.set(`${gIdx}:${aIdx}`, fIdx);
+        flatItems.push({
+          groupIndex: gIdx,
+          atomIndex: aIdx,
+          baseDenominator: atom.baseDenominator,
+          isDotted: atom.isDotted,
+          quarterValue: atom.quarterValue,
+          startOffset: subOffset,
+          isRest,
+          tuplet: spec.tuplet,
+        });
+        subOffset += atom.quarterValue;
+      }
+    }
+
+    const groupedFlatIndices =
+      isChordTrack || isPercussion
+        ? new Set<number>()
+        : TmdBrailleGenerator.computeGroupedFlatIndices(flatItems, prep.activeBeat);
+    const distinctionHints =
+      isChordTrack || isPercussion
+        ? new Map<number, ValueDistinctionHint>()
+        : TmdBrailleGenerator.computeValueDistinctionHints(flatItems, prep.activeBeat);
+
+    const groupTupletPrefixes = new Array<string>(prep.groups.length).fill("");
+    if (!isChordTrack && !isPercussion) {
+      let idx = 0;
+      while (idx < prep.groups.length) {
+        const tup = groupSpecs[idx].tuplet;
+        if (tup) {
+          groupTupletPrefixes[idx] =
+            tup.actual === 3
+              ? "2"
+              : `_${TmdBrailleGenerator.encodeLowerDigits(tup.actual)}'`;
+          const targetSpan =
+            (4.0 / ( groupSpecs[idx].atoms[0]?.baseDenominator ?? 4 )) *
+            tup.normal;
+          let accSpan = groupSpecs[idx].atoms.reduce(
+            (s, a) => s + a.quarterValue,
+            0
+          );
+          let j = idx + 1;
+          while (j < prep.groups.length) {
+            const nextTup = groupSpecs[j].tuplet;
+            if (
+              nextTup &&
+              nextTup.actual === tup.actual &&
+              nextTup.normal === tup.normal &&
+              accSpan < targetSpan - 1e-3
+            ) {
+              accSpan += groupSpecs[j].atoms.reduce(
+                (s, a) => s + a.quarterValue,
+                0
+              );
+              j++;
+            } else {
+              break;
+            }
+          }
+          idx = j;
+        } else {
+          idx++;
+        }
+      }
+    }
+
+    const measureStepAlters = new Map<number, number[]>();
+    const consumedDirectives = new Set<number>();
+    const groupTokens: string[] = [];
+    const sightedTokens: string[] = [...prep.preSighted];
+
+    for (let gIdx = 0; gIdx < prep.groups.length; gIdx++) {
+      const group = prep.groups[gIdx];
+      const primary = group[0];
+      if (!primary) continue;
+
+      let pendingDynamicAscii = "";
+      for (let dIdx = 0; dIdx < prep.inlineDirectivesByOffset.length; dIdx++) {
+        const item = prep.inlineDirectivesByOffset[dIdx];
+        if (
+          !consumedDirectives.has(dIdx) &&
+          item.offset <= primary.startOffset + 1e-4
+        ) {
+          consumedDirectives.add(dIdx);
+          pendingDynamicAscii += item.ascii;
+          sightedTokens.push(item.label);
+          pitchState.forceOctave = true;
+        }
+      }
+
+      const { ascii: groupAscii, sighted } =
+        TmdBrailleGenerator.renderEventGroup(
+          group,
+          gIdx,
+          groupSpecs[gIdx],
+          flatIndexByGroupAtom,
+          groupedFlatIndices,
+          distinctionHints,
+          groupTupletPrefixes[gIdx],
+          pendingDynamicAscii,
+          isChordTrack,
+          isPercussion,
+          useTopDownIntervals,
+          prep.defaultKeyStepAlters,
+          measureStepAlters,
+          pitchState
+        );
+      if (sighted) {
+        sightedTokens.push(sighted);
+      }
+      groupTokens.push(groupAscii);
+    }
+
+    return {
+      index: prep.measure.index,
+      isFullMeasureRest: false,
+      hasLeadingKeyOrMeterChange: prep.preDirectives.length > 0,
+      preMeasureDirectivesAscii: prep.preDirectives.join(" "),
+      ascii: groupTokens.join(""),
+      groupTokens,
+      sightedSummary: sightedTokens.join(" "),
+      endsWithCrossBarTie: prep.endsWithTie,
+      startsWithCrossBarTie: prep.startsWithTie,
+    };
+  }
+
+  private static renderTrackMeasures(
+    instrument: string,
+    sheet: Sheet,
+    isSolo: boolean
+  ): RenderedBrailleTrack {
+    const { measures: preparations, isChordTrack, isPercussion } =
+      TmdBrailleGenerator.prepareTrackMeasures(instrument, sheet);
+    const useTopDownIntervals =
+      isSolo &&
+      !isPercussion &&
+      !TmdBrailleGenerator.isBassClefInstrument(instrument);
+    const pitchState = {
+      lastPitch: null as { octave: number; stepIndex: number } | null,
+      forceOctave: true,
+    };
+    const outMeasures = preparations.map((prep) =>
+      TmdBrailleGenerator.renderSinglePreparedMeasure(
+        prep,
+        isChordTrack,
+        isPercussion,
+        useTopDownIntervals,
+        pitchState
+      )
+    );
     return { instrument, measures: outMeasures };
+  }
+
+  private static renderPartByPartTrackLines(
+    instrument: string,
+    sheet: Sheet,
+    isSolo: boolean,
+    initialPrefix: string,
+    lineWidth: number | null
+  ): string[] {
+    if (lineWidth === null || lineWidth <= 0) {
+      const rendered = TmdBrailleGenerator.renderTrackMeasures(
+        instrument,
+        sheet,
+        isSolo
+      );
+      const body = TmdBrailleGenerator.joinTrackMeasuresAscii(rendered.measures);
+      return [`${initialPrefix} ${body}<K`];
+    }
+
+    const maxW = lineWidth;
+    const { measures: preparations, isChordTrack, isPercussion } =
+      TmdBrailleGenerator.prepareTrackMeasures(instrument, sheet);
+    const useTopDownIntervals =
+      isSolo &&
+      !isPercussion &&
+      !TmdBrailleGenerator.isBassClefInstrument(instrument);
+
+    type TrackBlock =
+      | { type: "restRun"; preDirectives: string; count: number }
+      | { type: "measureChain"; indices: number[] };
+
+    const blocks: TrackBlock[] = [];
+    let i = 0;
+    while (i < preparations.length) {
+      const p = preparations[i];
+      if (p.isFullMeasureRest) {
+        let restCount = 1;
+        let j = i + 1;
+        while (
+          j < preparations.length &&
+          preparations[j].isFullMeasureRest &&
+          preparations[j].preDirectives.length === 0
+        ) {
+          restCount++;
+          j++;
+        }
+        blocks.push({
+          type: "restRun",
+          preDirectives: p.preDirectives.join(" "),
+          count: restCount,
+        });
+        i = j;
+      } else {
+        const chain = [i];
+        let cur = p;
+        let j = i + 1;
+        while (
+          j < preparations.length &&
+          cur.endsWithTie &&
+          preparations[j].startsWithTie &&
+          preparations[j].preDirectives.length === 0 &&
+          !preparations[j].isFullMeasureRest
+        ) {
+          chain.push(j);
+          cur = preparations[j];
+          j++;
+        }
+        blocks.push({ type: "measureChain", indices: chain });
+        i = j;
+      }
+    }
+
+    const lines: string[] = [];
+    let currentLine = initialPrefix;
+    const pitchState = {
+      lastPitch: null as { octave: number; stepIndex: number } | null,
+      forceOctave: true,
+    };
+
+    const appendSimpleToken = (token: string) => {
+      if (!token) return;
+      const sep = currentLine.endsWith(" ") ? "" : " ";
+      if (currentLine.trim().length === 0) {
+        currentLine += token;
+      } else if (currentLine.length + sep.length + token.length <= maxW) {
+        currentLine += sep + token;
+      } else {
+        lines.push(currentLine);
+        currentLine = "  " + token;
+        pitchState.forceOctave = true;
+      }
+    };
+
+    for (let bIdx = 0; bIdx < blocks.length; bIdx++) {
+      const block = blocks[bIdx];
+      const isLastBlock = bIdx === blocks.length - 1;
+      const suffix = isLastBlock ? "<K" : "";
+
+      if (block.type === "restRun") {
+        if (block.preDirectives.length > 0) {
+          appendSimpleToken(block.preDirectives);
+        }
+        const restToken =
+          TmdBrailleGenerator.encodeFullMeasureRests(block.count) + suffix;
+        appendSimpleToken(restToken);
+      } else {
+        const firstPrep = preparations[block.indices[0]];
+        const preDir = firstPrep.preDirectives.join(" ");
+        if (preDir.length > 0) {
+          appendSimpleToken(preDir);
+        }
+
+        const savedPitch = pitchState.lastPitch
+          ? { ...pitchState.lastPitch }
+          : null;
+        const savedForce = pitchState.forceOctave;
+        const trialState = {
+          lastPitch: savedPitch ? { ...savedPitch } : null,
+          forceOctave: savedForce,
+        };
+        const trialMeasures = block.indices.map((idx) =>
+          TmdBrailleGenerator.renderSinglePreparedMeasure(
+            preparations[idx],
+            isChordTrack,
+            isPercussion,
+            useTopDownIntervals,
+            trialState
+          )
+        );
+        const combinedAscii =
+          trialMeasures.map((m) => m.ascii).join("") + suffix;
+        const sep = currentLine.endsWith(" ") ? "" : " ";
+        const lineHasMusicContent = currentLine.trim().length > 0;
+
+        if (
+          !lineHasMusicContent &&
+          currentLine.length + combinedAscii.length <= maxW
+        ) {
+          currentLine += combinedAscii;
+          pitchState.lastPitch = trialState.lastPitch;
+          pitchState.forceOctave = trialState.forceOctave;
+        } else if (
+          lineHasMusicContent &&
+          currentLine.length + sep.length + combinedAscii.length <= maxW
+        ) {
+          currentLine += sep + combinedAscii;
+          pitchState.lastPitch = trialState.lastPitch;
+          pitchState.forceOctave = trialState.forceOctave;
+        } else {
+          // Wrap to a new continuation line (`  `) and force octave mark on first pitched note (Par. CN-4)
+          if (lineHasMusicContent) {
+            lines.push(currentLine);
+            currentLine = "  ";
+          }
+          const newLineState = {
+            lastPitch: savedPitch ? { ...savedPitch } : null,
+            forceOctave: true,
+          };
+          const newLineMeasures = block.indices.map((idx) =>
+            TmdBrailleGenerator.renderSinglePreparedMeasure(
+              preparations[idx],
+              isChordTrack,
+              isPercussion,
+              useTopDownIntervals,
+              newLineState
+            )
+          );
+          const newCombined =
+            newLineMeasures.map((m) => m.ascii).join("") + suffix;
+          const newSep =
+            currentLine === "  " || currentLine.endsWith(" ") ? "" : " ";
+          if (
+            currentLine.length + newSep.length + newCombined.length <= maxW
+          ) {
+            currentLine += newSep + newCombined;
+            pitchState.lastPitch = newLineState.lastPitch;
+            pitchState.forceOctave = newLineState.forceOctave;
+          } else {
+            if (newSep.length > 0) {
+              currentLine += newSep;
+            }
+            const allGroups = newLineMeasures.flatMap((m) => m.groupTokens);
+            for (let gIdx = 0; gIdx < allGroups.length; gIdx++) {
+              const gToken = allGroups[gIdx];
+              const isLastGroup = gIdx === allGroups.length - 1;
+              const tokWithSuffix = isLastGroup ? gToken + suffix : gToken;
+              const reserve = isLastGroup ? 0 : 1;
+              if (
+                currentLine.length + tokWithSuffix.length + reserve > maxW &&
+                currentLine.trim().length > 0
+              ) {
+                lines.push(currentLine + "\"");
+                currentLine = "  " + tokWithSuffix;
+              } else {
+                currentLine += tokWithSuffix;
+              }
+            }
+            pitchState.lastPitch = newLineState.lastPitch;
+            pitchState.forceOctave = newLineState.forceOctave;
+          }
+        }
+      }
+    }
+
+    if (currentLine.trim().length > 0) {
+      lines.push(currentLine);
+    }
+    return lines;
   }
 
   private static joinTrackMeasuresAscii(
@@ -582,9 +1048,266 @@ export class TmdBrailleGenerator {
     return tokens.join(" ");
   }
 
+  private static resolveBrailleDuration(
+    quarterNotes: number
+  ): BrailleDurationSpec {
+    const epsilon = 1e-4;
+    for (const std of BRAILLE_STANDARD_VALUES) {
+      if (Math.abs(quarterNotes - std.quarterValue) < epsilon) {
+        return { atoms: [{ ...std }], tuplet: null };
+      }
+    }
+
+    const tupletRatios: Array<{ actual: number; normal: number }> = [
+      { actual: 3, normal: 2 },
+      { actual: 5, normal: 4 },
+      { actual: 5, normal: 3 },
+      { actual: 7, normal: 4 },
+      { actual: 7, normal: 5 },
+      { actual: 7, normal: 6 },
+      { actual: 9, normal: 8 },
+      { actual: 11, normal: 8 },
+      { actual: 11, normal: 7 },
+      { actual: 13, normal: 8 },
+      { actual: 2, normal: 3 },
+      { actual: 4, normal: 3 },
+      { actual: 6, normal: 4 },
+    ];
+    const baseDenominators = [1, 2, 4, 8, 16, 32, 64, 128];
+    for (const ratio of tupletRatios) {
+      for (const baseDen of baseDenominators) {
+        const faceQ = 4.0 / baseDen;
+        const tupQ = (faceQ * ratio.normal) / ratio.actual;
+        if (Math.abs(quarterNotes - tupQ) < epsilon) {
+          return {
+            atoms: [
+              {
+                baseDenominator: baseDen,
+                isDotted: false,
+                quarterValue: quarterNotes,
+              },
+            ],
+            tuplet: ratio,
+          };
+        }
+      }
+    }
+
+    let remaining = quarterNotes;
+    const result: NotationDurationAtom[] = [];
+    while (remaining > epsilon) {
+      let matched = false;
+      for (const std of BRAILLE_STANDARD_VALUES) {
+        if (remaining >= std.quarterValue - epsilon) {
+          result.push({ ...std });
+          remaining -= std.quarterValue;
+          matched = true;
+          break;
+        }
+      }
+      if (!matched) {
+        if (remaining > 1e-6) {
+          result.push({
+            baseDenominator: 128,
+            isDotted: false,
+            quarterValue: remaining,
+          });
+        }
+        break;
+      }
+    }
+    if (result.length === 0) {
+      result.push({ baseDenominator: 4, isDotted: false, quarterValue: 1.0 });
+    }
+    return { atoms: result, tuplet: null };
+  }
+
+  private static computeGroupedFlatIndices(
+    items: MeasureRhythmicItem[],
+    beat: Beat
+  ): Set<number> {
+    if (items.length < 3) return new Set<number>();
+
+    const isCompound =
+      beat.count >= 6 &&
+      beat.count % 3 === 0 &&
+      (beat.noteValue === 8 || beat.noteValue === 16);
+    const beatQ = isCompound
+      ? 3.0 * (4.0 / Math.max(1, beat.noteValue))
+      : 4.0 / Math.max(1, beat.noteValue);
+    const halfBeatQ = isCompound ? beatQ / 3.0 : beatQ / 2.0;
+
+    const grouped = new Set<number>();
+    let i = 0;
+    while (i < items.length) {
+      const first = items[i];
+      if (
+        (first.baseDenominator !== 16 &&
+          first.baseDenominator !== 32 &&
+          first.baseDenominator !== 64) ||
+        first.isDotted ||
+        first.tuplet !== null
+      ) {
+        i++;
+        continue;
+      }
+
+      const noteQ = 4.0 / first.baseDenominator;
+      let matchedLen = 0;
+
+      const beatsFromStart = first.startOffset / beatQ;
+      if (Math.abs(beatsFromStart - Math.round(beatsFromStart)) < 1e-3) {
+        const nBeat = Math.round(beatQ / noteQ);
+        if (
+          nBeat >= 3 &&
+          i + nBeat <= items.length &&
+          TmdBrailleGenerator.canFormGroup(items, i, nBeat)
+        ) {
+          matchedLen = nBeat;
+        }
+      }
+
+      if (matchedLen === 0 && !isCompound) {
+        const halfBeatsFromStart = first.startOffset / halfBeatQ;
+        if (
+          Math.abs(halfBeatsFromStart - Math.round(halfBeatsFromStart)) < 1e-3
+        ) {
+          const nHalf = Math.round(halfBeatQ / noteQ);
+          if (
+            nHalf >= 4 &&
+            i + nHalf <= items.length &&
+            TmdBrailleGenerator.canFormGroup(items, i, nHalf)
+          ) {
+            matchedLen = nHalf;
+          }
+        }
+      }
+
+      if (matchedLen > 0) {
+        for (let k = i + 1; k < i + matchedLen; k++) {
+          grouped.add(k);
+        }
+        i += matchedLen;
+      } else {
+        i++;
+      }
+    }
+    return grouped;
+  }
+
+  private static canFormGroup(
+    items: MeasureRhythmicItem[],
+    start: number,
+    length: number
+  ): boolean {
+    const targetDen = items[start].baseDenominator;
+    for (let k = start; k < start + length; k++) {
+      const it = items[k];
+      if (
+        it.baseDenominator !== targetDen ||
+        it.isDotted ||
+        it.tuplet !== null
+      ) {
+        return false;
+      }
+      if (k > start && it.isRest) {
+        return false;
+      }
+    }
+    const afterIdx = start + length;
+    if (afterIdx < items.length) {
+      const nextItem = items[afterIdx];
+      if (nextItem.baseDenominator === 8 && nextItem.tuplet === null) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private static computeValueDistinctionHints(
+    items: MeasureRhythmicItem[],
+    beat: Beat
+  ): Map<number, ValueDistinctionHint> {
+    if (items.length === 0) return new Map();
+    const hints = new Map<number, ValueDistinctionHint>();
+
+    const expectedQ = beat.count * (4.0 / Math.max(1, beat.noteValue));
+    const totalQ = items.reduce((s, a) => s + a.quarterValue, 0);
+
+    if (
+      items.length === 1 &&
+      items[0].isRest &&
+      items[0].baseDenominator === 16
+    ) {
+      hints.set(0, ",<1");
+      return hints;
+    }
+
+    const hasLarge = items.some((a) => a.baseDenominator <= 8);
+    const hasSmall = items.some((a) => a.baseDenominator >= 16);
+
+    const classOf = (den: number): number => {
+      switch (den) {
+        case 1:
+        case 16:
+          return 0;
+        case 2:
+        case 32:
+          return 1;
+        case 4:
+        case 64:
+          return 2;
+        default:
+          return 3;
+      }
+    };
+
+    if (hasLarge && hasSmall) {
+      const largeClasses = new Set(
+        items
+          .filter((a) => a.baseDenominator <= 8)
+          .map((a) => classOf(a.baseDenominator))
+      );
+      const smallClasses = new Set(
+        items
+          .filter((a) => a.baseDenominator >= 16)
+          .map((a) => classOf(a.baseDenominator))
+      );
+      const sharesAmbiguousClass = Array.from(largeClasses).some((c) =>
+        smallClasses.has(c)
+      );
+      const isPickupOrIncomplete = Math.abs(totalQ - expectedQ) > 1e-3;
+
+      if (sharesAmbiguousClass || isPickupOrIncomplete) {
+        for (let idx = 1; idx < items.length; idx++) {
+          const prevSmall = items[idx - 1].baseDenominator >= 16;
+          const currSmall = items[idx].baseDenominator >= 16;
+          if (prevSmall !== currSmall) {
+            hints.set(idx, currSmall ? ",<1" : "^<1");
+          }
+        }
+      }
+    } else if (hasSmall && !hasLarge && Math.abs(totalQ - expectedQ) > 1e-3) {
+      if (Math.abs(totalQ * 16.0 - expectedQ) < 1e-3) {
+        hints.set(0, ",<1");
+      }
+    }
+
+    return hints;
+  }
+
   private static renderEventGroup(
     group: MeasureEvent[],
+    groupIndex: number,
+    spec: BrailleDurationSpec,
+    flatIndexByGroupAtom: Map<string, number>,
+    groupedFlatIndices: Set<number>,
+    distinctionHints: Map<number, ValueDistinctionHint>,
+    tupletPrefixAscii: string,
+    pendingDynamicAscii: string,
     isChordTrack: boolean,
+    isPercussion: boolean,
+    useTopDownIntervals: boolean,
     defaultKeyStepAlters: number[],
     measureStepAlters: Map<number, number[]>,
     pitchState: {
@@ -594,7 +1317,7 @@ export class TmdBrailleGenerator {
   ): { ascii: string; sighted: string } {
     const first = group[0];
     if (!first) return { ascii: "", sighted: "" };
-    const atoms = NotationDuration.decompose(first.duration);
+    const atoms = spec.atoms;
 
     // 1. Simultaneous pitched notes
     const notes: Array<{
@@ -613,16 +1336,38 @@ export class TmdBrailleGenerator {
     }
 
     if (notes.length > 0) {
-      notes.sort((a, b) => {
-        const d0 = a.spelled.octave * 7 + a.spelled.stepIndex;
-        const d1 = b.spelled.octave * 7 + b.spelled.stepIndex;
-        if (d0 !== d1) return d0 - d1;
-        return a.spelled.midiPitch - b.spelled.midiPitch;
-      });
+      if (useTopDownIntervals) {
+        notes.sort((a, b) => {
+          const d0 = a.spelled.octave * 7 + a.spelled.stepIndex;
+          const d1 = b.spelled.octave * 7 + b.spelled.stepIndex;
+          if (d0 !== d1) return d1 - d0;
+          return b.spelled.midiPitch - a.spelled.midiPitch;
+        });
+      } else {
+        notes.sort((a, b) => {
+          const d0 = a.spelled.octave * 7 + a.spelled.stepIndex;
+          const d1 = b.spelled.octave * 7 + b.spelled.stepIndex;
+          if (d0 !== d1) return d0 - d1;
+          return a.spelled.midiPitch - b.spelled.midiPitch;
+        });
+      }
 
       let out = "";
       for (let atomIdx = 0; atomIdx < atoms.length; atomIdx++) {
         const atom = atoms[atomIdx];
+        const flatIdx = flatIndexByGroupAtom.get(`${groupIndex}:${atomIdx}`) ?? -1;
+        const hintStr = distinctionHints.get(flatIdx) ?? "";
+        if (hintStr.length > 0) {
+          pitchState.forceOctave = true;
+        }
+        const effectiveAtom: NotationDurationAtom = groupedFlatIndices.has(flatIdx)
+          ? {
+              baseDenominator: 8,
+              isDotted: false,
+              quarterValue: atom.quarterValue,
+            }
+          : atom;
+
         const base = notes[0];
         const isContinuationAtom = atomIdx > 0 || base.event.tieStop;
         const needsInternalTie =
@@ -668,8 +1413,8 @@ export class TmdBrailleGenerator {
 
         const noteCell = TmdBrailleGenerator.encodeNoteCell(
           base.spelled.stepIndex,
-          atom.baseDenominator,
-          atom.isDotted
+          effectiveAtom.baseDenominator,
+          effectiveAtom.isDotted
         );
 
         let intervalsStr = "";
@@ -694,8 +1439,12 @@ export class TmdBrailleGenerator {
 
           const memDiatonic =
             member.spelled.octave * 7 + member.spelled.stepIndex;
-          const deltaFromBase = Math.max(0, memDiatonic - baseDiatonic);
-          const deltaFromPrev = Math.max(0, memDiatonic - prevDiatonic);
+          const deltaFromBase = useTopDownIntervals
+            ? Math.max(0, baseDiatonic - memDiatonic)
+            : Math.max(0, memDiatonic - baseDiatonic);
+          const deltaFromPrev = useTopDownIntervals
+            ? Math.max(0, prevDiatonic - memDiatonic)
+            : Math.max(0, memDiatonic - prevDiatonic);
           prevDiatonic = memDiatonic;
 
           if (deltaFromBase === 0) {
@@ -710,18 +1459,27 @@ export class TmdBrailleGenerator {
           }
         }
 
-        const tieStr = needsInternalTie ? (notes.length > 1 ? ".C.C" : "@C") : "";
-        out += `${accStr}${octStr}${noteCell}${intervalsStr}${tieStr}`;
+        const tieStr = needsInternalTie ? (notes.length > 1 ? ".C" : "@C") : "";
+        const tupStr = atomIdx === 0 ? tupletPrefixAscii : "";
+        out += `${hintStr}${tupStr}${accStr}${octStr}${noteCell}${intervalsStr}${tieStr}`;
       }
 
-      const pitchNames = notes.map((n) =>
-        TmdBrailleGenerator.formatSpelledPitchName(n.spelled)
-      );
+      const pitchNames = [...notes]
+        .sort((a, b) => {
+          const d0 = a.spelled.octave * 7 + a.spelled.stepIndex;
+          const d1 = b.spelled.octave * 7 + b.spelled.stepIndex;
+          if (d0 !== d1) return d0 - d1;
+          return a.spelled.midiPitch - b.spelled.midiPitch;
+        })
+        .map((n) => TmdBrailleGenerator.formatSpelledPitchName(n.spelled));
       const durLabel = TmdBrailleGenerator.formatDurationLabel(atoms);
       const tieSuffix = notes[0].event.tieStart ? "~" : "";
       const chordName =
         pitchNames.length > 1 ? pitchNames.join("+") : pitchNames[0];
-      return { ascii: out, sighted: `${chordName}(${durLabel})${tieSuffix}` };
+      return {
+        ascii: TmdBrailleGenerator.prependDynamic(pendingDynamicAscii, out),
+        sighted: `${chordName}(${durLabel})${tieSuffix}`,
+      };
     }
 
     // 2. Chord symbol event
@@ -737,14 +1495,20 @@ export class TmdBrailleGenerator {
           ? TmdBrailleGenerator.encodeChordStemSign(atoms[0])
           : "_'";
         return {
-          ascii: `${sym}${stem}`,
+          ascii: TmdBrailleGenerator.prependDynamic(
+            pendingDynamicAscii,
+            `${sym}${stem}`
+          ),
           sighted: `[${chord.toString()}](${durLabel})`,
         };
       } else {
-        const voiced = PitchMapping.spellChordVoicing(
+        const rawVoiced = PitchMapping.spellChordVoicing(
           chord,
           first.state.keyOffset
         );
+        const voiced = useTopDownIntervals
+          ? [...rawVoiced].reverse()
+          : rawVoiced;
         const base = voiced[0];
         if (!base) return { ascii: "", sighted: "" };
         let out = "";
@@ -795,10 +1559,10 @@ export class TmdBrailleGenerator {
               measureStepAlters.set(member.octave, memOctAlters);
               memAcc = TmdBrailleGenerator.encodeAccidental(member.alter);
             }
-            const delta = Math.max(
-              1,
-              member.octave * 7 + member.stepIndex - baseDiatonic
-            );
+            const memDiatonic = member.octave * 7 + member.stepIndex;
+            const delta = useTopDownIntervals
+              ? Math.max(1, baseDiatonic - memDiatonic)
+              : Math.max(1, memDiatonic - baseDiatonic);
             const intIdx = ((delta - 1) % 7) + 1;
             const intOct =
               delta > 7
@@ -806,11 +1570,12 @@ export class TmdBrailleGenerator {
                 : "";
             intervalsStr += `${memAcc}${intOct}${TmdBrailleGenerator.encodeIntervalSign(intIdx)}`;
           }
-          const tieStr = atomIdx < atoms.length - 1 ? ".C.C" : "";
-          out += `${accStr}${octStr}${noteCell}${intervalsStr}${tieStr}`;
+          const tieStr = atomIdx < atoms.length - 1 ? ".C" : "";
+          const tupStr = atomIdx === 0 ? tupletPrefixAscii : "";
+          out += `${tupStr}${accStr}${octStr}${noteCell}${intervalsStr}${tieStr}`;
         }
         return {
-          ascii: out,
+          ascii: TmdBrailleGenerator.prependDynamic(pendingDynamicAscii, out),
           sighted: `[${chord.toString()}](${durLabel})`,
         };
       }
@@ -823,12 +1588,16 @@ export class TmdBrailleGenerator {
       );
       if (clean.length === 0) {
         return {
-          ascii: atoms.map((a) => TmdBrailleGenerator.encodeRestCell(a)).join(""),
+          ascii: TmdBrailleGenerator.prependDynamic(
+            pendingDynamicAscii,
+            atoms.map((a) => TmdBrailleGenerator.encodeRestCell(a)).join("")
+          ),
           sighted: `Rest(${TmdBrailleGenerator.formatDurationLabel(atoms)})`,
         };
       }
       const subDur = first.duration / clean.length;
-      const subAtom = NotationDuration.decompose(subDur)[0] ?? {
+      const subSpec = TmdBrailleGenerator.resolveBrailleDuration(subDur);
+      const subAtom = subSpec.atoms[0] ?? {
         baseDenominator: 4,
         isDotted: false,
         quarterValue: 1.0,
@@ -858,17 +1627,41 @@ export class TmdBrailleGenerator {
           subAtom.isDotted
         )}`;
       }
-      return { ascii: out, sighted: `Perc(${clean.join("")})` };
+      return {
+        ascii: TmdBrailleGenerator.prependDynamic(pendingDynamicAscii, out),
+        sighted: `Perc(${clean.join("")})`,
+      };
     }
 
     // 4. Rest event
     const prefix = isChordTrack ? "\"" : "";
+    let restOut = "";
+    for (let atomIdx = 0; atomIdx < atoms.length; atomIdx++) {
+      const atom = atoms[atomIdx];
+      const flatIdx = flatIndexByGroupAtom.get(`${groupIndex}:${atomIdx}`) ?? -1;
+      const hintStr = distinctionHints.get(flatIdx) ?? "";
+      if (hintStr.length > 0) {
+        pitchState.forceOctave = true;
+      }
+      const tupStr = atomIdx === 0 ? tupletPrefixAscii : "";
+      restOut += `${hintStr}${tupStr}${prefix}${TmdBrailleGenerator.encodeRestCell(atom)}`;
+    }
     return {
-      ascii: atoms
-        .map((a) => `${prefix}${TmdBrailleGenerator.encodeRestCell(a)}`)
-        .join(""),
+      ascii: TmdBrailleGenerator.prependDynamic(pendingDynamicAscii, restOut),
       sighted: `Rest(${TmdBrailleGenerator.formatDurationLabel(atoms)})`,
     };
+  }
+
+  private static prependDynamic(
+    pendingDynamicAscii: string,
+    groupAscii: string
+  ): string {
+    if (!pendingDynamicAscii) return groupAscii;
+    const firstChar = groupAscii[0];
+    if (firstChar && TmdBrailleGenerator.cellUsesDots123(firstChar)) {
+      return `${pendingDynamicAscii}'${groupAscii}`;
+    }
+    return `${pendingDynamicAscii}${groupAscii}`;
   }
 
   private static formatSpelledPitchName(spelled: SpelledPitch): string {
@@ -1010,13 +1803,40 @@ export class TmdBrailleGenerator {
     }
   }
 
+  private static encodeAccidentalRun(count: number, sign: string): string {
+    if (count <= 0) return "";
+    if (count <= 3) return sign.repeat(count);
+    return `#${TmdBrailleGenerator.encodeUpperDigits(count)}${sign}`;
+  }
+
   private static encodeKeySignature(key: string): string {
     const { fifths } = PitchMapping.parseKeyModeAndFifths(key);
     if (fifths === 0) return "";
     const count = Math.abs(fifths);
     const sign = fifths > 0 ? "%" : "<";
-    if (count <= 3) return sign.repeat(count);
-    return `#${TmdBrailleGenerator.encodeUpperDigits(count)}${sign}`;
+    return TmdBrailleGenerator.encodeAccidentalRun(count, sign);
+  }
+
+  private static encodeKeySignatureChange(
+    fromKey: string,
+    toKey: string
+  ): string {
+    const { fifths: oldFifths } = PitchMapping.parseKeyModeAndFifths(fromKey);
+    const { fifths: newFifths } = PitchMapping.parseKeyModeAndFifths(toKey);
+    let cancelCount = 0;
+    if (oldFifths !== 0) {
+      if (newFifths === 0 || oldFifths * newFifths < 0) {
+        cancelCount = Math.abs(oldFifths);
+      } else if (Math.abs(newFifths) < Math.abs(oldFifths)) {
+        cancelCount = Math.abs(oldFifths) - Math.abs(newFifths);
+      }
+    }
+    const cancelAscii = TmdBrailleGenerator.encodeAccidentalRun(
+      cancelCount,
+      "*"
+    );
+    const newAscii = TmdBrailleGenerator.encodeKeySignature(toKey);
+    return cancelAscii + newAscii;
   }
 
   private static encodeTimeSignature(beat: Beat): string {
@@ -1059,7 +1879,7 @@ export class TmdBrailleGenerator {
         out += TmdBrailleGenerator.encodeUpperDigits(Number(ch));
       } else {
         inNumber = false;
-        if (ch >= "A" && ch <= "Z") {
+        if (ch >= "A" && ch >= "A" && ch <= "Z") {
           out += `,${ch}`;
         } else if (ch >= "a" && ch <= "z") {
           out += ch.toUpperCase();
