@@ -84,8 +84,8 @@ main:Piano@|0|{
 
     expect(abc).toContain("K:Bm");
     expect(abc).toContain("!ppp!");
-    // Under inline {key= F#m} (3 sharps: F#, C#, G#), degree 4 in ?= D is G4 natural -> must emit =g4
-    expect(abc).toContain("=g4");
+    // Under inline {key= F#m} (3 sharps: F#, C#, G#), degree 4 in ?= D is G4 natural -> must emit =G4
+    expect(abc).toContain("=G4");
     expect(lily).toContain("\\key b \\minor");
     expect(lily).toContain("\\ppp");
     expect(xml).toContain("<mode>minor</mode>");
@@ -166,7 +166,7 @@ A:Piano@|0|{
 -> A ->#
 `;
     const abcD = TmdABCGenerator.generateABC(TmdParser.parse(scoreD));
-    expect(abcD).toContain("c4 =c4 ^c4 d4");
+    expect(abcD).toContain("C4 =C4 ^C4 D4");
 
     const scoreC = `
 ::SCORE::
@@ -178,11 +178,13 @@ A:Piano@|0|{
 A:Piano@|0|{
   <4*>
   | 1' 1 1, 7' |
+  | 1_ 1 1^ 1^^ |
 }
 -> A ->#
 `;
     const abcC = TmdABCGenerator.generateABC(TmdParser.parse(scoreC));
-    expect(abcC).toContain("^c4 =c4 _c4 ^b4");
+    expect(abcC).toContain("^C4 =C4 _C4 ^B4");
+    expect(abcC).toContain("C,4 C4 c4 c'4");
   });
 
   it("emits MusicXML <accidental> tags using intra-measure accidental state machine", () => {

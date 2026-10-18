@@ -15,13 +15,12 @@ export class TmdABCGenerator {
     const speed = sheet.speed > 0 ? sheet.speed : 120;
     const tempoField = TmdABCGenerator.resolveTempo(sheet.beat, speed);
     abc += `${tempoField}\n`;
-    abc += `K:${TmdABCGenerator.abcKey(sheet.declaredKey || sheet.keySignature.toString())}\n\n`;
+    abc += `K:${TmdABCGenerator.abcKey(sheet.declaredKey || sheet.keySignature.toString())}\n`;
 
     instruments.forEach((inst, idx) => {
       const vId = `V${idx + 1}`;
       abc += `V:${vId} name="${inst}" snm="${inst.slice(0, 3)}"\n`;
     });
-    abc += "\n";
 
     instruments.forEach((inst, idx) => {
       const vId = `V${idx + 1}`;
@@ -30,7 +29,6 @@ export class TmdABCGenerator {
         abc += "%%MIDI channel 10\n";
       }
       abc += TmdABCGenerator.generateTrackMusic(inst, sheet);
-      abc += "\n\n";
     });
 
     return abc;
@@ -252,12 +250,8 @@ export class TmdABCGenerator {
     if (octave >= 5) {
       const apostrophes = "'".repeat(octave - 5);
       letter = `${stepLower}${apostrophes}`;
-    } else if (octave === 4) {
-      letter = stepLower;
-    } else if (octave === 3) {
-      letter = stepUpper;
     } else {
-      const commas = ",".repeat(Math.max(0, 3 - octave));
+      const commas = ",".repeat(Math.max(0, 4 - octave));
       letter = `${stepUpper}${commas}`;
     }
 

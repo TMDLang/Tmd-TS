@@ -523,10 +523,11 @@ A:Piano@|0|{
 `;
     const sheet = TmdParser.parse(extremeTmd)!;
     const abc = TmdABCGenerator.generateABC(sheet);
+    expect(abc).toContain("C,,");
     expect(abc).toContain("C,");
     expect(abc).toContain("c'");
-    expect(abc).toContain("^f");
-    expect(abc).toContain("_b");
+    expect(abc).toContain("^F");
+    expect(abc).toContain("_B");
 
     const ly = TmdLilyPondGenerator.generateLilyPond(sheet);
     expect(ly).toContain("c,4");
@@ -545,7 +546,7 @@ A:Piano@|0|{
 A:Piano@|0|{
     <8*>
     1 2 3 4 5 6
-    {!=90}
+    {!= 90}
     1 2 3 4 5 6
 }
 -> A ->#
@@ -655,9 +656,9 @@ A:Piano@|0|{
       const ly = TmdLilyPondGenerator.generateLilyPond(sheet);
       expect(ly).toContain("<c' e' g'>4 <d' f'>4 e'4 f'4 |");
 
-      // ABC: 1+3+5 -> [ceg]4, 2+4 -> [df]4, followed by e4 f4 |
+      // ABC: 1+3+5 -> [CEG]4, 2+4 -> [DF]4, followed by E4 F4 |
       const abc = TmdABCGenerator.generateABC(sheet);
-      expect(abc).toContain('[ceg]4 [df]4 e4 f4 |');
+      expect(abc).toContain('[CEG]4 [DF]4 E4 F4 |');
 
       // Braille: sighted summary reflects simultaneous chord notes rather than 7 sequential quarter notes
       const braillePreview = TmdBrailleGenerator.generateBraillePreview(sheet);
@@ -1172,10 +1173,10 @@ A:Piano@|0|{
       const abc = TmdABCGenerator.generateABC(sheet);
 
       expect(abc).toContain('K:C');
-      expect(abc).toContain('c/2 d/2 e/2 f/2');
-      expect(abc).toContain('c/4 d/4 e/4 f/4 g/4 a/4 b/4');
-      expect(abc).toContain('c4/3 d4/3 e4/3');
-      expect(abc).toContain('c12/5 d12/5 e12/5 f12/5 g12/5');
+      expect(abc).toContain('C/2 D/2 E/2 F/2');
+      expect(abc).toContain('C/4 D/4 E/4 F/4 G/4 A/4 B/4 c/4');
+      expect(abc).toContain('C4/3 D4/3 E4/3');
+      expect(abc).toContain('C12/5 D12/5 E12/5 F12/5 G12/5');
       expect(abc).toContain('[M:5/4]');
       expect(abc).toContain('[Q:1/4=150]');
       expect(abc).toContain('[K:D]');
