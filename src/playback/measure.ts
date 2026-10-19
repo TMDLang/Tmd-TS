@@ -1,5 +1,5 @@
 import { TmdMacroEvaluator } from '../playback/macro.js';
-import { PlaybackContent, PlaybackDirectiveEvent, PlaybackEvent, PlaybackState, TmdPlaybackRenderer } from '../playback/playback.js';
+import { PlaybackContent, PlaybackDirectiveEvent, PlaybackEvent, PlaybackState, PlaybackTupletMetadata, TmdPlaybackRenderer } from '../playback/playback.js';
 import { Beat, clampTempo, DEFAULT_TEMPO_BPM, effectivePlaybackOrders, Sheet } from '../syntax/types.js';
 
 export interface NotationDurationAtom {
@@ -57,6 +57,7 @@ export interface MeasureEvent {
   tieStart: boolean;
   tieStop: boolean;
   state: PlaybackState;
+  tuplet?: PlaybackTupletMetadata;
 }
 
 export interface Measure {
@@ -194,6 +195,7 @@ export class TmdMeasureRenderer {
           tieStart,
           tieStop,
           state: event.state,
+          tuplet: Math.abs(clDur - event.duration) < 1e-6 ? event.tuplet : undefined,
         });
       }
 
@@ -225,6 +227,7 @@ export class TmdMeasureRenderer {
             tieStart: false,
             tieStop: false,
             state: event.state,
+            tuplet: Math.abs(clDur - event.duration) < 1e-6 ? event.tuplet : undefined,
           });
         }
       }

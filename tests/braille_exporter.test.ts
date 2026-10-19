@@ -344,4 +344,204 @@ A:Piano@|0|{
       .filter((l) => l.startsWith("#A "));
     expect(unwrappedMusicLines.length).toBe(1);
   });
+
+  it("Issue #75: Duplets (_2'), quadruplets (_4'), sextuplets (_6'), triplets adjacent to non-3 tuplets (_3'), and tuplets with internal ties", () => {
+    // 1. Compound 6/8 duplet (2 in 3 eighth notes -> _2'DE) and quadruplet (4 in 3 eighth notes -> _4'DEFG)
+    const compoundTupletSource = `::SCORE::
+!= 120
+?= C
+<6/8>
+
+A:Flute@|0|{
+    <8*>
+    | (1 2)%(- - -) (1 2 3 4)%(- - -) |
+}
+-> A ->#
+`;
+    const compoundSheet = TmdParser.parse(compoundTupletSource)!;
+    const compoundBrf = TmdBrailleGenerator.generateBraille(compoundSheet, {
+      encoding: "ascii",
+      layout: "partByPart",
+      lineWidth: null,
+    });
+    expect(compoundBrf).toContain("#A _2'\"DE_4'DEFG<K");
+
+    // 2. Sextuplet (_6'), triplet adjacent to quintuplet (_3'), and tuplet with internal tie ((1 - 3)%(--))
+    const advancedTupletSource = `::SCORE::
+!= 120
+?= C
+<4/4>
+
+A:Flute@|0|{
+    <4*>
+    | (1 2 3 4 5 6)%(--) 1 2 |
+    | (1 2 3 4 5)%(--) (1 2 3)%(--) |
+    | (1 - 3)%(--) (1 2 3)%(--) |
+}
+-> A ->#
+`;
+    const advancedSheet = TmdParser.parse(advancedTupletSource)!;
+    const advancedBrf = TmdBrailleGenerator.generateBraille(advancedSheet, {
+      encoding: "ascii",
+      layout: "partByPart",
+      lineWidth: null,
+    });
+    // Note: in measure 1, 6 (A4 = I) to 1 (C4 = ?) is a 6th (delta = 5 >= 5), requiring octave mark `"`
+    expect(advancedBrf).toContain('#A _6\'"DEFGHI"?: _5\'DEFGH_3\'?:$ 2N$2?:$<K');
+  });
+
+  it("Issue #75: Mid-measure tempo changes (Par. 14-8), Section 8 canonical sign ordering, and BANA Par. 8.1 grouping suppression", () => {
+    // 1. Mid-measure tempo change interrupts measure with `" ?7#<BPM> ` and forces octave mark
+    const midTempoSource = `::SCORE::
+!= 120
+?= C
+<4/4>
+
+A:Violin@|0|{
+    <4*>
+    | 1 2 {!=140} 3 4 |
+}
+-> A ->#
+`;
+    const midTempoSheet = TmdParser.parse(midTempoSource)!;
+    const midTempoBrf = TmdBrailleGenerator.generateBraille(midTempoSheet, {
+      encoding: "ascii",
+      layout: "partByPart",
+      lineWidth: null,
+    });
+    expect(midTempoBrf).toContain('#A "?: " ?7#ADJ "$]<K');
+
+    // 2. Section 8 canonical order: [Value Distinction Sign] BEFORE [Dynamic / Nuance] BEFORE [Tuplet / Accidental / Octave]
+    const orderSource = `::SCORE::
+!= 120
+?= C
+<4/4>
+
+A:Violin@|0|{
+    <1*>
+    | 1 |
+    <2*>
+    | 1 <32*> {f} 1' 2 3 4 5 6 7 1^ 2^ 3^ 4^ 5^ 6^ 7^ 1^^ 2^^ |
+}
+-> A ->#
+`;
+    const orderSheet = TmdParser.parse(orderSource)!;
+    const orderBrf = TmdBrailleGenerator.generateBraille(orderSheet, {
+      encoding: "ascii",
+      layout: "partByPart",
+      lineWidth: null,
+    });
+    // Value distinction sign `,<1` must precede dynamic `>F'` (with dot-3 separator before `%`) and accidental/octave `%"N`
+    expect(orderBrf).toContain(",<1>F'%\"N");
+
+    // 3. BANA Par. 8.1 suppression when an ungrouped 8th note occurs later in the measure
+    const suppressedByLaterEighthSource = `::SCORE::
+!= 120
+?= C
+<4/4>
+
+A:Violin@|0|{
+    <16*>
+    | 1 2 3 4 <4*> 5 <8*> 4 3 <4*> 2 |
+}
+-> A ->#
+`;
+    const suppressedSheet = TmdParser.parse(suppressedByLaterEighthSource)!;
+    const suppressedBrf = TmdBrailleGenerator.generateBraille(suppressedSheet, {
+      encoding: "ascii",
+      layout: "partByPart",
+      lineWidth: null,
+    });
+    // Because 8th notes `GF` occur later in the measure, the first beat `1 2 3 4` must NOT use 8th cells `EFG`; must stay 16th `YZ&=`
+    expect(suppressedBrf).toContain('#A "YZ&=\\GF:<K');
+  });
+
+  it("Issue #75: Sub-128th duration conservation, SlapBass bottom-up intervals, Table 12A chord symbols, and simultaneous percussion", () => {
+    // 1. Sub-128th (<256*>) accumulates pairs into exact 128th cells without doubling measure duration
+    const sub128Source = `::SCORE::
+!= 120
+?= C
+<4/4>
+
+A:Flute@|0|{
+    <256*>
+    | 1 1 2 2 <4*> 3 - - - |
+}
+-> A ->#
+`;
+    const sub128Sheet = TmdParser.parse(sub128Source)!;
+    const sub128Brf = TmdBrailleGenerator.generateBraille(sub128Sheet, {
+      encoding: "ascii",
+      layout: "partByPart",
+      lineWidth: null,
+    });
+    // Four <256*> notes equal two 128th notes ("DE), not four 128th notes
+    expect(sub128Brf).toContain('#A "DE');
+    expect(sub128Brf).not.toContain('#A "DDEE');
+
+    // 2. Solo SlapBass uses ascending (bottom-up) chord intervals
+    const slapBassSource = `::SCORE::
+!= 120
+?= C
+<4/4>
+
+A:SlapBass@|0|{
+    <1*>
+    | 1_+3_+5_ |
+}
+-> A ->#
+`;
+    const slapBassSheet = TmdParser.parse(slapBassSource)!;
+    const slapBassBrf = TmdBrailleGenerator.generateBraille(slapBassSheet, {
+      encoding: "ascii",
+      layout: "partByPart",
+      lineWidth: null,
+    });
+    expect(slapBassBrf).toContain("#A _Y+9<K");
+
+    // 3. Table 12A extended chord symbols: [F#dim7], [C7sus4], [B7-9], [G6/D]
+    const chordSymSource = `::SCORE::
+!= 120
+?= C
+<4/4>
+
+A:Chord@|0|{
+    <4*>
+    | [F'dim7] [C7sus4] [B7-9] [G6/D] |
+}
+-> A ->#
+`;
+    const chordSymSheet = TmdParser.parse(chordSymSource)!;
+    const chordSymBrf = TmdBrailleGenerator.generateBraille(chordSymSheet, {
+      encoding: "ascii",
+      layout: "partByPart",
+      lineWidth: null,
+    });
+    expect(chordSymBrf).toContain(",F%DIM#G_A,C#GSUS#D_A,B#G-#I_A,G#F/,D_A<K");
+
+    // 4. Simultaneous percussion hits (layered D and C at same offset) encoded with ascending interval sign
+    const percSource = `::SCORE::
+!= 120
+?= C
+<4/4>
+
+Kicks {
+    <4*>
+    | (D) - - - |
+}
+Crashes {
+    <4*>
+    | (C) - - - |
+}
+-> (layer (play Kicks Drums) (play Crashes Drums)) ->#
+`;
+    const percSheet = TmdParser.parse(percSource)!;
+    const percBrf = TmdBrailleGenerator.generateBraille(percSheet, {
+      encoding: "ascii",
+      layout: "partByPart",
+      lineWidth: null,
+    });
+    // D = F4 (step 3, oct 4), C = A5 (step 5, oct 5), delta = 9 steps (10th -> octave . + 3rd +): "=.+<K
+    expect(percBrf).toContain('"=.+<K');
+  });
 });

@@ -79,6 +79,7 @@ interface PreparedMeasure {
   preSighted: string[];
   inlineDirectivesByOffset: Array<{
     offset: number;
+    kind: "dynamics" | "tempo";
     ascii: string;
     label: string;
   }>;
@@ -92,7 +93,7 @@ interface PreparedMeasure {
 
 interface BrailleDurationSpec {
   atoms: NotationDurationAtom[];
-  tuplet: { actual: number; normal: number } | null;
+  tuplet: { id?: number; actual: number; normal: number } | null;
 }
 
 interface MeasureRhythmicItem {
@@ -103,7 +104,10 @@ interface MeasureRhythmicItem {
   quarterValue: number;
   startOffset: number;
   isRest: boolean;
-  tuplet: { actual: number; normal: number } | null;
+  tuplet: { id?: number; actual: number; normal: number } | null;
+  tieStart: boolean;
+  tieStop: boolean;
+  hasInlineDirective: boolean;
 }
 
 type ValueDistinctionHint = "^<1" | ",<1";
@@ -414,6 +418,7 @@ export class TmdBrailleGenerator {
       "electricbass",
       "acousticbass",
       "fretlessbass",
+      "slapbass",
       "synthbass",
       "bassoon",
       "contrabassoon",
@@ -425,6 +430,45 @@ export class TmdBrailleGenerator {
       "timpani",
     ]);
     return bassInstruments.has(lower);
+  }
+
+  private static coalesceSub128thGroups(
+    rawGroups: MeasureEvent[][]
+  ): MeasureEvent[][] {
+    const minAtomDur = 0.03125;
+    const epsilon = 1e-6;
+    const out: MeasureEvent[][] = [];
+    let i = 0;
+    while (i < rawGroups.length) {
+      const grp = rawGroups[i];
+      const primary = grp[0];
+      if (!primary || primary.duration >= minAtomDur - epsilon) {
+        out.push(grp);
+        i++;
+        continue;
+      }
+      let accDur = primary.duration;
+      let lastTieStart = grp.some((e) => e.tieStart);
+      let j = i + 1;
+      while (
+        j < rawGroups.length &&
+        accDur < minAtomDur - epsilon &&
+        (rawGroups[j][0]?.duration ?? 0) < minAtomDur - epsilon
+      ) {
+        accDur += rawGroups[j][0].duration;
+        lastTieStart = rawGroups[j].some((e) => e.tieStart);
+        j++;
+      }
+      out.push(
+        grp.map((ev) => ({
+          ...ev,
+          duration: accDur,
+          tieStart: lastTieStart,
+        }))
+      );
+      i = j;
+    }
+    return out;
   }
 
   private static prepareTrackMeasures(
@@ -465,6 +509,7 @@ export class TmdBrailleGenerator {
       const preSighted: string[] = [];
       const inlineDirectivesByOffset: Array<{
         offset: number;
+        kind: "dynamics" | "tempo";
         ascii: string;
         label: string;
       }> = [];
@@ -527,14 +572,29 @@ export class TmdBrailleGenerator {
           case "tempo":
           case "relativeTempo": {
             const bpm = Math.round(directive.state.tempo);
-            preDirectives.push(`?7#${TmdBrailleGenerator.encodeUpperDigits(bpm)}`);
-            preSighted.push(`♩=${bpm}`);
+            const relOffset = Math.max(
+              0,
+              directive.position - measure.startTime
+            );
+            const tempoAscii = `?7#${TmdBrailleGenerator.encodeUpperDigits(bpm)}`;
+            if (relOffset <= 1e-4) {
+              preDirectives.push(tempoAscii);
+              preSighted.push(`♩=${bpm}`);
+            } else {
+              inlineDirectivesByOffset.push({
+                offset: relOffset,
+                kind: "tempo",
+                ascii: ` " ${tempoAscii} `,
+                label: `♩=${bpm}`,
+              });
+            }
             break;
           }
           case "dynamics": {
             const relOffset = Math.max(0, directive.position - measure.startTime);
             inlineDirectivesByOffset.push({
               offset: relOffset,
+              kind: "dynamics",
               ascii: `>${k.mark.toUpperCase()}`,
               label: `{${k.mark}}`,
             });
@@ -572,9 +632,10 @@ export class TmdBrailleGenerator {
 
       const isFullRest =
         nonRestEvents.length === 0 && inlineDirectivesByOffset.length === 0;
-      const groups = isFullRest
+      const rawGroups = isFullRest
         ? []
         : TmdMeasureRenderer.groupSimultaneousEvents(measure.events);
+      const groups = TmdBrailleGenerator.coalesceSub128thGroups(rawGroups);
       const startsWithTie = groups[0]?.some((e) => e.tieStop) ?? false;
       const endsWithTie =
         groups[groups.length - 1]?.some((e) => e.tieStart) ?? false;
@@ -628,7 +689,10 @@ export class TmdBrailleGenerator {
     }
 
     const groupSpecs = prep.groups.map((g) =>
-      TmdBrailleGenerator.resolveBrailleDuration(g[0]?.duration ?? 0)
+      TmdBrailleGenerator.resolveBrailleDuration(
+        g[0]?.duration ?? 0,
+        g[0]?.tuplet
+      )
     );
 
     const flatItems: MeasureRhythmicItem[] = [];
@@ -640,6 +704,9 @@ export class TmdBrailleGenerator {
       const isRest = primary.content.type === "rest";
       const spec = groupSpecs[gIdx];
       let subOffset = primary.startOffset;
+      const hasInlineDir = prep.inlineDirectivesByOffset.some(
+        (d) => Math.abs(d.offset - primary.startOffset) < 1e-4
+      );
       for (let aIdx = 0; aIdx < spec.atoms.length; aIdx++) {
         const atom = spec.atoms[aIdx];
         const fIdx = flatItems.length;
@@ -653,6 +720,12 @@ export class TmdBrailleGenerator {
           startOffset: subOffset,
           isRest,
           tuplet: spec.tuplet,
+          tieStop: aIdx === 0 ? group.some((e) => e.tieStop) : true,
+          tieStart:
+            aIdx === spec.atoms.length - 1
+              ? group.some((e) => e.tieStart)
+              : true,
+          hasInlineDirective: aIdx === 0 && hasInlineDir,
         });
         subOffset += atom.quarterValue;
       }
@@ -669,42 +742,69 @@ export class TmdBrailleGenerator {
 
     const groupTupletPrefixes = new Array<string>(prep.groups.length).fill("");
     if (!isChordTrack && !isPercussion) {
+      const tupletRuns: Array<{ start: number; end: number; actual: number }> = [];
       let idx = 0;
       while (idx < prep.groups.length) {
         const tup = groupSpecs[idx].tuplet;
         if (tup) {
-          groupTupletPrefixes[idx] =
-            tup.actual === 3
-              ? "2"
-              : `_${TmdBrailleGenerator.encodeLowerDigits(tup.actual)}'`;
-          const targetSpan =
-            (4.0 / ( groupSpecs[idx].atoms[0]?.baseDenominator ?? 4 )) *
-            tup.normal;
-          let accSpan = groupSpecs[idx].atoms.reduce(
-            (s, a) => s + a.quarterValue,
-            0
-          );
           let j = idx + 1;
-          while (j < prep.groups.length) {
-            const nextTup = groupSpecs[j].tuplet;
-            if (
-              nextTup &&
-              nextTup.actual === tup.actual &&
-              nextTup.normal === tup.normal &&
-              accSpan < targetSpan - 1e-3
+          if (tup.id !== undefined) {
+            while (
+              j < prep.groups.length &&
+              groupSpecs[j].tuplet?.id === tup.id
             ) {
-              accSpan += groupSpecs[j].atoms.reduce(
-                (s, a) => s + a.quarterValue,
-                0
-              );
               j++;
-            } else {
-              break;
+            }
+          } else {
+            const targetSpan =
+              (4.0 / (groupSpecs[idx].atoms[0]?.baseDenominator ?? 4)) *
+              tup.normal;
+            let accSpan = groupSpecs[idx].atoms.reduce(
+              (s, a) => s + a.quarterValue,
+              0
+            );
+            while (j < prep.groups.length) {
+              const nextTup = groupSpecs[j].tuplet;
+              if (
+                nextTup &&
+                nextTup.actual === tup.actual &&
+                nextTup.normal === tup.normal &&
+                accSpan < targetSpan - 1e-3
+              ) {
+                accSpan += groupSpecs[j].atoms.reduce(
+                  (s, a) => s + a.quarterValue,
+                  0
+                );
+                j++;
+              } else {
+                break;
+              }
             }
           }
+          tupletRuns.push({ start: idx, end: j, actual: tup.actual });
           idx = j;
         } else {
           idx++;
+        }
+      }
+
+      for (let rIdx = 0; rIdx < tupletRuns.length; rIdx++) {
+        const run = tupletRuns[rIdx];
+        if (run.actual === 3) {
+          const prevRun = rIdx > 0 ? tupletRuns[rIdx - 1] : null;
+          const nextRun =
+            rIdx + 1 < tupletRuns.length ? tupletRuns[rIdx + 1] : null;
+          const adjacentToNon3 =
+            (prevRun !== null &&
+              prevRun.end === run.start &&
+              prevRun.actual !== 3) ||
+            (nextRun !== null &&
+              nextRun.start === run.end &&
+              nextRun.actual !== 3);
+          groupTupletPrefixes[run.start] = adjacentToNon3 ? "_3'" : "2";
+        } else {
+          groupTupletPrefixes[run.start] =
+            `_${TmdBrailleGenerator.encodeLowerDigits(run.actual)}'`;
         }
       }
     }
@@ -719,6 +819,7 @@ export class TmdBrailleGenerator {
       const primary = group[0];
       if (!primary) continue;
 
+      let pendingTempoInterruptAscii = "";
       let pendingDynamicAscii = "";
       for (let dIdx = 0; dIdx < prep.inlineDirectivesByOffset.length; dIdx++) {
         const item = prep.inlineDirectivesByOffset[dIdx];
@@ -727,7 +828,11 @@ export class TmdBrailleGenerator {
           item.offset <= primary.startOffset + 1e-4
         ) {
           consumedDirectives.add(dIdx);
-          pendingDynamicAscii += item.ascii;
+          if (item.kind === "tempo") {
+            pendingTempoInterruptAscii += item.ascii;
+          } else {
+            pendingDynamicAscii += item.ascii;
+          }
           sightedTokens.push(item.label);
           pitchState.forceOctave = true;
         }
@@ -753,7 +858,7 @@ export class TmdBrailleGenerator {
       if (sighted) {
         sightedTokens.push(sighted);
       }
-      groupTokens.push(groupAscii);
+      groupTokens.push(`${pendingTempoInterruptAscii}${groupAscii}`);
     }
 
     return {
@@ -1049,9 +1154,56 @@ export class TmdBrailleGenerator {
   }
 
   private static resolveBrailleDuration(
-    quarterNotes: number
+    quarterNotes: number,
+    explicitTuplet?: {
+      id: number;
+      actual: number;
+      normal: number;
+      writtenDuration: number;
+    }
   ): BrailleDurationSpec {
     const epsilon = 1e-4;
+    if (explicitTuplet && explicitTuplet.writtenDuration > epsilon) {
+      const scale = quarterNotes / explicitTuplet.writtenDuration;
+      let rem = explicitTuplet.writtenDuration;
+      const atoms: NotationDurationAtom[] = [];
+      while (rem > epsilon) {
+        let matched = false;
+        for (const std of BRAILLE_STANDARD_VALUES) {
+          if (rem >= std.quarterValue - epsilon) {
+            atoms.push({
+              baseDenominator: std.baseDenominator,
+              isDotted: std.isDotted,
+              quarterValue: std.quarterValue * scale,
+            });
+            rem -= std.quarterValue;
+            matched = true;
+            break;
+          }
+        }
+        if (!matched) {
+          if (rem > 1e-6) {
+            atoms.push({
+              baseDenominator: 128,
+              isDotted: false,
+              quarterValue: rem * scale,
+            });
+          }
+          break;
+        }
+      }
+      if (atoms.length > 0) {
+        return {
+          atoms,
+          tuplet: {
+            id: explicitTuplet.id,
+            actual: explicitTuplet.actual,
+            normal: explicitTuplet.normal,
+          },
+        };
+      }
+    }
+
     for (const std of BRAILLE_STANDARD_VALUES) {
       if (Math.abs(quarterNotes - std.quarterValue) < epsilon) {
         return { atoms: [{ ...std }], tuplet: null };
@@ -1128,6 +1280,12 @@ export class TmdBrailleGenerator {
   ): Set<number> {
     if (items.length < 3) return new Set<number>();
 
+    const expectedQ = beat.count * (4.0 / Math.max(1, beat.noteValue));
+    const totalQ = items.reduce((s, a) => s + a.quarterValue, 0);
+    if (Math.abs(totalQ - expectedQ) > 1e-3) {
+      return new Set<number>();
+    }
+
     const isCompound =
       beat.count >= 6 &&
       beat.count % 3 === 0 &&
@@ -1201,6 +1359,9 @@ export class TmdBrailleGenerator {
     length: number
   ): boolean {
     const targetDen = items[start].baseDenominator;
+    if (items[start].tieStop || items[start + length - 1].tieStart) {
+      return false;
+    }
     for (let k = start; k < start + length; k++) {
       const it = items[k];
       if (
@@ -1210,12 +1371,14 @@ export class TmdBrailleGenerator {
       ) {
         return false;
       }
-      if (k > start && it.isRest) {
+      if (k > start && (it.isRest || it.tieStop || it.hasInlineDirective)) {
+        return false;
+      }
+      if (k < start + length - 1 && it.tieStart) {
         return false;
       }
     }
-    const afterIdx = start + length;
-    if (afterIdx < items.length) {
+    for (let afterIdx = start + length; afterIdx < items.length; afterIdx++) {
       const nextItem = items[afterIdx];
       if (nextItem.baseDenominator === 8 && nextItem.tuplet === null) {
         return false;
@@ -1357,6 +1520,7 @@ export class TmdBrailleGenerator {
         const atom = atoms[atomIdx];
         const flatIdx = flatIndexByGroupAtom.get(`${groupIndex}:${atomIdx}`) ?? -1;
         const hintStr = distinctionHints.get(flatIdx) ?? "";
+        const forcedAtStart = pitchState.forceOctave;
         if (hintStr.length > 0) {
           pitchState.forceOctave = true;
         }
@@ -1369,7 +1533,8 @@ export class TmdBrailleGenerator {
           : atom;
 
         const base = notes[0];
-        const isContinuationAtom = atomIdx > 0 || base.event.tieStop;
+        const isContinuationAtom =
+          atomIdx > 0 || (base.event.tieStop && !forcedAtStart);
         const needsInternalTie =
           atomIdx < atoms.length - 1 || base.event.tieStart;
 
@@ -1461,7 +1626,15 @@ export class TmdBrailleGenerator {
 
         const tieStr = needsInternalTie ? (notes.length > 1 ? ".C" : "@C") : "";
         const tupStr = atomIdx === 0 ? tupletPrefixAscii : "";
-        out += `${hintStr}${tupStr}${accStr}${octStr}${noteCell}${intervalsStr}${tieStr}`;
+        const coreAtomAscii = `${tupStr}${accStr}${octStr}${noteCell}${intervalsStr}${tieStr}`;
+        const dynWrappedAscii =
+          atomIdx === 0
+            ? TmdBrailleGenerator.prependDynamic(
+                pendingDynamicAscii,
+                coreAtomAscii
+              )
+            : coreAtomAscii;
+        out += `${hintStr}${dynWrappedAscii}`;
       }
 
       const pitchNames = [...notes]
@@ -1477,7 +1650,7 @@ export class TmdBrailleGenerator {
       const chordName =
         pitchNames.length > 1 ? pitchNames.join("+") : pitchNames[0];
       return {
-        ascii: TmdBrailleGenerator.prependDynamic(pendingDynamicAscii, out),
+        ascii: out,
         sighted: `${chordName}(${durLabel})${tieSuffix}`,
       };
     }
@@ -1581,12 +1754,16 @@ export class TmdBrailleGenerator {
       }
     }
 
-    // 3. Percussion event
-    if (first.content.type === "percussion") {
-      const clean = Array.from(first.content.pattern).filter(
-        (c) => c.trim().length > 0 && c !== "(" && c !== ")"
+    // 3. Percussion event(s)
+    const percEvents = group.filter((ev) => ev.content.type === "percussion");
+    if (percEvents.length > 0) {
+      const patterns = percEvents.map((ev) =>
+        Array.from(
+          ev.content.type === "percussion" ? ev.content.pattern : ""
+        ).filter((c) => c.trim().length > 0 && c !== "(" && c !== ")")
       );
-      if (clean.length === 0) {
+      const maxSlots = Math.max(0, ...patterns.map((p) => p.length));
+      if (maxSlots === 0) {
         return {
           ascii: TmdBrailleGenerator.prependDynamic(
             pendingDynamicAscii,
@@ -1595,7 +1772,7 @@ export class TmdBrailleGenerator {
           sighted: `Rest(${TmdBrailleGenerator.formatDurationLabel(atoms)})`,
         };
       }
-      const subDur = first.duration / clean.length;
+      const subDur = first.duration / maxSlots;
       const subSpec = TmdBrailleGenerator.resolveBrailleDuration(subDur);
       const subAtom = subSpec.atoms[0] ?? {
         baseDenominator: 4,
@@ -1603,33 +1780,70 @@ export class TmdBrailleGenerator {
         quarterValue: 1.0,
       };
       let out = "";
-      for (const ch of clean) {
-        if (ch === "-" || ch === ".") {
+      const sightedSlots: string[] = [];
+      for (let slotIdx = 0; slotIdx < maxSlots; slotIdx++) {
+        const slotChars = patterns
+          .map((p) => p[slotIdx])
+          .filter((ch): ch is string => Boolean(ch && ch !== "-" && ch !== "."));
+        if (slotChars.length === 0) {
           out += TmdBrailleGenerator.encodeRestCell(subAtom);
+          sightedSlots.push("-");
           continue;
         }
-        const { stepIndex, octave } =
-          PercussionStroke.fromCharacter(ch)?.unpitchedDisplayPosition ??
-          PercussionStroke.snare.unpitchedDisplayPosition;
+        sightedSlots.push(slotChars.join("+"));
+        const positions = slotChars
+          .map(
+            (ch) =>
+              PercussionStroke.fromCharacter(ch)?.unpitchedDisplayPosition ??
+              PercussionStroke.snare.unpitchedDisplayPosition
+          )
+          .sort(
+            (a, b) =>
+              a.octave * 7 + a.stepIndex - (b.octave * 7 + b.stepIndex)
+          );
+        const basePos = positions[0];
         const octStr = TmdBrailleGenerator.shouldEmitOctave(
-          octave,
-          stepIndex,
+          basePos.octave,
+          basePos.stepIndex,
           pitchState.lastPitch,
           pitchState.forceOctave
         )
-          ? TmdBrailleGenerator.encodeOctaveMark(octave)
+          ? TmdBrailleGenerator.encodeOctaveMark(basePos.octave)
           : "";
-        pitchState.lastPitch = { octave, stepIndex };
+        pitchState.lastPitch = {
+          octave: basePos.octave,
+          stepIndex: basePos.stepIndex,
+        };
         pitchState.forceOctave = false;
+        let intervalsStr = "";
+        const baseDiatonic = basePos.octave * 7 + basePos.stepIndex;
+        let prevDiatonic = baseDiatonic;
+        for (let mIdx = 1; mIdx < positions.length; mIdx++) {
+          const memPos = positions[mIdx];
+          const memDiatonic = memPos.octave * 7 + memPos.stepIndex;
+          const deltaFromBase = Math.max(0, memDiatonic - baseDiatonic);
+          const deltaFromPrev = Math.max(0, memDiatonic - prevDiatonic);
+          prevDiatonic = memDiatonic;
+          if (deltaFromBase === 0) {
+            intervalsStr += `${TmdBrailleGenerator.encodeOctaveMark(memPos.octave)}-`;
+          } else {
+            const intIdx = ((deltaFromBase - 1) % 7) + 1;
+            const needOct = deltaFromBase > 7 || deltaFromPrev >= 7;
+            const intOct = needOct
+              ? TmdBrailleGenerator.encodeOctaveMark(memPos.octave)
+              : "";
+            intervalsStr += `${intOct}${TmdBrailleGenerator.encodeIntervalSign(intIdx)}`;
+          }
+        }
         out += `${octStr}${TmdBrailleGenerator.encodeNoteCell(
-          stepIndex,
+          basePos.stepIndex,
           subAtom.baseDenominator,
           subAtom.isDotted
-        )}`;
+        )}${intervalsStr}`;
       }
       return {
         ascii: TmdBrailleGenerator.prependDynamic(pendingDynamicAscii, out),
-        sighted: `Perc(${clean.join("")})`,
+        sighted: `Perc(${sightedSlots.join("")})`,
       };
     }
 
@@ -1644,10 +1858,18 @@ export class TmdBrailleGenerator {
         pitchState.forceOctave = true;
       }
       const tupStr = atomIdx === 0 ? tupletPrefixAscii : "";
-      restOut += `${hintStr}${tupStr}${prefix}${TmdBrailleGenerator.encodeRestCell(atom)}`;
+      const coreRestAscii = `${tupStr}${prefix}${TmdBrailleGenerator.encodeRestCell(atom)}`;
+      const dynWrappedRestAscii =
+        atomIdx === 0
+          ? TmdBrailleGenerator.prependDynamic(
+              pendingDynamicAscii,
+              coreRestAscii
+            )
+          : coreRestAscii;
+      restOut += `${hintStr}${dynWrappedRestAscii}`;
     }
     return {
-      ascii: TmdBrailleGenerator.prependDynamic(pendingDynamicAscii, restOut),
+      ascii: restOut,
       sighted: `Rest(${TmdBrailleGenerator.formatDurationLabel(atoms)})`,
     };
   }
@@ -1879,7 +2101,7 @@ export class TmdBrailleGenerator {
         out += TmdBrailleGenerator.encodeUpperDigits(Number(ch));
       } else {
         inNumber = false;
-        if (ch >= "A" && ch >= "A" && ch <= "Z") {
+        if (ch >= "A" && ch <= "Z") {
           out += `,${ch}`;
         } else if (ch >= "a" && ch <= "z") {
           out += ch.toUpperCase();
@@ -1887,6 +2109,20 @@ export class TmdBrailleGenerator {
           out += " ";
         } else if (ch === "-" || ch === "_") {
           out += "-";
+        } else if (ch === "+") {
+          out += "+";
+        } else if (ch === "(" || ch === ")") {
+          out += "7";
+        } else if (ch === "/") {
+          out += "/";
+        } else if (ch === "#" || ch === "'") {
+          out += "%";
+        } else if (ch === "°") {
+          out += "4";
+        } else if (ch === "ø") {
+          out += "4'";
+        } else if (ch === "Δ") {
+          out += "0";
         }
       }
     }

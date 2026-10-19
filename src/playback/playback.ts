@@ -33,11 +33,19 @@ export interface PlaybackState {
   dynamicLevel: DynamicMark;
 }
 
+export interface PlaybackTupletMetadata {
+  id: number;
+  actual: number;
+  normal: number;
+  writtenDuration: number;
+}
+
 export interface PlaybackEvent {
   position: number;
   duration: number;
   content: PlaybackContent;
   state: PlaybackState;
+  tuplet?: PlaybackTupletMetadata;
 }
 
 export interface PlaybackDirectiveEvent {
@@ -474,6 +482,8 @@ export class TmdPlaybackRenderer {
     };
   }
 
+  private static nextTupletId = 1;
+
   private static renderParagraph(
     paragraph: Entry,
     start: number,
@@ -518,7 +528,7 @@ export class TmdPlaybackRenderer {
           if (events.length > 0) {
             const lastPosition = events[events.length - 1].position;
             for (let i = events.length - 1; i >= 0 && Math.abs(events[i].position - lastPosition) < 1e-6; i--) {
-              events[i] = { ...events[i], duration: events[i].duration + groupDuration };
+              events[i] = { ...events[i], duration: events[i].duration + groupDuration, tuplet: undefined };
             }
           } else {
             events.push({ position, duration: groupDuration, content: { type: "rest" }, state });
@@ -526,37 +536,72 @@ export class TmdPlaybackRenderer {
         } else {
           // If the group contains internal ties (e.g. (1 2 3 -)%(--)), calculate slots based on total units
           // Each slot in the tuplet has baseSlotDuration = groupDuration / group.units.length
-          const baseSlotDuration = groupDuration / Math.max(1, group.units.length);
+          const slotCount = Math.max(1, group.units.length);
+          const spanCount = Math.max(1, group.length);
+          const baseSlotDuration = groupDuration / slotCount;
+          const isSlotPowerOf2 = (slotCount & (slotCount - 1)) === 0;
+          const isSpanPowerOf2 = (spanCount & (spanCount - 1)) === 0;
+          let tupletSpec: { id: number; actual: number; normal: number; writtenSlotDuration: number } | undefined;
+          if (slotCount >= 2 && (!isSlotPowerOf2 || !isSpanPowerOf2)) {
+            const tupletId = TmdPlaybackRenderer.nextTupletId++;
+            const normal = isSlotPowerOf2
+              ? spanCount
+              : 1 << Math.floor(Math.log2(slotCount));
+            const writtenSlotDuration = isSlotPowerOf2
+              ? unitDuration
+              : groupDuration / normal;
+            tupletSpec = {
+              id: tupletId,
+              actual: slotCount,
+              normal,
+              writtenSlotDuration,
+            };
+          }
           let currentEventIndices: number[] = [];
 
           group.units.forEach((unit, idx) => {
             if (unit.type === "tie") {
               if (currentEventIndices.length > 0) {
-                for (const index of currentEventIndices) events[index].duration += baseSlotDuration;
+                for (const index of currentEventIndices) {
+                  events[index].duration += baseSlotDuration;
+                  if (events[index].tuplet && tupletSpec) {
+                    events[index].tuplet = {
+                      ...events[index].tuplet!,
+                      writtenDuration: events[index].tuplet!.writtenDuration + tupletSpec.writtenSlotDuration,
+                    };
+                  }
+                }
               } else if (events.length > 0) {
                 // Leading tie inside group extends all simultaneous events from preceding group
                 const lastPos = events[events.length - 1].position;
                 for (let k = events.length - 1; k >= 0; k--) {
                   if (Math.abs(events[k].position - lastPos) < 1e-6) {
                     events[k].duration += baseSlotDuration;
+                    events[k].tuplet = undefined;
                   } else {
                     break;
                   }
                 }
               } else {
-                events.push({ position: position + idx * baseSlotDuration, duration: baseSlotDuration, content: { type: "rest" }, state });
+                const tuplet = tupletSpec
+                  ? { id: tupletSpec.id, actual: tupletSpec.actual, normal: tupletSpec.normal, writtenDuration: tupletSpec.writtenSlotDuration }
+                  : undefined;
+                events.push({ position: position + idx * baseSlotDuration, duration: baseSlotDuration, content: { type: "rest" }, state, tuplet });
                 currentEventIndices = [events.length - 1];
               }
             } else {
               const content = TmdPlaybackRenderer.contentOf(unit);
+              const tuplet = tupletSpec
+                ? { id: tupletSpec.id, actual: tupletSpec.actual, normal: tupletSpec.normal, writtenDuration: tupletSpec.writtenSlotDuration }
+                : undefined;
               if (unit.type === "multiNote") {
                 currentEventIndices = [];
                 for (const note of unit.notes) {
-                  events.push({ position: position + idx * baseSlotDuration, duration: baseSlotDuration, content: { type: "note", note }, state });
+                  events.push({ position: position + idx * baseSlotDuration, duration: baseSlotDuration, content: { type: "note", note }, state, tuplet: tuplet ? { ...tuplet } : undefined });
                   currentEventIndices.push(events.length - 1);
                 }
               } else if (content) {
-                events.push({ position: position + idx * baseSlotDuration, duration: baseSlotDuration, content, state });
+                events.push({ position: position + idx * baseSlotDuration, duration: baseSlotDuration, content, state, tuplet });
                 currentEventIndices = [events.length - 1];
               }
             }
