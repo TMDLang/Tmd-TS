@@ -9,7 +9,10 @@ export class TmdABCGenerator {
 
     abc += "X:1\n";
     abc += `T:${sheet.name ? sheet.name : "Untitled"}\n`;
-    abc += `C:${sheet.metadata["composer"] || "TMD (Chen, Chih-Han / aguai)"}\n`;
+    const composer = sheet.metadata["composer"];
+    if (composer && composer.length > 0) {
+      abc += `C:${composer}\n`;
+    }
     abc += `M:${sheet.beat.count}/${sheet.beat.noteValue}\n`;
     abc += "L:1/16\n";
     const speed = sheet.speed > 0 ? sheet.speed : 120;

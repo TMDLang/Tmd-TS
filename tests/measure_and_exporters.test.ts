@@ -1231,6 +1231,44 @@ A:Piano@|0|{
         }
       }
     });
+
+    it('leaves composer blank when score has no composer metadata (Issue #76)', () => {
+      const tmdWithoutComposer = `
+::SCORE::
+** No Composer Song **
+!= 120
+?= C
+<4/4>
+
+A:Piano@|0|{
+    <4*>
+    | 1 2 3 4 |
+}
+-> A ->#
+`;
+      const sheetWithoutComposer = TmdParser.parse(tmdWithoutComposer)!;
+      const abcWithoutComposer = TmdABCGenerator.generateABC(sheetWithoutComposer);
+      expect(abcWithoutComposer).not.toContain('aguai');
+      expect(abcWithoutComposer).not.toContain('\nC:');
+
+      const tmdWithComposer = `
+::SCORE::
+** Custom Composer Song **
+~ "曲：王小明"
+!= 120
+?= C
+<4/4>
+
+A:Piano@|0|{
+    <4*>
+    | 1 2 3 4 |
+}
+-> A ->#
+`;
+      const sheetWithComposer = TmdParser.parse(tmdWithComposer)!;
+      const abcWithComposer = TmdABCGenerator.generateABC(sheetWithComposer);
+      expect(abcWithComposer).toContain('\nC:曲：王小明\n');
+    });
   });
 
   describe('LilyPond Postfix Dynamics, Multi-Stroke Percussion, Sub-64th/Tuplets, and Golden Case Conservation (Issue #74)', () => {
