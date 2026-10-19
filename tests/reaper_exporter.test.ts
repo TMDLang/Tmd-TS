@@ -232,4 +232,24 @@ Theme {
     expect(rpp).toContain('NAME "Violin1"');
     expect(rpp).toContain('NAME "Violin2"');
   });
+
+  it('rejects zero, negative, non-integer, or out-of-range PPQ before generating project data (Issue #77)', () => {
+    const sheet = TmdParser.parse(`::SCORE::
+** Invalid PPQ **
+!= 120
+?= C
+<4/4>
+A:Piano@|0|{
+    <4*>
+    1 2 3 4
+}
+-> A ->#
+`)!;
+
+    expect(() => TmdReaperGenerator.generateRPP(sheet, 0)).toThrow(/ppq must be an integer between 1 and 32767/);
+    expect(() => TmdReaperGenerator.generateRPP(sheet, -960)).toThrow(/ppq must be an integer between 1 and 32767/);
+    expect(() => TmdReaperGenerator.generateRPP(sheet, Number.NaN)).toThrow(/ppq must be an integer between 1 and 32767/);
+    expect(() => TmdReaperGenerator.generateRPP(sheet, 480.5)).toThrow(/ppq must be an integer between 1 and 32767/);
+    expect(() => TmdReaperGenerator.generateRPP(sheet, 0x8000)).toThrow(/ppq must be an integer between 1 and 32767/);
+  });
 });

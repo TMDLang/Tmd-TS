@@ -8,6 +8,13 @@ import {
   TmdMIDIGenerator,
 } from './midi.js';
 
+export class TmdReaperError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "TmdReaperError";
+  }
+}
+
 export class TmdReaperGenerator {
   public static readonly defaultPPQ = 960;
 
@@ -15,6 +22,9 @@ export class TmdReaperGenerator {
     rawSheet: Sheet,
     ppq: number = TmdReaperGenerator.defaultPPQ
   ): string {
+    if (!Number.isInteger(ppq) || ppq < 1 || ppq > 0x7fff) {
+      throw new TmdReaperError("ppq must be an integer between 1 and 32767");
+    }
     const sheet = TmdMacroEvaluator.expandThrowing(rawSheet);
     const distinctInstruments = SheetInstrumentHelper.distinctInstruments(sheet, false);
 
