@@ -12,6 +12,7 @@ import { handleLSPCommand } from "./commands/lsp.js";
 import { runLSPServer } from "./commands/lsp.js";
 import { handleOutlineCommand } from "./commands/outline.js";
 import { handleRefactorCommand } from "./commands/refactor.js";
+import { handleStudioURLCommand } from "./commands/studio_url.js";
 import {
   TmdABCGenerator,
   TmdBrailleGenerator,
@@ -44,6 +45,7 @@ SUBCOMMANDS:
   outline [--json] <input-path> Generate a document symbol outline of a TMD score.
   inspect [--json | --svg | --html] [--locale LOCALE] <input-path> Inspect full song musical profile, vocal tessitura, and arrangement density.
   refactor <subcommand>    Refactor TMD score (rename-instrument, rename-section, extract-instrument).
+  studio-url [<options>] <input-path> Generate a shareable TMD Studio URL (#tmd=...) for a TMD score.
   lsp                      Run Language Server Protocol (LSP) daemon over stdio (JSON-RPC).
 
 OPTIONS:
@@ -99,6 +101,9 @@ export function main(argv = process.argv.slice(2)): number {
     }
     if (first === "refactor") {
       return handleRefactorCommand(argv.slice(1));
+    }
+    if (first === "studio-url") {
+      return handleStudioURLCommand(argv.slice(1));
     }
     if (first === "lsp") {
       return handleLSPCommand(argv.slice(1));
