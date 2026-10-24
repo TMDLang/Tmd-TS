@@ -47,7 +47,7 @@ intro:Piano@|0|{
 2. **Title**: \`** Title **\` (enclosed in double asterisks).
 3. **Tempo**: \`!= 120\` (in BPM, supports integer or decimals like \`!= 120.5\`).
 4. **Movable-do base**: \`?= C\` (sets the pitch of numbered degree \`1\`; it is not a major/minor declaration).
-5. **Explicit tonality**: \`key= Bm\` or \`Key= C\` (stores the actual declared key and mode separately from \`?=\`).
+5. **Printed key signature (Optional)**: \`key= Bm\` or \`Key= C\` is notation metadata for engraved/printed output. Use it only when a printed score or notation export needs an explicit key signature; it does not change sounding pitches. \`?=\` controls the movable-do pitch center and playback pitch context.
 6. **Time Signature**: \`<4/4>\` (numerator/denominator, e.g. \`<3/4>\`, \`<6/8>\`).
 7. **Entries / Assignment Tracks**: \`name:assignment@|offset|{ ... }\`.
 8. **Playback Flow**: \`-> section1 -> section2 ->#\` (must start with \`->\` and terminate with \`->#\`).
@@ -241,7 +241,7 @@ You can place inline directives anywhere inside a section between notes:
 - \`{!= 140}\`: Absolute tempo change (BPM).
 - \`{!+ 10}\`: Relative tempo change (+10 BPM).
 - \`{?= D}\`: Absolute movable-do base change to D.
-- \`{key= Bm}\`: Explicit notation key-signature marker for B minor, independent from movable-do playback context; it does not change sounding pitches.
+  - \`{key= Bm}\`: Printed/engraved B-minor key-signature marker, independent from movable-do playback context; it does not transpose sounding pitches.
 - \`{?+ 2}\`: Relative key transposition up 2 semitones.
 - \`{?- 2}\`: Relative key transposition down 2 semitones.
 - \`[pitchMode=fixed]\` on the entry header forces **Fixed Pitch** (locks \`keyOffset = 0\`, immune to song-level playback transpositions like \`-> {?+3} -> ...\`). The inline forms \`{?=fixed}\` and \`{? fixed}\` are unsupported. Ideal for Timpani, Sound FX, or non-transposing tracks.
@@ -272,7 +272,7 @@ Rules:
   - \`{?+3}\`: Transpose playback up 3 semitones.
   - \`{?-2}\`: Transpose playback down 2 semitones.
   - \`{?=G}\`: Change the movable-do playback base to G.
-  - \`{key= Bm}\`: Declare an explicit B-minor tonality change.
+  - \`{key= Bm}\`: Declare a printed/engraved B-minor key-signature change; it does not transpose sounding pitches.
 - Supports S-Expression macro combinators:
   - \`(play <Theme> <Instrument>)\`: Bind abstract theme to an instrument track.
   - \`(loop <Theme> <Instrument> <times>)\`: Repeat theme sequentially.
