@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.6] - 2026-10-27
+
+### Added
+- Expanded the AI TMD skill with simultaneous multi-note syntax, prototype and macro rules, checker workflows, and CLI/MCP guidance.
+
+### Changed
+- Clarified the distinction between `?=` sounding movable-do context and `key=` printed key-signature metadata.
+- Documented the supported fixed-pitch entry attribute `[pitchMode=fixed]` and current refactoring／inspection workflows.
+
 ## [0.2.5] - 2026-10-11
 
 ### Added
