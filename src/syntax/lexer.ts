@@ -229,6 +229,62 @@ export class Lexer {
       }
     }
 
+    // Lyric line: L|, L |, L1|, L1 |, etc.
+    if (c === "L") {
+      let digitOffset = 1;
+      while (this.peek(digitOffset) >= "0" && this.peek(digitOffset) <= "9") {
+        digitOffset++;
+      }
+      let wsOffset = digitOffset;
+      while (this.peek(wsOffset) === " " || this.peek(wsOffset) === "\t") {
+        wsOffset++;
+      }
+      if (this.peek(wsOffset) === "|") {
+        const stanzaStr = this.input.slice(this.pos + 1, this.pos + digitOffset);
+        const stanza = stanzaStr.length > 0 ? parseInt(stanzaStr, 10) : undefined;
+        let rawPrefix = "";
+        for (let i = 0; i <= wsOffset; i++) {
+          rawPrefix += this.advance();
+        }
+        let content = "";
+        let braceDepth = 0;
+        while (!this.isAtEnd()) {
+          const cur = this.peek();
+          if (cur === "\r" || cur === "\n") break;
+          if (cur === "/" && this.peek(1) === "*") {
+            this.advance();
+            this.advance();
+            while (!this.isAtEnd() && !(this.peek() === "*" && this.peek(1) === "/")) {
+              this.advance();
+            }
+            if (!this.isAtEnd()) {
+              this.advance();
+              this.advance();
+            }
+            content += " ";
+            continue;
+          }
+          if (cur === "{") {
+            braceDepth++;
+          } else if (cur === "}") {
+            if (braceDepth > 0) {
+              braceDepth--;
+            } else {
+              break;
+            }
+          }
+          content += this.advance();
+        }
+        return {
+          type: "lyricLine",
+          value: { stanza, rawPrefix, content },
+          text: `${rawPrefix}${content}`,
+          line,
+          column: col,
+        };
+      }
+    }
+
     // **
     if (c === "*" && this.peek(1) === "*") {
       this.advance(); this.advance();

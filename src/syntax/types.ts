@@ -359,11 +359,103 @@ export interface SectionDirective {
   kind: SectionDirectiveKind;
 }
 
+export type LyricSoundingKind = "syllable" | "tie" | "rest";
+
+export interface LyricSoundingToken {
+  type: "sounding";
+  kind: LyricSoundingKind;
+  /** Original token text as written in source (before merging standalone transparent tokens). */
+  text: string;
+  /** Text with adjacent standalone transparent punctuation merged (for sheet engraving exporters). */
+  rawText: string;
+  /** Punctuation-stripped and hyphen-stripped word/syllable (for vocal synthesis exporters). */
+  cleanWord: string;
+  /** True when a syllable token ends with a syllable-continuation hyphen (e.g. 'yes-'). */
+  isHyphenated?: boolean;
+  line?: number;
+  column?: number;
+}
+
+export interface LyricTransparentToken {
+  type: "transparent";
+  text: string;
+  position: "leading" | "trailing";
+  line?: number;
+  column?: number;
+}
+
+export interface LyricGroup {
+  type: "group";
+  /** All lexical elements (both sounding and transparent) inside the parenthesized group. */
+  elements: LyricElement[];
+  /** Resolved sounding tokens inside the group (1:1 with melodic unit group notes). */
+  soundingTokens: LyricSoundingToken[];
+  /** True if a duration ratio suffix such as %(--) was attached to the lyric group. */
+  hasInvalidRatio?: boolean;
+  line?: number;
+  column?: number;
+}
+
+export type LyricElement =
+  | LyricSoundingToken
+  | LyricTransparentToken
+  | LyricGroup;
+
+export type LyricSlot = LyricSoundingToken | LyricGroup;
+
+export interface LyricMeasure {
+  /** All lexical elements in the measure in appearance order (including transparent tokens). */
+  elements: LyricElement[];
+  /** Grid-aligned slots (sounding tokens and parenthesized groups; transparent tokens merged into rawText). */
+  slots: LyricSlot[];
+  /** Flattened sounding tokens across the measure (expanding groups). */
+  soundingTokens: LyricSoundingToken[];
+  /** Inline directives placed inside the lyric measure. */
+  directives?: string[];
+  line?: number;
+  column?: number;
+}
+
+export interface LyricLine {
+  /** Stanza number (1..64 for L1|..L64|, or undefined for default L|). */
+  stanza?: number;
+  /** Raw prefix as written, e.g. "L|", "L1|", "L |". */
+  rawPrefix: string;
+  measures: LyricMeasure[];
+  line?: number;
+  column?: number;
+}
+
+export interface MelodicMeasureSpan {
+  /** Index of the measure within the section (0-based). */
+  measureIndex: number;
+  /** Start index in section.unitGroups (inclusive). */
+  startGroupIndex: number;
+  /** End index in section.unitGroups (exclusive). */
+  endGroupIndex: number;
+  /** Start unit position (in noteLength units from start of section). */
+  startUnitPosition: number;
+  /** End unit position (in noteLength units from start of section). */
+  endUnitPosition: number;
+  line?: number;
+  column?: number;
+}
+
+export interface LyricBlock {
+  /** Melodic measures on the melodic line to which these lyric lines are attached. */
+  melodicMeasures: MelodicMeasureSpan[];
+  /** One or more lyric lines (L| or L1|..L64|) beneath the melodic line. */
+  lyricLines: LyricLine[];
+  line?: number;
+}
+
 export interface Section {
   noteLength: number;
   unitGroups: UnitGroup[];
   directives: SectionDirective[];
   barlinePositions?: number[];
+  lyricBlocks?: LyricBlock[];
+  lyrics?: LyricLine[];
 }
 
 export type EntryPitchMode = "transposing" | "fixed";
@@ -397,7 +489,7 @@ export type SExpr = SExprAtom | SExpr[];
 
 /** Canonical playback expression used to sequence sections and modifiers. */
 export type Playback =
-  | { type: "name"; name: string; line?: number; column?: number }
+  | { type: "name"; name: string; stanza?: number; rawStanzaTag?: string; line?: number; column?: number }
   | { type: "relative"; value: string; line?: number; column?: number }
   | { type: "absolute"; value: string; line?: number; column?: number }
   | { type: "macro"; expr: SExpr[]; line?: number; column?: number };
@@ -780,6 +872,8 @@ export function mapSectionsNotes(sections: Section[], transform: (note: Note) =>
     noteLength: sec.noteLength,
     directives: [...sec.directives],
     ...(sec.barlinePositions ? { barlinePositions: [...sec.barlinePositions] } : {}),
+    ...(sec.lyricBlocks ? { lyricBlocks: JSON.parse(JSON.stringify(sec.lyricBlocks)) } : {}),
+    ...(sec.lyrics ? { lyrics: JSON.parse(JSON.stringify(sec.lyrics)) } : {}),
     unitGroups: sec.unitGroups.map((group) => ({
       length: group.length,
       units: group.units.map((u) => mapUnitNotes(u, transform)),

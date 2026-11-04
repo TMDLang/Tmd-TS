@@ -2,6 +2,8 @@ import {
   Accidental,
   Beat,
   Entry,
+  LyricElement,
+  LyricLine,
   Note,
   Playback,
   Section,
@@ -71,13 +73,119 @@ export function formatSectionDirective(dir: SectionDirective): string {
   }
 }
 
+export function formatLyricElement(el: LyricElement): string {
+  switch (el.type) {
+    case "transparent":
+      return el.text;
+    case "sounding":
+      return el.text;
+    case "group":
+      return `(${el.elements.map(formatLyricElement).join(" ")})`;
+  }
+}
+
+export function formatLyricLine(line: LyricLine): string {
+  const prefix = line.stanza !== undefined ? `L${line.stanza}|` : "L|";
+  const measureStrs = line.measures.map((m) => m.elements.map(formatLyricElement).join(" "));
+  return `    ${prefix} ${measureStrs.join(" | ")} |`;
+}
+
 export function formatSection(sec: Section, beat: Beat = { count: 4, noteValue: 4 }): string {
   const lines: string[] = [];
   lines.push(`    <${sec.noteLength}*>`);
-  let counter = 0;
   let dirIdx = 0;
   const sortedDirs = [...sec.directives].sort((a, b) => a.position - b.position);
 
+  let curPos = 0;
+  const measureUnits = Math.max(1, Math.floor((beat.count * sec.noteLength) / beat.noteValue));
+
+  if (sec.lyricBlocks && sec.lyricBlocks.length > 0) {
+    let groupCursor = 0;
+
+    const formatGroupRangeByBeat = (startIdx: number, endIdx: number) => {
+      if (startIdx >= endIdx) return;
+      let currentMeasureTokens: string[] = ["|"];
+      let inMeasureCount = 0;
+      let counter = 0;
+
+      const appendDirs = (pos: number) => {
+        while (dirIdx < sortedDirs.length && sortedDirs[dirIdx].position === pos) {
+          currentMeasureTokens.push(formatSectionDirective(sortedDirs[dirIdx]));
+          dirIdx++;
+        }
+      };
+
+      appendDirs(curPos);
+      for (let i = startIdx; i < endIdx; i++) {
+        const group = sec.unitGroups[i];
+        currentMeasureTokens.push(formatUnitGroup(group));
+        inMeasureCount += group.length;
+        curPos += group.length;
+        appendDirs(curPos);
+
+        if (inMeasureCount >= measureUnits) {
+          currentMeasureTokens.push("|");
+          inMeasureCount = 0;
+          counter++;
+          if (counter >= 4 && i + 1 < endIdx) {
+            lines.push(`    ${currentMeasureTokens.join(" ")}`);
+            currentMeasureTokens = ["|"];
+            counter = 0;
+          }
+        }
+      }
+      if (currentMeasureTokens.length > 1) {
+        if (currentMeasureTokens[currentMeasureTokens.length - 1] !== "|") {
+          currentMeasureTokens.push("|");
+        }
+        lines.push(`    ${currentMeasureTokens.join(" ")}`);
+      }
+    };
+
+    for (const block of sec.lyricBlocks) {
+      if (block.melodicMeasures.length > 0) {
+        const firstStart = block.melodicMeasures[0].startGroupIndex;
+        if (groupCursor < firstStart) {
+          formatGroupRangeByBeat(groupCursor, firstStart);
+          groupCursor = firstStart;
+        }
+
+        const tokens: string[] = ["|"];
+        const appendDirs = (pos: number) => {
+          while (dirIdx < sortedDirs.length && sortedDirs[dirIdx].position === pos) {
+            tokens.push(formatSectionDirective(sortedDirs[dirIdx]));
+            dirIdx++;
+          }
+        };
+        appendDirs(curPos);
+
+        for (const mSpan of block.melodicMeasures) {
+          for (let i = mSpan.startGroupIndex; i < mSpan.endGroupIndex; i++) {
+            const group = sec.unitGroups[i];
+            tokens.push(formatUnitGroup(group));
+            curPos += group.length;
+            appendDirs(curPos);
+          }
+          tokens.push("|");
+          groupCursor = Math.max(groupCursor, mSpan.endGroupIndex);
+        }
+        lines.push(`    ${tokens.join(" ")}`);
+      }
+
+      const sortedLyrics = [...block.lyricLines].sort((a, b) => (a.stanza ?? 0) - (b.stanza ?? 0));
+      for (const lLine of sortedLyrics) {
+        lines.push(formatLyricLine(lLine));
+      }
+    }
+
+    if (groupCursor < sec.unitGroups.length) {
+      formatGroupRangeByBeat(groupCursor, sec.unitGroups.length);
+    }
+
+    return lines.join("\n") + "\n";
+  }
+
+  let counter = 0;
   let currentMeasureTokens: string[] = ["|"];
 
   function appendDirs(pos: number) {
@@ -87,10 +195,8 @@ export function formatSection(sec: Section, beat: Beat = { count: 4, noteValue: 
     }
   }
 
-  let curPos = 0;
   appendDirs(curPos);
 
-  const measureUnits = Math.max(1, Math.floor((beat.count * sec.noteLength) / beat.noteValue));
   let inMeasureCount = 0;
 
   for (let i = 0; i < sec.unitGroups.length; i++) {
@@ -160,7 +266,10 @@ export function formatSExpr(expr: SExpr): string {
 
 export function formatOrder(order: Playback): string {
   switch (order.type) {
-    case "name": return order.name;
+    case "name":
+      if (order.stanza !== undefined) return `${order.name}[L${order.stanza}]`;
+      if (order.rawStanzaTag) return `${order.name}[${order.rawStanzaTag}]`;
+      return order.name;
     case "relative": return `{?${order.value}}`;
     case "absolute": return `{?=${order.value}}`;
     case "macro": return `(${order.expr.map(formatSExpr).join(" ")})`;

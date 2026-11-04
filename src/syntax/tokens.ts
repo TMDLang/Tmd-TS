@@ -30,6 +30,7 @@ export type TokenType =
   | "percussion"
   | "metadata"
   | "programText"
+  | "lyricLine"
   | "tie"
   | "identifier"
   | "eof";
@@ -75,6 +76,7 @@ export function tokenExpectedDescription(type: TokenType): string {
     case "percussion": return "percussion";
     case "metadata": return "metadata";
     case "programText": return "program block";
+    case "lyricLine": return "lyric line";
     case "tie": return "-";
     case "identifier": return "identifier";
     case "eof": return "end of input";
