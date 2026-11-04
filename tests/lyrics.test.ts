@@ -1,4 +1,10 @@
 import { describe, expect, it } from "vitest";
+import {
+  TmdMIDIGenerator,
+  TmdUSTGenerator,
+  TmdVSQGenerator,
+  TmdVSQXGenerator,
+} from "../src/exporters/index.js";
 import { TmdMeasureRenderer, TmdPlaybackRenderer } from "../src/playback/index.js";
 import { formatSheet } from "../src/syntax/format.js";
 import { TmdParser } from "../src/syntax/parser.js";
@@ -389,5 +395,111 @@ TigerTheme {
       "day",
       "once",
     ]);
+  });
+});
+
+describe("Voice Synthesis Exporters with Lyrics (Issue #80 - Commit 4)", () => {
+  const synthSource = `::SCORE::
+** Synth Lyrics **
+!= 120
+?= C
+<4/4>
+
+verse:Vocal@|0|{
+    <4*>
+    | 1 2 3 - | 5 - 3 0 |
+    L| 「 か 」 き, く - | け - こ 0 |
+}
+
+-> verse ->#
+`;
+
+  it("emits MIDI 0xFF 0x05 Lyric Meta Events using cleanWord and omits melisma tie events", () => {
+    const sheet = TmdParser.parse(synthSource);
+    const timeline = TmdPlaybackRenderer.render(sheet, "Vocal");
+    const midiEvents = TmdMIDIGenerator.instrumentEvents(
+      timeline,
+      "Vocal",
+      { type: "standard", name: "Voice Oohs", program: 53 },
+      0,
+      480
+    );
+
+    const lyricEvents = midiEvents.filter((e) => e.message.type === "lyric");
+    expect(lyricEvents.map((e) => ({
+      tick: e.tick,
+      text: e.message.type === "lyric" ? e.message.text : "",
+    }))).toEqual([
+      { tick: 0, text: "か" },
+      { tick: 480, text: "き" },
+      { tick: 960, text: "く" },
+      { tick: 1920, text: "け" },
+      { tick: 2880, text: "こ" },
+    ]);
+
+    const midiBinary = TmdMIDIGenerator.generateMIDI(sheet);
+    // Verify 0xFF 0x05 meta event marker exists in encoded binary
+    let foundLyricMeta = false;
+    for (let i = 0; i < midiBinary.length - 1; i++) {
+      if (midiBinary[i] === 0xff && midiBinary[i + 1] === 0x05) {
+        foundLyricMeta = true;
+        break;
+      }
+    }
+    expect(foundLyricMeta).toBe(true);
+  });
+
+  it("exports VOCALOID .vsqx and .vsq with cleanWord lyrics, phonemes, and merged melisma durations", () => {
+    const sheet = TmdParser.parse(synthSource);
+    const vsqx = TmdVSQXGenerator.generateVSQX(sheet);
+
+    expect(vsqx).toContain("<y><![CDATA[か]]></y>");
+    expect(vsqx).toContain("<p><![CDATA[k a]]></p>");
+    expect(vsqx).toContain("<y><![CDATA[き]]></y>");
+    expect(vsqx).toContain("<p><![CDATA[k' i]]></p>");
+    expect(vsqx).toContain("<y><![CDATA[く]]></y>");
+    expect(vsqx).toContain("<dur>960</dur>");
+    expect(vsqx).not.toContain("「");
+    expect(vsqx).not.toContain(",");
+
+    const vsqBytes = TmdVSQGenerator.generateVSQ(sheet);
+    const iniBytes: number[] = [];
+    for (let i = 0; i < vsqBytes.length - 3; i++) {
+      if (vsqBytes[i] === 0xff && vsqBytes[i + 1] === 0x01) {
+        const len = vsqBytes[i + 2];
+        for (let j = 0; j < len; j++) {
+          iniBytes.push(vsqBytes[i + 3 + j]);
+        }
+        i += 2 + len;
+      }
+    }
+    const vsqText = new TextDecoder().decode(new Uint8Array(iniBytes));
+    expect(vsqText).toContain('L0="か","k a"');
+    expect(vsqText).toContain('L0="き","k\' i"');
+  });
+
+  it("exports UTAU .ust with cleanWord lyrics and merged melisma durations", () => {
+    const melismaScore = `::SCORE::
+** UTAU Melisma **
+!= 120
+?= C
+<4/4>
+
+verse:Vocal@|0|{
+    <4*>
+    | 1 2 3 4 |
+    L| I free! - - |
+}
+
+-> verse ->#
+`;
+    const sheet = TmdParser.parse(melismaScore);
+    const ust = TmdUSTGenerator.generateUST(sheet);
+    expect(ust).toContain("Lyric=I\r\n");
+    expect(ust).toContain("Lyric=free\r\n");
+    expect(ust).not.toContain("Lyric=free!");
+    expect(ust).not.toContain("Lyric=-");
+    // 'free' spans 3 quarter notes = 3 * 480 = 1440 ticks
+    expect(ust).toContain("Length=1440\r\nLyric=free\r\n");
   });
 });

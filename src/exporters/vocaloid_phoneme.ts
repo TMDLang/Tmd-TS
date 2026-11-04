@@ -156,7 +156,14 @@ export class VocaloidPhoneme {
       const tick = preMeasureTicks + Math.max(0, Number.isFinite(rawTicks) ? rawTicks : 0);
       const rawDur = Math.round(event.duration * ticksPerQuarter);
       const dur = Math.max(1, Number.isFinite(rawDur) ? rawDur : 1);
-      const lyric = defaultLyric;
+      if (event.lyric?.kind === 'tie' && items.length > 0) {
+        items[items.length - 1].dur += dur;
+        continue;
+      }
+      const lyric =
+        event.lyric?.kind === 'syllable' && event.lyric.cleanWord.length > 0
+          ? event.lyric.cleanWord
+          : defaultLyric;
       const phoneme = this.resolvePhoneme(lyric);
       items.push({ tick, dur, pitch, lyric, phoneme });
     }
