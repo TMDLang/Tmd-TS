@@ -12,6 +12,17 @@ export type TmdValidationRule =
   | "E-TIMELINE-OVERLAP"
   | "E-TEMPO-CONFLICT"
   | "E-CHORD-MULTINOTE"
+  | "E-LYRIC-SLOT-MISMATCH"
+  | "E-LYRIC-COUNT"
+  | "E-LYRIC-DIRECTIVE"
+  | "E-LYRIC-GROUP"
+  | "E-LYRIC-TOKEN-UNSEPARATED"
+  | "E-STANZA-ZERO"
+  | "E-STANZA-RANGE"
+  | "E-STANZA-DUPLICATE"
+  | "E-STANZA-INCONSISTENT"
+  | "W-STANZA-GAP"
+  | "W-STANZA-FALLBACK"
   | "W-CHORD-CUSTOM"
   | "W-UNUSED-ENTRY"
   | "W-UNUSED-PROTOTYPE"
@@ -573,6 +584,316 @@ export class TmdScoreValidator {
                 message: `Section '${secName}' instrument '${item.instrument}' spans ${item.span} measure(s), whereas other instruments in '${secName}' span ${referenceSpan} measure(s). Check if '<n*>' note-length subdivision or rest padding was intended.`,
               });
             }
+          }
+        }
+      }
+    }
+
+    // Stage 7: Vocal Lyrics & Multi-Stanza Validation
+    const sectionDefinedStanzas = new Map<string, Set<number>>();
+    for (const entry of sheet.entries) {
+      for (const section of entry.sections) {
+        if (!section.lyricBlocks || section.lyricBlocks.length === 0) continue;
+
+        const blockStanzaSets: Array<{ line: number; stanzas: Set<number> }> = [];
+
+        for (const block of section.lyricBlocks) {
+          const seenStanzasInBlock = new Set<number | string>();
+          const validStanzaNumbersInBlock: number[] = [];
+
+          for (const lyricLine of block.lyricLines) {
+            const lLine = (lyricLine.line ?? entry.line ?? 1) + lineOffset;
+            const lCol = lyricLine.column ?? 1;
+
+            if (lyricLine.stanza === 0) {
+              diagnostics.push({
+                file,
+                line: lLine,
+                column: lCol,
+                endLine: lLine,
+                endColumn: lCol + lyricLine.rawPrefix.length,
+                severity: "error",
+                rule: "E-STANZA-ZERO",
+                message: `Illegal stanza index 'L0|' in '${entry.name}'. Stanza numbering is 1-based (L1..L64).`,
+              });
+            } else if (lyricLine.stanza !== undefined && lyricLine.stanza > 64) {
+              diagnostics.push({
+                file,
+                line: lLine,
+                column: lCol,
+                endLine: lLine,
+                endColumn: lCol + lyricLine.rawPrefix.length,
+                severity: "error",
+                rule: "E-STANZA-RANGE",
+                message: `Stanza index 'L${lyricLine.stanza}|' in '${entry.name}' exceeds the maximum limit of 64 (L1..L64).`,
+              });
+            }
+
+            const stanzaKey = lyricLine.stanza ?? "default";
+            if (seenStanzasInBlock.has(stanzaKey)) {
+              diagnostics.push({
+                file,
+                line: lLine,
+                column: lCol,
+                endLine: lLine,
+                endColumn: lCol + lyricLine.rawPrefix.length,
+                severity: "error",
+                rule: "E-STANZA-DUPLICATE",
+                message: `Duplicate stanza '${lyricLine.rawPrefix.trim()}' declared under the same melodic measure block in '${entry.name}'.`,
+              });
+            } else {
+              seenStanzasInBlock.add(stanzaKey);
+              if (
+                lyricLine.stanza !== undefined &&
+                lyricLine.stanza >= 1 &&
+                lyricLine.stanza <= 64
+              ) {
+                validStanzaNumbersInBlock.push(lyricLine.stanza);
+                if (!sectionDefinedStanzas.has(entry.name)) {
+                  sectionDefinedStanzas.set(entry.name, new Set());
+                }
+                sectionDefinedStanzas.get(entry.name)!.add(lyricLine.stanza);
+              }
+            }
+
+            if (lyricLine.measures.length !== block.melodicMeasures.length) {
+              diagnostics.push({
+                file,
+                line: lLine,
+                column: lCol,
+                endLine: lLine,
+                endColumn: lCol + 2,
+                severity: "error",
+                rule: "E-LYRIC-SLOT-MISMATCH",
+                message: `Lyric line in '${entry.name}' has ${lyricLine.measures.length} measure(s), but corresponding melodic line has ${block.melodicMeasures.length} measure(s).`,
+              });
+            }
+
+            const pairCount = Math.min(
+              lyricLine.measures.length,
+              block.melodicMeasures.length
+            );
+            for (let mIdx = 0; mIdx < pairCount; mIdx++) {
+              const lMeasure = lyricLine.measures[mIdx];
+              const mSpan = block.melodicMeasures[mIdx];
+              const melodicGroups = section.unitGroups.slice(
+                mSpan.startGroupIndex,
+                mSpan.endGroupIndex
+              );
+
+              if (lMeasure.directives && lMeasure.directives.length > 0) {
+                for (const dir of lMeasure.directives) {
+                  diagnostics.push({
+                    file,
+                    line: lLine,
+                    column: lMeasure.column ?? lCol,
+                    endLine: lLine,
+                    endColumn: (lMeasure.column ?? lCol) + dir.length,
+                    severity: "error",
+                    rule: "E-LYRIC-DIRECTIVE",
+                    message: `Musical directive '${dir}' is forbidden inside a lyric line in '${entry.name}'.`,
+                  });
+                }
+              }
+
+              for (const tok of lMeasure.soundingTokens) {
+                if (tok.kind === "syllable" && /\p{Script=Han}{2,}/u.test(tok.cleanWord)) {
+                  diagnostics.push({
+                    file,
+                    line: lLine,
+                    column: tok.column ?? lCol,
+                    endLine: lLine,
+                    endColumn: (tok.column ?? lCol) + tok.text.length,
+                    severity: "error",
+                    rule: "E-LYRIC-TOKEN-UNSEPARATED",
+                    message: `Lyric token '${tok.text}' in '${entry.name}' contains multiple unseparated CJK syllables; separate each syllable with whitespace (e.g. '${Array.from(tok.cleanWord).join(" ")}').`,
+                  });
+                }
+              }
+
+              const expectedSlots = melodicGroups.reduce(
+                (sum, g) => sum + g.units.length,
+                0
+              );
+              const actualSlots = lMeasure.soundingTokens.length;
+              if (actualSlots !== expectedSlots) {
+                diagnostics.push({
+                  file,
+                  line: lLine,
+                  column: lMeasure.column ?? lCol,
+                  endLine: lLine,
+                  endColumn: (lMeasure.column ?? lCol) + 2,
+                  severity: "error",
+                  rule: "E-LYRIC-SLOT-MISMATCH",
+                  message: `Lyric measure ${mSpan.measureIndex + 1} in '${entry.name}' has ${actualSlots} sounding token(s), but corresponding melodic measure has ${expectedSlots} slot(s).`,
+                });
+              }
+
+              const hasMelodicSubdivision = melodicGroups.some(
+                (g) => g.units.length > 1
+              );
+              const hasLyricGroup = lMeasure.slots.some((s) => s.type === "group");
+              if (hasMelodicSubdivision || hasLyricGroup) {
+                if (
+                  lMeasure.slots.some(
+                    (s) => s.type === "group" && s.hasInvalidRatio
+                  )
+                ) {
+                  diagnostics.push({
+                    file,
+                    line: lLine,
+                    column: lMeasure.column ?? lCol,
+                    endLine: lLine,
+                    endColumn: (lMeasure.column ?? lCol) + 2,
+                    severity: "error",
+                    rule: "E-LYRIC-GROUP",
+                    message: `Lyric group in '${entry.name}' must not repeat duration ratio suffix '%(...)'.`,
+                  });
+                } else if (lMeasure.slots.length !== melodicGroups.length) {
+                  diagnostics.push({
+                    file,
+                    line: lLine,
+                    column: lMeasure.column ?? lCol,
+                    endLine: lLine,
+                    endColumn: (lMeasure.column ?? lCol) + 2,
+                    severity: "error",
+                    rule: "E-LYRIC-GROUP",
+                    message: `Lyric measure ${mSpan.measureIndex + 1} in '${entry.name}' does not mirror melodic subdivision grouping '(...)'.`,
+                  });
+                } else {
+                  for (let gIdx = 0; gIdx < melodicGroups.length; gIdx++) {
+                    const mGroup = melodicGroups[gIdx];
+                    const lSlot = lMeasure.slots[gIdx];
+                    const melodyIsGroup = mGroup.units.length > 1;
+                    const lyricIsGroup = lSlot.type === "group";
+                    if (melodyIsGroup !== lyricIsGroup) {
+                      diagnostics.push({
+                        file,
+                        line: lLine,
+                        column: lSlot.column ?? lCol,
+                        endLine: lLine,
+                        endColumn: (lSlot.column ?? lCol) + 2,
+                        severity: "error",
+                        rule: "E-LYRIC-GROUP",
+                        message: `Lyric measure ${mSpan.measureIndex + 1} in '${entry.name}' must mirror melodic subdivision with parenthesized lyric group '(...)'.`,
+                      });
+                      break;
+                    } else if (
+                      lyricIsGroup &&
+                      lSlot.soundingTokens.length !== mGroup.units.length
+                    ) {
+                      diagnostics.push({
+                        file,
+                        line: lLine,
+                        column: lSlot.column ?? lCol,
+                        endLine: lLine,
+                        endColumn: (lSlot.column ?? lCol) + 2,
+                        severity: "error",
+                        rule: "E-LYRIC-GROUP",
+                        message: `Lyric group in '${entry.name}' has ${lSlot.soundingTokens.length} sounding token(s), but melodic subdivision has ${mGroup.units.length} note slot(s).`,
+                      });
+                      break;
+                    }
+                  }
+                }
+              }
+            }
+          }
+
+          if (validStanzaNumbersInBlock.length > 0) {
+            const sortedStanzas = [...new Set(validStanzaNumbersInBlock)].sort(
+              (a, b) => a - b
+            );
+            const maxStanza = sortedStanzas[sortedStanzas.length - 1];
+            const missing: number[] = [];
+            for (let s = 1; s <= maxStanza; s++) {
+              if (!sortedStanzas.includes(s)) {
+                missing.push(s);
+              }
+            }
+            const blockLine = (block.line ?? entry.line ?? 1) + lineOffset;
+            if (missing.length > 0) {
+              diagnostics.push({
+                file,
+                line: blockLine,
+                column: 1,
+                endLine: blockLine,
+                endColumn: 2,
+                severity: "warning",
+                rule: "W-STANZA-GAP",
+                message: `Discontinuous stanza numbering in '${entry.name}': missing stanza(s) ${missing.map((n) => "L" + n).join(", ")}.`,
+              });
+            }
+            blockStanzaSets.push({
+              line: blockLine,
+              stanzas: new Set(sortedStanzas),
+            });
+          }
+        }
+
+        if (blockStanzaSets.length >= 2) {
+          const unionStanzas = new Set<number>();
+          for (const b of blockStanzaSets) {
+            for (const s of b.stanzas) unionStanzas.add(s);
+          }
+          if (unionStanzas.size > 1) {
+            for (const b of blockStanzaSets) {
+              if (b.stanzas.size !== unionStanzas.size) {
+                diagnostics.push({
+                  file,
+                  line: b.line,
+                  column: 1,
+                  endLine: b.line,
+                  endColumn: 2,
+                  severity: "error",
+                  rule: "E-STANZA-INCONSISTENT",
+                  message: `Inconsistent stanza set across measures in '${entry.name}': expected stanza(s) ${Array.from(unionStanzas).sort((a, c) => a - c).map((n) => "L" + n).join(", ")}.`,
+                });
+              }
+            }
+          }
+        }
+      }
+    }
+
+    for (const order of sheet.playback) {
+      if (order.type === "name") {
+        if (order.stanza === 0) {
+          diagnostics.push({
+            file,
+            line: (order.line ?? 1) + lineOffset,
+            column: order.column ?? 1,
+            endLine: (order.line ?? 1) + lineOffset,
+            endColumn: (order.column ?? 1) + 2,
+            severity: "error",
+            rule: "E-STANZA-ZERO",
+            message: `Illegal stanza selector '[L0]' on playback order '-> ${order.name}'. Stanza numbering is 1-based (L1..L64).`,
+          });
+        } else if (order.stanza !== undefined && order.stanza > 64) {
+          diagnostics.push({
+            file,
+            line: (order.line ?? 1) + lineOffset,
+            column: order.column ?? 1,
+            endLine: (order.line ?? 1) + lineOffset,
+            endColumn: (order.column ?? 1) + 2,
+            severity: "error",
+            rule: "E-STANZA-RANGE",
+            message: `Stanza selector '[L${order.stanza}]' on playback order '-> ${order.name}' exceeds maximum limit of 64 (L1..L64).`,
+          });
+        } else if (order.stanza === undefined) {
+          const stanzas = sectionDefinedStanzas.get(order.name);
+          if (stanzas && stanzas.size > 1) {
+            diagnostics.push({
+              file,
+              line: (order.line ?? 1) + lineOffset,
+              column: order.column ?? 1,
+              endLine: (order.line ?? 1) + lineOffset,
+              endColumn: (order.column ?? 1) + 2,
+              severity: "warning",
+              rule: "W-STANZA-FALLBACK",
+              message: `Playback order '-> ${order.name}' omits a stanza selector for multi-stanza section '${order.name}'; falling back to default 'L1'.`,
+              suggestion: `Specify an explicit stanza selector such as '-> ${order.name}[L1]'.`,
+            });
           }
         }
       }

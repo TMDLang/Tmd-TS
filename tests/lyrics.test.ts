@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { formatSheet } from "../src/syntax/format.js";
 import { TmdParser } from "../src/syntax/parser.js";
+import { TmdScoreValidator } from "../src/validation/score_validator.js";
 
 describe("Vocal Lyrics AST, Parser & formatSheet (Issue #80 - Commit 1)", () => {
   it("parses single-stanza L| lyrics with syllables, ties (-), and rests (0)", () => {
@@ -160,5 +161,116 @@ TigerTheme {
     expect(formatted).toContain("    | 1 1 2 2 | 2 3 4 5 |\n    L1| A A A A | U U U U |\n    L2| B B B B | V V V V |");
     expect(formatted).toContain("    | 1 2 3 1 |\n    L| 兩 隻 老 虎 |");
     expect(formatted).toContain("-> verse[L1] -> verse[L2] ->#");
+  });
+});
+
+describe("Semantic Validation & Checker Diagnostics for Lyrics (Issue #80 - Commit 2)", () => {
+  it("passes validation for valid 1:1 aligned lyrics including dyads (1+3), tuplets, and transparent punctuation", () => {
+    const validScore = `::SCORE::
+** Valid Vocal Score **
+!= 120
+?= C
+<4/4>
+
+verse:Vocal@|0|{
+    <4*>
+    | 1+3 (3 4)%(--) 0 | 5 - 3 1 |
+    L1| 「 哈 (嗎 喔) 」 0 | 我 - 很 好 |
+    L2| 「 嘿 (走 吧) 」 0 | 還 - 不 錯 |
+}
+
+-> verse[L1] -> verse[L2] ->#
+`;
+    const diags = TmdScoreValidator.validate(validScore);
+    expect(diags).toEqual([]);
+  });
+
+  it("emits E-LYRIC-SLOT-MISMATCH when lyric sounding token count does not match melodic slot count", () => {
+    const mismatchScore = `::SCORE::
+** Slot Mismatch **
+!= 120
+?= C
+<4/4>
+
+verse:Vocal@|0|{
+    <4*>
+    | 1 2 3 4 |
+    L| 你 好 嗎 |
+}
+
+-> verse ->#
+`;
+    const diags = TmdScoreValidator.validate(mismatchScore);
+    expect(diags.some((d) => d.rule === "E-LYRIC-SLOT-MISMATCH" && d.severity === "error")).toBe(true);
+  });
+
+  it("emits E-LYRIC-GROUP when melodic tuplet subdivision is not mirrored by parenthesized lyric group", () => {
+    const groupMismatch = `::SCORE::
+** Group Mismatch **
+!= 120
+?= C
+<4/4>
+
+verse:Vocal@|0|{
+    <4*>
+    | (1 1)%(--) 3 4 |
+    L| 你 好 嗎 喔 |
+}
+
+-> verse ->#
+`;
+    const diags = TmdScoreValidator.validate(groupMismatch);
+    expect(diags.some((d) => d.rule === "E-LYRIC-GROUP" && d.severity === "error")).toBe(true);
+  });
+
+  it("emits E-LYRIC-DIRECTIVE and E-LYRIC-TOKEN-UNSEPARATED for forbidden directives and unseparated CJK tokens", () => {
+    const score = `::SCORE::
+** Directive and Unseparated **
+!= 120
+?= C
+<4/4>
+
+verse:Vocal@|0|{
+    <4*>
+    | 1 2 3 4 |
+    L| {mp} 我們 走 吧 0 |
+}
+
+-> verse ->#
+`;
+    const diags = TmdScoreValidator.validate(score);
+    expect(diags.some((d) => d.rule === "E-LYRIC-DIRECTIVE" && d.severity === "error")).toBe(true);
+    expect(diags.some((d) => d.rule === "E-LYRIC-TOKEN-UNSEPARATED" && d.severity === "error")).toBe(true);
+  });
+
+  it("emits E-STANZA-ZERO (L0|), E-STANZA-RANGE (> 64), E-STANZA-DUPLICATE, E-STANZA-INCONSISTENT, W-STANZA-GAP, and W-STANZA-FALLBACK", () => {
+    const stanzaErrors = `::SCORE::
+** Stanza Diagnostics **
+!= 120
+?= C
+<4/4>
+
+verse:Vocal@|0|{
+    <4*>
+    | 1 2 3 4 |
+    L0| A A A A |
+    L1| B B B B |
+    L1| C C C C |
+    L3| D D D D |
+    L65| E E E E |
+
+    | 5 6 7 1^ |
+    L1| F F F F |
+}
+
+-> verse ->#
+`;
+    const diags = TmdScoreValidator.validate(stanzaErrors);
+    expect(diags.some((d) => d.rule === "E-STANZA-ZERO" && d.severity === "error")).toBe(true);
+    expect(diags.some((d) => d.rule === "E-STANZA-RANGE" && d.severity === "error")).toBe(true);
+    expect(diags.some((d) => d.rule === "E-STANZA-DUPLICATE" && d.severity === "error")).toBe(true);
+    expect(diags.some((d) => d.rule === "E-STANZA-INCONSISTENT" && d.severity === "error")).toBe(true);
+    expect(diags.some((d) => d.rule === "W-STANZA-GAP" && d.severity === "warning")).toBe(true);
+    expect(diags.some((d) => d.rule === "W-STANZA-FALLBACK" && d.severity === "warning")).toBe(true);
   });
 });
