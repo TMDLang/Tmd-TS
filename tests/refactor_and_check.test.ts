@@ -58,8 +58,8 @@ intro:Piano@|0|{
     expect(formatted).toContain("intro:Piano@|0|{");
     expect(formatted).toContain("    <4*>");
     expect(formatted).toContain("    | [1] - | - [7,] |");
-    expect(formatted).toContain("    1 2 3 4");
-    expect(formatted).toContain("    (1' 2, 3^ 4_)%(--)");
+    expect(formatted).toContain("    | 1 2 3 4 |");
+    expect(formatted).toContain("    | (1' 2, 3^ 4_)%(--) |");
     expect(formatted).toContain("}");
     expect(formatted).toContain("-> intro ->#");
 
@@ -1376,7 +1376,7 @@ describe("TMD CLI subcommands check, format, and refactor (TDD)", () => {
       // optimize-grid (Cello has 1_ - - - at <4*>, should compress to <1*>)
       expect(main(["refactor", "optimize-grid", file, "--instrument", "Cello", "-i"])).toBe(0);
       content = readFileSync(file, "utf-8");
-      expect(content).toContain("Chorus:Cello@|0|{\n    <1*>\n    1_\n}");
+      expect(content).toContain("Chorus:Cello@|0|{\n    <1*>\n    | 1_ |\n}");
       expect(content).toContain("Chorus:Fiddle@|0|{\n    <4*>");
 
       // duplicate-track
@@ -1825,6 +1825,123 @@ intro:Piano@|0|{
 `);
       const group = sheet.entries[0].sections[0].unitGroups[0];
       expect(formatUnitGroup(group)).toBe("(1 2)%(-)");
+    });
+  });
+
+  describe("Musical Unit & Measure Line Formatting (#1-#6)", () => {
+    it("expands compact note sequences while preserving chords, directives, percussion, and multi-notes (#1)", () => {
+      const input = `::SCORE::
+** Compact Expansion **
+!= 120
+?= C
+<4/4>
+
+verse:Piano@|0|{
+    <16*>
+    | 1 234 | 1'2_3 0 | 10-2 | [Cmaj7]1 [Cadd9] 1+3+5 XsTt |
+}
+
+-> verse ->#
+`;
+      const formatted = TmdRefactor.format(input);
+      expect(formatted).toContain("    <16*>");
+      expect(formatted).toContain("    | 1 2 3 4 | 1' 2_ 3 0 | 1 0 - 2 | [Cmaj7] 1 [Cadd9] 1+3+5 XsTt |");
+    });
+
+    it("completes missing outer barlines on musical measure lines (#2)", () => {
+      const input = `::SCORE::
+** Barline Completion **
+!= 120
+?= C
+<4/4>
+
+verse:Piano@|0|{
+    <4*>
+    1 2 3 4 | 5 - 3 1
+    | 1 2 3 4
+    5 6 7 1^ |
+}
+
+-> verse ->#
+`;
+      const formatted = TmdRefactor.format(input);
+      expect(formatted).toContain("    | 1 2 3 4 | 5 - 3 1 |");
+      expect(formatted).toContain("    | 1 2 3 4 |");
+      expect(formatted).toContain("    | 5 6 7 1^ |");
+    });
+
+    it("normalizes tuplets and unit groups removing inner edge padding and spaces around % (#3)", () => {
+      const input = `::SCORE::
+** Tuplet Normalization **
+!= 120
+?= C
+<4/4>
+
+verse:Piano@|0|{
+    <4*>
+    | ( 1 2 ) % ( - ) ( 3 4)%(-) (12)%(- -) ( 5 6 ) |
+}
+
+-> verse ->#
+`;
+      const formatted = TmdRefactor.format(input);
+      expect(formatted).toContain("    | (1 2)%(-) (3 4)%(-) (1 2)%(--) (5 6) |");
+    });
+
+    it("compacts chord brackets and slash bass separators (#4)", () => {
+      const input = `::SCORE::
+** Chord Compaction **
+!= 120
+?= C
+<4/4>
+
+verse:Piano@|0|{
+    <4*>
+    | [ C ] - [ C / G ] - | [ Am7 / E ] - [ Gsus4 ] - |
+}
+
+-> verse ->#
+`;
+      const formatted = TmdRefactor.format(input);
+      expect(formatted).toContain("    | [C] - [C/G] - | [Am7/E] - [Gsus4] - |");
+    });
+
+    it("orders note modifiers canonically with accidental before octave displacement (#5)", () => {
+      const input = `::SCORE::
+** Modifier Order **
+!= 120
+?= C
+<4/4>
+
+verse:Piano@|0|{
+    <4*>
+    | 1^' 5_, 2^^' (3_' 4^,)%(-) | 1^'+3_, - - - |
+}
+
+-> verse ->#
+`;
+      const formatted = TmdRefactor.format(input);
+      expect(formatted).toContain("    | 1'^ 5,_ 2'^^ (3'_ 4,^)%(-) | 1'^+3,_ - - - |");
+    });
+
+    it("compacts multi-note + operators and inline directives {...} (#6)", () => {
+      const input = `::SCORE::
+** Multi-Note and Directives **
+!= 120
+?= C
+<4/4>
+
+verse:Piano@|0|{
+    <4*>
+    | { != 120 } 1 + 3 { ?= D } 2 + 4 + 6 { ? + 2 } 5 { key = C } 6 | { < 3 / 4 > } { mf } 1 2 3 |
+}
+
+-> verse ->#
+`;
+      const formatted = TmdRefactor.format(input);
+      expect(formatted).toContain(
+        "    | {!=120} 1+3 {?=D} 2+4+6 {?+2} 5 {key= C} 6 | {<3/4>} {mf} 1 2 3 |"
+      );
     });
   });
 });
