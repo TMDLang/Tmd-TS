@@ -14,6 +14,7 @@ import {
   classifyTopLevelLine,
   findInlineCommentStart,
   formatLine,
+  parseLyricStanzaIndex,
   reindentBlockComment,
   type TopLevelBlockKind,
 } from "./format_helpers.js";
@@ -147,6 +148,28 @@ export class TmdRefactor {
         } else {
           inPlaybackFlow = false;
         }
+      }
+
+      const firstStanzaIdx = parseLyricStanzaIndex(trimmed);
+      if (firstStanzaIdx !== undefined) {
+        const lyricBlock: { stanzaIdx: number; text: string }[] = [];
+        let j = i;
+        while (j < rawLines.length) {
+          const subTrimmed = rawLines[j].trim();
+          const stanzaIdx = parseLyricStanzaIndex(subTrimmed);
+          if (stanzaIdx === undefined) break;
+          lyricBlock.push({
+            stanzaIdx,
+            text: formatLine(rawLines[j], indentLevel),
+          });
+          j++;
+        }
+        lyricBlock.sort((a, b) => a.stanzaIdx - b.stanzaIdx);
+        for (const item of lyricBlock) {
+          resultLines.push(item.text);
+        }
+        i = j;
+        continue;
       }
 
       const formattedLine = formatLine(line, indentLevel);

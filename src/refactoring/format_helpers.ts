@@ -5,6 +5,65 @@ export function escapeRegex(str: string): string {
 const PARAGRAPH_HEADER_REGEX =
   /^([a-zA-Z0-9_\u4e00-\u9fa5-]+)\s*:\s*([a-zA-Z0-9_\u4e00-\u9fa5-]+)(?:\s*\[[^\]]*\])?\s*(@[^{]*)?\s*\{/;
 const GRID_SUBDIVISION_REGEX = /^<(\d+)\*>/;
+const LYRIC_LINE_REGEX = /^L(\d+)?\s*\|(.*)$/;
+
+export function parseLyricStanzaIndex(trimmedLine: string): number | undefined {
+  const commentIdx = findInlineCommentStart(trimmedLine);
+  const clean = (commentIdx !== -1 ? trimmedLine.slice(0, commentIdx) : trimmedLine).trim();
+  const match = clean.match(LYRIC_LINE_REGEX);
+  if (!match) return undefined;
+  if (!match[1]) return 0;
+  return parseInt(match[1], 10);
+}
+
+export function formatLyricBody(text: string): string {
+  const chars = Array.from(text);
+  const tokens: string[] = [];
+  let i = 0;
+
+  while (i < chars.length) {
+    const ch = chars[i];
+    if (ch === " " || ch === "\t") {
+      i++;
+      continue;
+    }
+    if (ch === "|") {
+      tokens.push("|");
+      i++;
+      continue;
+    }
+    if (ch === "(") {
+      const closeIdx = findMatchingDelimiter(chars, i, "(", ")");
+      if (closeIdx !== -1) {
+        const innerRaw = chars.slice(i + 1, closeIdx).join("");
+        const formattedInner = formatLyricBody(innerRaw);
+        tokens.push(`(${formattedInner})`);
+        i = closeIdx + 1;
+        continue;
+      }
+    }
+    let token = "";
+    while (
+      i < chars.length &&
+      chars[i] !== " " &&
+      chars[i] !== "\t" &&
+      chars[i] !== "|" &&
+      chars[i] !== "(" &&
+      chars[i] !== ")"
+    ) {
+      token += chars[i];
+      i++;
+    }
+    if (token.length > 0) {
+      tokens.push(token);
+    } else {
+      tokens.push(chars[i]);
+      i++;
+    }
+  }
+
+  return tokens.join(" ");
+}
 
 export function parseParagraphHeaderLine(
   trimmedLine: string
@@ -390,6 +449,24 @@ export function formatLine(line: string, indent = 0): string {
       .trim()
       .replace(/\s+/g, " ");
     return indentPrefix + normalized + commentSuffix;
+  }
+
+  // Lyric line: L| ... or L1| ...
+  const lyricMatch = trimmed.match(LYRIC_LINE_REGEX);
+  if (lyricMatch) {
+    const stanzaNum = lyricMatch[1] ?? "";
+    const prefix = `L${stanzaNum}|`;
+    let body = formatLyricBody(lyricMatch[2]);
+    while (body.startsWith("|")) {
+      body = body.slice(1).trimStart();
+    }
+    while (body.endsWith("|")) {
+      body = body.slice(0, -1).trimEnd();
+    }
+    if (body.length === 0) {
+      return `${indentPrefix}${prefix} |${commentSuffix}`;
+    }
+    return `${indentPrefix}${prefix} ${body} |${commentSuffix}`;
   }
 
   // Content / measure line

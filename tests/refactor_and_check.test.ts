@@ -2096,5 +2096,127 @@ chorus:Vocal@|0|{
       );
     });
   });
+
+  describe("Lyric Line Formatting, Stanza Sorting & Idempotency (#7, #16)", () => {
+    it("formats lyric lines normalizing prefix, outer barlines, token spacing, and parenthesized groups (#7)", () => {
+      const input = `::SCORE::
+** Lyric Formatting **
+!= 120
+?= C
+<4/4>
+
+verse:Vocal@|0|{
+    <4*>
+    1 2 3 4 | 5 - 3 1
+    L |   你   好   嗎   喔   |   我   -   很   好
+    | (1 1)%(--) 3 4 |
+    L| (  你   好  )   嗎   喔   |
+}
+
+-> verse ->#
+`;
+      const formatted = TmdRefactor.format(input);
+      expect(formatted).toContain("    | 1 2 3 4 | 5 - 3 1 |\n    L| 你 好 嗎 喔 | 我 - 很 好 |");
+      expect(formatted).toContain("    | (1 1)%(--) 3 4 |\n    L| (你 好) 嗎 喔 |");
+    });
+
+    it("sorts consecutive multi-stanza lyric lines in ascending numeric order (#7)", () => {
+      const input = `::SCORE::
+** Stanza Sorting **
+!= 120
+?= C
+<4/4>
+
+verse:Vocal@|0|{
+    <4*>
+    | 1 2 3 4 | 5 - 3 1 |
+    L10 | 第 十 段 詞 | 結 尾 啦 - |
+    L2 | 吃 飽 了 嗎 | 還 - 沒 吃 |
+    L1| 你 好 嗎 喔 | 我 - 很 好 |
+}
+
+-> verse[L1] -> verse[L2] -> verse[L10] ->#
+`;
+      const formatted = TmdRefactor.format(input);
+      expect(formatted).toContain(
+        [
+          "    | 1 2 3 4 | 5 - 3 1 |",
+          "    L1| 你 好 嗎 喔 | 我 - 很 好 |",
+          "    L2| 吃 飽 了 嗎 | 還 - 沒 吃 |",
+          "    L10| 第 十 段 詞 | 結 尾 啦 - |",
+        ].join("\n")
+      );
+    });
+
+    it("satisfies format idempotency and AST serializer compatibility (#16)", () => {
+      const messySource = `::SCORE::
+** Idempotency & Compatibility **
+!=128
+?=G
+key=Em
+<4/4>
+~   "Composer: Alice | Bob"
+=~: __ALBUM__ = "Greatest   Hits"
+Theme{
+<4*>
+1234
+}
+verse : Vocal [ pitchMode = fixed ] @ | 0 | {
+
+<4*>
+1^' 2_, ( 3 4 ) % ( - ) | [ C / G ] 1 + 3 0 -
+L2 | 第 二 段 ( 歌 詞 ) | 啦 - 0 -
+L1 | 第 一 段 ( 歌 詞 ) | 喔 - 0 -
+
+}
+show : Lighting @ verse {
+"""
+cue 1
+  wait   4
+"""
+}
+-> (play Theme Piano) -> verse[ L1 ]
+-> verse[ L2 ] -> #
+
+`;
+      const once = TmdRefactor.format(messySource);
+      const twice = TmdRefactor.format(once);
+      expect(twice).toBe(once);
+
+      const parseableSource = `::SCORE::
+** AST Round Trip **
+!= 120
+?= D
+key= Bm
+<4/4>
+
+~ "Composer: J.S. Bach"
+=~:__OPUS__= "BWV 1"
+
+Theme {
+    <4*>
+    | 1 2 3 4 |
+}
+
+verse:Piano[pitchMode=fixed]@|0|{
+    <4*>
+    | {!=100} (1 2)%(-) 3+5 [D/F#] - | 1'^ 5,_ 0 - |
+}
+
+show:Lighting@verse{
+"""
+cue black
+wait 4
+"""
+}
+
+-> (play Theme Violin) -> verse -> {?+2} -> verse
+    -> verse ->#
+`;
+      const sheet = TmdParser.parse(parseableSource);
+      const serialized = formatSheet(sheet);
+      expect(TmdRefactor.format(serialized)).toBe(serialized);
+    });
+  });
 });
 
