@@ -44,8 +44,7 @@ export function formatUnitGroup(group: UnitGroup): string {
   if (group.units.length === 1 && group.length === 1) {
     return formatUnit(group.units[0]);
   }
-  const separator = group.units.some((u) => u.type === "multiNote" || u.type === "chord") ? " " : "";
-  const unitsStr = group.units.map(formatUnit).join(separator);
+  const unitsStr = group.units.map(formatUnit).join(" ");
   const lenStr = "-".repeat(group.length);
   return `(${unitsStr})%(${lenStr})`;
 }
@@ -73,14 +72,17 @@ export function formatSectionDirective(dir: SectionDirective): string {
 }
 
 export function formatSection(sec: Section, beat: Beat = { count: 4, noteValue: 4 }): string {
-  let result = `\t<${sec.noteLength}*>`;
+  const lines: string[] = [];
+  lines.push(`    <${sec.noteLength}*>`);
   let counter = 0;
   let dirIdx = 0;
   const sortedDirs = [...sec.directives].sort((a, b) => a.position - b.position);
 
+  let currentMeasureTokens: string[] = ["|"];
+
   function appendDirs(pos: number) {
     while (dirIdx < sortedDirs.length && sortedDirs[dirIdx].position === pos) {
-      result += `${formatSectionDirective(sortedDirs[dirIdx])} `;
+      currentMeasureTokens.push(formatSectionDirective(sortedDirs[dirIdx]));
       dirIdx++;
     }
   }
@@ -90,36 +92,39 @@ export function formatSection(sec: Section, beat: Beat = { count: 4, noteValue: 
 
   const measureUnits = Math.max(1, Math.floor((beat.count * sec.noteLength) / beat.noteValue));
   let inMeasureCount = 0;
-  result += "\n\t| ";
 
-  for (const group of sec.unitGroups) {
-    result += `${formatUnitGroup(group)} `;
+  for (let i = 0; i < sec.unitGroups.length; i++) {
+    const group = sec.unitGroups[i];
+    currentMeasureTokens.push(formatUnitGroup(group));
     inMeasureCount += group.length;
     curPos += group.length;
     appendDirs(curPos);
 
     if (inMeasureCount >= measureUnits) {
-      result += "| ";
+      currentMeasureTokens.push("|");
       inMeasureCount = 0;
       counter++;
-      if (counter >= 4) {
-        result += "\n\t| ";
+      if (counter >= 4 && i + 1 < sec.unitGroups.length) {
+        lines.push(`    ${currentMeasureTokens.join(" ")}`);
+        currentMeasureTokens = ["|"];
         counter = 0;
       }
     }
   }
 
-  if (inMeasureCount > 0 && !result.trim().endsWith("|")) {
-    result += "|";
-  }
-
   while (dirIdx < sortedDirs.length) {
-    result += `${formatSectionDirective(sortedDirs[dirIdx])} `;
+    currentMeasureTokens.push(formatSectionDirective(sortedDirs[dirIdx]));
     dirIdx++;
   }
 
-  result += "\n\n";
-  return result;
+  if (currentMeasureTokens.length > 1) {
+    if (currentMeasureTokens[currentMeasureTokens.length - 1] !== "|") {
+      currentMeasureTokens.push("|");
+    }
+    lines.push(`    ${currentMeasureTokens.join(" ")}`);
+  }
+
+  return lines.join("\n") + "\n";
 }
 
 export function formatParagraph(p: Entry, beat?: Beat): string {
@@ -141,9 +146,7 @@ export function formatParagraph(p: Entry, beat?: Beat): string {
     result += "|{\n";
   }
 
-  for (const sec of p.sections) {
-    result += formatSection(sec, beat);
-  }
+  result += p.sections.map((sec) => formatSection(sec, beat)).join("\n");
   result += "}\n\n";
   return result;
 }
@@ -168,8 +171,8 @@ export function formatSheet(sheet: Sheet): string {
   let result = "";
   result += "::SCORE::\n";
   result += `** ${sheet.name} **\n`;
-  result += `!=${Number.isInteger(sheet.speed) ? sheet.speed : sheet.speed}\n`;
-  result += `?=${sheet.keySignature.toString()}\n`;
+  result += `!= ${Number.isInteger(sheet.speed) ? sheet.speed : sheet.speed}\n`;
+  result += `?= ${sheet.keySignature.toString()}\n`;
   if (sheet.declaredKey) result += `key= ${sheet.declaredKey}\n`;
   result += `<${sheet.beat.count}/${sheet.beat.noteValue}>\n\n`;
 
@@ -188,13 +191,18 @@ export function formatSheet(sheet: Sheet): string {
     result += formatParagraph(p, sheet.beat);
   }
 
-  let counter = 0;
-  for (const order of sheet.playback) {
-    result += `-> ${formatOrder(order)} `;
-    counter++;
-    if (counter % 4 === 0) result += "\n";
+  if (sheet.playback.length === 0) {
+    result += "->#\n";
+  } else {
+    const chunks: string[] = [];
+    for (let i = 0; i < sheet.playback.length; i += 4) {
+      const slice = sheet.playback.slice(i, i + 4);
+      const linePrefix = i === 0 ? "" : "    ";
+      const suffix = i + 4 >= sheet.playback.length ? " ->#" : "";
+      chunks.push(`${linePrefix}${slice.map((o) => `-> ${formatOrder(o)}`).join(" ")}${suffix}`);
+    }
+    result += chunks.join("\n") + "\n";
   }
-  result += "->#\n";
   return result;
 }
 

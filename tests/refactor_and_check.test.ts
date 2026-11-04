@@ -7,6 +7,9 @@ import { handleLSPCommand } from "../src/commands/lsp.js";
 import { handleOutlineCommand } from "../src/commands/outline.js";
 import { handleRefactorCommand } from "../src/commands/refactor.js";
 import {
+  formatSection,
+  formatSheet,
+  formatUnitGroup,
   Lexer,
   TmdMeasureChecker,
   TmdMeasureIssue,
@@ -1761,3 +1764,68 @@ verse:Vocal@|0|{
     }
   });
 });
+
+describe("Issue #79: Formatter Semantics Alignment", () => {
+  describe("AST Serializer (formatSheet, formatSection, formatUnitGroup)", () => {
+    it("uses 4 spaces instead of tabs in formatSection() (#13)", () => {
+      const sheet = TmdParser.parse(`::SCORE::
+** Tab Check **
+!= 120
+?= C
+<4/4>
+
+intro:Piano@|0|{
+    <4*>
+    | 1 2 3 4 |
+}
+
+-> intro ->#
+`);
+      const sectionFormatted = formatSection(sheet.entries[0].sections[0], sheet.beat);
+      expect(sectionFormatted).not.toContain("\t");
+      expect(sectionFormatted).toContain("    <4*>\n    | 1 2 3 4 |");
+    });
+
+    it("normalizes header spacing with a space after = in formatSheet() (#14)", () => {
+      const sheet = TmdParser.parse(`::SCORE::
+** Header Check **
+!=120
+?=D
+key=Bm
+<4/4>
+
+intro:Piano@|0|{
+    <4*>
+    | 1 2 3 4 |
+}
+
+-> intro ->#
+`);
+      const serialized = formatSheet(sheet);
+      expect(serialized).toContain("!= 120\n");
+      expect(serialized).toContain("?= D\n");
+      expect(serialized).toContain("key= Bm\n");
+      expect(serialized).not.toContain("!=120");
+      expect(serialized).not.toContain("?=D");
+    });
+
+    it("always separates units with a single space in formatUnitGroup() (#15)", () => {
+      const sheet = TmdParser.parse(`::SCORE::
+** Tuplet Check **
+!= 120
+?= C
+<4/4>
+
+intro:Piano@|0|{
+    <4*>
+    | (12)%(-) 3 4 - |
+}
+
+-> intro ->#
+`);
+      const group = sheet.entries[0].sections[0].unitGroups[0];
+      expect(formatUnitGroup(group)).toBe("(1 2)%(-)");
+    });
+  });
+});
+
