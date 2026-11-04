@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { TmdMeasureRenderer, TmdPlaybackRenderer } from "../src/playback/index.js";
 import { formatSheet } from "../src/syntax/format.js";
 import { TmdParser } from "../src/syntax/parser.js";
 import { TmdScoreValidator } from "../src/validation/score_validator.js";
@@ -272,5 +273,121 @@ verse:Vocal@|0|{
     expect(diags.some((d) => d.rule === "E-STANZA-INCONSISTENT" && d.severity === "error")).toBe(true);
     expect(diags.some((d) => d.rule === "W-STANZA-GAP" && d.severity === "warning")).toBe(true);
     expect(diags.some((d) => d.rule === "W-STANZA-FALLBACK" && d.severity === "warning")).toBe(true);
+  });
+});
+
+describe("Playback Timeline & Multi-Stanza Broadcast Routing (Issue #80 - Commit 3)", () => {
+  it("routes verse[L1] and verse[L2] across playback timeline and broadcasts to tracks with default L| fallback", () => {
+    const source = `::SCORE::
+** Multi-Stanza Broadcast **
+!= 120
+?= C
+<4/4>
+
+verse:LeadVocal@|0|{
+    <4*>
+    | 1 2 3 4 |
+    L1| 春 天 來 了 |
+    L2| 秋 天 到 了 |
+}
+
+verse:BackingVocal@|0|{
+    <4*>
+    | 5 - 5 - |
+    L| 啦 - 啦 - |
+}
+
+chorus:LeadVocal@|0|{
+    <4*>
+    | 1^ 7 6 5 |
+    L| 唱 首歌 吧 - |
+}
+
+-> verse[L1] -> chorus -> verse[L2] ->#
+`;
+    const sheet = TmdParser.parse(source);
+    const leadTimeline = TmdPlaybackRenderer.render(sheet, "LeadVocal");
+    const leadNoteEvents = leadTimeline.events.filter((e) => e.content.type === "note");
+    expect(leadNoteEvents.map((e) => e.lyric?.cleanWord)).toEqual([
+      "春",
+      "天",
+      "來",
+      "了",
+      "唱",
+      "首歌",
+      "吧",
+      "-",
+      "秋",
+      "天",
+      "到",
+      "了",
+    ]);
+
+    const backingTimeline = TmdPlaybackRenderer.render(sheet, "BackingVocal");
+    const backingNoteEvents = backingTimeline.events.filter((e) => e.content.type === "note");
+    // BackingVocal has 2 sustained notes per verse (duration 2.0 each), played in verse[L1] and verse[L2]
+    expect(backingNoteEvents).toHaveLength(4);
+    expect(backingNoteEvents.map((e) => e.lyric?.cleanWord)).toEqual(["啦", "啦", "啦", "啦"]);
+    expect(backingNoteEvents.map((e) => e.duration)).toEqual([2, 2, 2, 2]);
+  });
+
+  it("preserves and shifts prototype lyrics across canon macro voices and attaches syllabic/melisma metadata in TmdMeasureRenderer", () => {
+    const source = `::SCORE::
+** Canon Lyrics **
+!= 120
+?= C
+<4/4>
+
+TigerTheme {
+    <4*>
+    | 1 2 3 1 | 3 4 5 - |
+    L| yes- ter- day once | more - - - |
+}
+
+-> (canon TigerTheme (Soprano Alto) 1) ->#
+`;
+    const sheet = TmdParser.parse(source);
+    const sopranoTimeline = TmdPlaybackRenderer.render(sheet, "Soprano");
+    const altoTimeline = TmdPlaybackRenderer.render(sheet, "Alto");
+
+    expect(sopranoTimeline.events.map((e) => e.lyric?.cleanWord)).toEqual([
+      "yes",
+      "ter",
+      "day",
+      "once",
+      "more",
+      "-",
+      "-",
+    ]);
+    expect(sopranoTimeline.events.map((e) => e.lyric?.syllabic)).toEqual([
+      "begin",
+      "middle",
+      "end",
+      "single",
+      "single",
+      undefined,
+      undefined,
+    ]);
+    expect(sopranoTimeline.events[4].lyric?.melismaStart).toBe(true);
+
+    // Alto enters 1 measure (4 beats) later with identical lyrics
+    expect(altoTimeline.events[0].position).toBeCloseTo(4.0, 5);
+    expect(altoTimeline.events.map((e) => e.lyric?.cleanWord)).toEqual([
+      "yes",
+      "ter",
+      "day",
+      "once",
+      "more",
+      "-",
+      "-",
+    ]);
+
+    const sopranoMeasures = TmdMeasureRenderer.renderMeasures(sheet, "Soprano");
+    expect(sopranoMeasures[0].events.map((e) => e.lyric?.rawText)).toEqual([
+      "yes-",
+      "ter-",
+      "day",
+      "once",
+    ]);
   });
 });

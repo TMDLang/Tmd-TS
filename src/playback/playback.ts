@@ -8,11 +8,14 @@ import {
   effectivePlaybackOrders,
   Entry,
   KeySignature,
+  LyricLine,
+  LyricSoundingToken,
   MAX_TEMPO_BPM,
   MIN_TEMPO_BPM,
   Note,
   noteToMIDIPitch,
   Playback,
+  Section,
   SectionDirective,
   SectionDirectiveKind,
   Sheet,
@@ -40,12 +43,28 @@ export interface PlaybackTupletMetadata {
   writtenDuration: number;
 }
 
+export type LyricSyllabic = "single" | "begin" | "middle" | "end";
+
+export interface PlaybackLyric {
+  kind: "syllable" | "tie" | "rest";
+  text: string;
+  rawText: string;
+  cleanWord: string;
+  syllabic?: LyricSyllabic;
+  isHyphenated?: boolean;
+  melismaStart?: boolean;
+  melismaSlots?: number;
+  stanza?: number;
+}
+
 export interface PlaybackEvent {
   position: number;
   duration: number;
   content: PlaybackContent;
   state: PlaybackState;
   tuplet?: PlaybackTupletMetadata;
+  lyric?: PlaybackLyric;
+  stanzaLyrics?: PlaybackLyric[];
 }
 
 export interface PlaybackDirectiveEvent {
@@ -121,7 +140,7 @@ export class TmdPlaybackRenderer {
     return result;
   }
 
-  private static visitOrder(order: Playback, state: PlaybackState): { state: PlaybackState; name?: string } {
+  private static visitOrder(order: Playback, state: PlaybackState): { state: PlaybackState; name?: string; stanza?: number } {
     if (order.type === "relative") {
       const delta = parseInt(order.value.replace("+", ""), 10);
       return Number.isNaN(delta) ? { state } : { state: { ...state, keyOffset: state.keyOffset + delta } };
@@ -129,7 +148,7 @@ export class TmdPlaybackRenderer {
     if (order.type === "absolute") {
       return { state: { ...state, keyOffset: KeySignature.parse(order.value).semitoneOffset } };
     }
-    return order.type === "name" ? { state, name: order.name } : { state };
+    return order.type === "name" ? { state, name: order.name, stanza: order.stanza } : { state };
   }
 
   private static ordersFor(sheet: Sheet): Playback[] {
@@ -317,7 +336,8 @@ export class TmdPlaybackRenderer {
             start,
             paragraphState,
             paragraph.pitchMode === "fixed",
-            minTimeSigPos
+            minTimeSigPos,
+            visited.stanza
           );
           events.push(...rendered.events);
           directives.push(...rendered.directives);
@@ -484,12 +504,195 @@ export class TmdPlaybackRenderer {
 
   private static nextTupletId = 1;
 
+  private static resolveSectionLyrics(
+    section: Section,
+    selectedStanza?: number
+  ): Map<string, { lyric: PlaybackLyric; stanzaLyrics: PlaybackLyric[] }> | undefined {
+    if (!section.lyricBlocks || section.lyricBlocks.length === 0) return undefined;
+
+    const selectLineForBlock = (lines: LyricLine[]): LyricLine | undefined => {
+      if (lines.length === 0) return undefined;
+      const sorted = [...lines].sort((a, b) => (a.stanza ?? 0) - (b.stanza ?? 0));
+      if (selectedStanza !== undefined) {
+        return (
+          sorted.find((l) => l.stanza === selectedStanza) ??
+          sorted.find((l) => l.stanza === undefined) ??
+          sorted[0]
+        );
+      }
+      return (
+        sorted.find((l) => l.stanza === undefined) ??
+        sorted.find((l) => l.stanza === 1) ??
+        sorted[0]
+      );
+    };
+
+    const resolveTokensForLineSeq = (
+      items: Array<{ key: string; token: LyricSoundingToken; stanza?: number }>
+    ): Map<string, PlaybackLyric> => {
+      const out = new Map<string, PlaybackLyric>();
+      let prevHyphenated = false;
+
+      for (let k = 0; k < items.length; k++) {
+        const { key, token, stanza } = items[k];
+        if (token.kind === "tie") {
+          out.set(key, {
+            kind: "tie",
+            text: "-",
+            rawText: "-",
+            cleanWord: "-",
+            ...(stanza !== undefined ? { stanza } : {}),
+          });
+        } else if (token.kind === "rest") {
+          prevHyphenated = false;
+          out.set(key, {
+            kind: "rest",
+            text: "0",
+            rawText: "0",
+            cleanWord: "0",
+            ...(stanza !== undefined ? { stanza } : {}),
+          });
+        } else {
+          let tieCount = 0;
+          while (
+            k + 1 + tieCount < items.length &&
+            items[k + 1 + tieCount].token.kind === "tie"
+          ) {
+            tieCount++;
+          }
+          const isMelismaLeadIn = Boolean(token.isHyphenated && tieCount > 0);
+          const currHyphenated = Boolean(token.isHyphenated && !isMelismaLeadIn);
+          const effectiveRawText =
+            isMelismaLeadIn && token.rawText.endsWith("-")
+              ? token.rawText.slice(0, -1)
+              : token.rawText;
+
+          let syllabic: LyricSyllabic;
+          if (!prevHyphenated && currHyphenated) syllabic = "begin";
+          else if (prevHyphenated && currHyphenated) syllabic = "middle";
+          else if (prevHyphenated && !currHyphenated) syllabic = "end";
+          else syllabic = "single";
+
+          prevHyphenated = currHyphenated;
+
+          out.set(key, {
+            kind: "syllable",
+            text: token.text,
+            rawText: effectiveRawText,
+            cleanWord: token.cleanWord,
+            syllabic,
+            ...(currHyphenated ? { isHyphenated: true } : {}),
+            ...(tieCount > 0 ? { melismaStart: true, melismaSlots: tieCount } : {}),
+            ...(stanza !== undefined ? { stanza } : {}),
+          });
+        }
+      }
+      return out;
+    };
+
+    const collectBlockMeasureSlots = (
+      mSpanStartGroup: number,
+      mSpanEndGroup: number
+    ): string[] => {
+      const slotKeys: string[] = [];
+      for (let gIdx = mSpanStartGroup; gIdx < mSpanEndGroup; gIdx++) {
+        const g = section.unitGroups[gIdx];
+        if (!g) continue;
+        for (let uIdx = 0; uIdx < g.units.length; uIdx++) {
+          slotKeys.push(`${gIdx}:${uIdx}`);
+        }
+      }
+      return slotKeys;
+    };
+
+    const activeSeq: Array<{ key: string; token: LyricSoundingToken; stanza?: number }> = [];
+    const stanzaSeqs = new Map<
+      number | string,
+      Array<{ key: string; token: LyricSoundingToken; stanza?: number }>
+    >();
+
+    for (const block of section.lyricBlocks) {
+      const activeLine = selectLineForBlock(block.lyricLines);
+      const sortedLines = [...block.lyricLines].sort(
+        (a, b) => (a.stanza ?? 0) - (b.stanza ?? 0)
+      );
+      const candidateLines =
+        selectedStanza !== undefined
+          ? activeLine
+            ? [activeLine]
+            : []
+          : sortedLines;
+
+      for (let mIdx = 0; mIdx < block.melodicMeasures.length; mIdx++) {
+        const mSpan = block.melodicMeasures[mIdx];
+        const slotKeys = collectBlockMeasureSlots(
+          mSpan.startGroupIndex,
+          mSpan.endGroupIndex
+        );
+
+        if (activeLine && activeLine.measures[mIdx]) {
+          const tokens = activeLine.measures[mIdx].soundingTokens;
+          const count = Math.min(slotKeys.length, tokens.length);
+          for (let s = 0; s < count; s++) {
+            activeSeq.push({
+              key: slotKeys[s],
+              token: tokens[s],
+              stanza: activeLine.stanza,
+            });
+          }
+        }
+
+        for (const lLine of candidateLines) {
+          const stanzaId = lLine.stanza ?? "default";
+          if (!stanzaSeqs.has(stanzaId)) {
+            stanzaSeqs.set(stanzaId, []);
+          }
+          const seq = stanzaSeqs.get(stanzaId)!;
+          if (lLine.measures[mIdx]) {
+            const tokens = lLine.measures[mIdx].soundingTokens;
+            const count = Math.min(slotKeys.length, tokens.length);
+            for (let s = 0; s < count; s++) {
+              seq.push({
+                key: slotKeys[s],
+                token: tokens[s],
+                stanza: lLine.stanza ?? 1,
+              });
+            }
+          }
+        }
+      }
+    }
+
+    const activeResolved = resolveTokensForLineSeq(activeSeq);
+    const stanzaResolvedList = Array.from(stanzaSeqs.values()).map((seq) =>
+      resolveTokensForLineSeq(seq)
+    );
+
+    const finalMap = new Map<
+      string,
+      { lyric: PlaybackLyric; stanzaLyrics: PlaybackLyric[] }
+    >();
+    for (const [key, lyric] of activeResolved.entries()) {
+      const stanzaLyrics: PlaybackLyric[] = [];
+      for (const sMap of stanzaResolvedList) {
+        const sLyric = sMap.get(key);
+        if (sLyric) stanzaLyrics.push(sLyric);
+      }
+      finalMap.set(key, {
+        lyric,
+        stanzaLyrics: stanzaLyrics.length > 0 ? stanzaLyrics : [lyric],
+      });
+    }
+    return finalMap;
+  }
+
   private static renderParagraph(
     paragraph: Entry,
     start: number,
     initialState: PlaybackState,
     fixedPitch = false,
-    minTimeSignaturePosition?: number
+    minTimeSignaturePosition?: number,
+    selectedStanza?: number
   ): { events: PlaybackEvent[]; directives: PlaybackDirectiveEvent[]; state: PlaybackState; duration: number } {
     let state = { ...initialState };
     const events: PlaybackEvent[] = [];
@@ -503,8 +706,10 @@ export class TmdPlaybackRenderer {
       const sortedDirectives = [...section.directives].sort((a, b) => a.position - b.position);
       let directiveIndex = 0;
       let sectionPosition = 0;
+      const sectionLyrics = TmdPlaybackRenderer.resolveSectionLyrics(section, selectedStanza);
 
-      for (const group of section.unitGroups) {
+      for (let groupIdx = 0; groupIdx < section.unitGroups.length; groupIdx++) {
+        const group = section.unitGroups[groupIdx];
         while (deferredTimeSignatures.length > 0 && position >= effectiveMinTimeSigPos - 1e-6) {
           const deferred = deferredTimeSignatures.shift()!;
           state = TmdPlaybackRenderer.applyDirective(deferred.kind, state, fixedPitch);
@@ -531,7 +736,14 @@ export class TmdPlaybackRenderer {
               events[i] = { ...events[i], duration: events[i].duration + groupDuration, tuplet: undefined };
             }
           } else {
-            events.push({ position, duration: groupDuration, content: { type: "rest" }, state });
+            const slotLyric = sectionLyrics?.get(`${groupIdx}:0`);
+            events.push({
+              position,
+              duration: groupDuration,
+              content: { type: "rest" },
+              state,
+              ...(slotLyric ? { lyric: slotLyric.lyric, stanzaLyrics: slotLyric.stanzaLyrics } : {}),
+            });
           }
         } else {
           // If the group contains internal ties (e.g. (1 2 3 -)%(--)), calculate slots based on total units
@@ -560,6 +772,7 @@ export class TmdPlaybackRenderer {
           let currentEventIndices: number[] = [];
 
           group.units.forEach((unit, idx) => {
+            const slotLyric = sectionLyrics?.get(`${groupIdx}:${idx}`);
             if (unit.type === "tie") {
               if (currentEventIndices.length > 0) {
                 for (const index of currentEventIndices) {
@@ -586,7 +799,14 @@ export class TmdPlaybackRenderer {
                 const tuplet = tupletSpec
                   ? { id: tupletSpec.id, actual: tupletSpec.actual, normal: tupletSpec.normal, writtenDuration: tupletSpec.writtenSlotDuration }
                   : undefined;
-                events.push({ position: position + idx * baseSlotDuration, duration: baseSlotDuration, content: { type: "rest" }, state, tuplet });
+                events.push({
+                  position: position + idx * baseSlotDuration,
+                  duration: baseSlotDuration,
+                  content: { type: "rest" },
+                  state,
+                  tuplet,
+                  ...(slotLyric ? { lyric: slotLyric.lyric, stanzaLyrics: slotLyric.stanzaLyrics } : {}),
+                });
                 currentEventIndices = [events.length - 1];
               }
             } else {
@@ -597,11 +817,25 @@ export class TmdPlaybackRenderer {
               if (unit.type === "multiNote") {
                 currentEventIndices = [];
                 for (const note of unit.notes) {
-                  events.push({ position: position + idx * baseSlotDuration, duration: baseSlotDuration, content: { type: "note", note }, state, tuplet: tuplet ? { ...tuplet } : undefined });
+                  events.push({
+                    position: position + idx * baseSlotDuration,
+                    duration: baseSlotDuration,
+                    content: { type: "note", note },
+                    state,
+                    tuplet: tuplet ? { ...tuplet } : undefined,
+                    ...(slotLyric ? { lyric: slotLyric.lyric, stanzaLyrics: slotLyric.stanzaLyrics } : {}),
+                  });
                   currentEventIndices.push(events.length - 1);
                 }
               } else if (content) {
-                events.push({ position: position + idx * baseSlotDuration, duration: baseSlotDuration, content, state, tuplet });
+                events.push({
+                  position: position + idx * baseSlotDuration,
+                  duration: baseSlotDuration,
+                  content,
+                  state,
+                  tuplet,
+                  ...(slotLyric ? { lyric: slotLyric.lyric, stanzaLyrics: slotLyric.stanzaLyrics } : {}),
+                });
                 currentEventIndices = [events.length - 1];
               }
             }
