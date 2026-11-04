@@ -252,13 +252,54 @@ export function reindentBlockComment(lines: string[], indentPrefix: string): str
   });
 }
 
+export function findInlineCommentStart(line: string): number {
+  let inQuotes = false;
+  for (let i = 0; i < line.length - 1; i++) {
+    if (line[i] === '"') {
+      inQuotes = !inQuotes;
+    } else if (!inQuotes && line[i] === "/" && line[i + 1] === "*") {
+      return i;
+    }
+  }
+  return -1;
+}
+
+export type TopLevelBlockKind = "header" | "metadata" | "entry" | "playback" | "other";
+
+export function classifyTopLevelLine(trimmedLine: string): TopLevelBlockKind {
+  const commentIdx = findInlineCommentStart(trimmedLine);
+  const clean = (commentIdx !== -1 ? trimmedLine.slice(0, commentIdx) : trimmedLine).trim();
+  if (
+    clean.startsWith("::SCORE::") ||
+    (clean.startsWith("**") && clean.endsWith("**") && clean.length > 4) ||
+    clean.startsWith("!=") ||
+    clean.startsWith("! =") ||
+    clean.startsWith("?=") ||
+    clean.startsWith("? =") ||
+    /^key\s*=/i.test(clean) ||
+    (clean.startsWith("<") && clean.endsWith(">") && clean.includes("/"))
+  ) {
+    return "header";
+  }
+  if (/^~\s*"/.test(clean) || /^=\s*~\s*:/.test(clean)) {
+    return "metadata";
+  }
+  if (clean.endsWith("{")) {
+    return "entry";
+  }
+  if (clean.startsWith("->")) {
+    return "playback";
+  }
+  return "other";
+}
+
 export function formatLine(line: string, indent = 0): string {
   const indentPrefix = "    ".repeat(indent);
   let working = line;
   let commentSuffix = "";
 
-  // Extract inline block comment if present at end of line
-  const commentStart = working.indexOf("/*");
+  // Extract inline block comment if present at end of line (outside quotes)
+  const commentStart = findInlineCommentStart(working);
   if (commentStart !== -1) {
     const commentText = working.slice(commentStart);
     working = working.slice(0, commentStart);
@@ -337,28 +378,18 @@ export function formatLine(line: string, indent = 0): string {
     return "}" + commentSuffix;
   }
 
-  //Orders line: -> ...
+  // Orders line: -> ...
   if (trimmed.startsWith("->")) {
-    const tokens = trimmed.split(/\s+/).filter((t) => t.length > 0);
-    const orderTokens: string[] = [];
-    let i = 0;
-    while (i < tokens.length) {
-      const t = tokens[i];
-      if (t === "->" || t === "->#") {
-        orderTokens.push(t);
-      } else if (t.startsWith("->")) {
-
-        orderTokens.push("->");
-        const sub = t.slice(2);
-        if (sub.length > 0) {
-          orderTokens.push(sub);
-        }
-      } else {
-        orderTokens.push(t);
-      }
-      i++;
-    }
-    return orderTokens.join(" ") + commentSuffix;
+    const normalized = trimmed
+      .replace(/\s*\[\s*([^\]]*?)\s*\]/g, (_, inner: string) => `[${inner.replace(/\s+/g, "")}]`)
+      .replace(/\{([^}]*)\}/g, (_, inner: string) => formatInlineDirective(inner))
+      .replace(/\(\s+/g, "(")
+      .replace(/\s+\)/g, ")")
+      .replace(/->\s*#/g, " -># ")
+      .replace(/->(?!#)/g, " -> ")
+      .trim()
+      .replace(/\s+/g, " ");
+    return indentPrefix + normalized + commentSuffix;
   }
 
   // Content / measure line

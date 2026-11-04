@@ -1944,5 +1944,157 @@ verse:Piano@|0|{
       );
     });
   });
+
+  describe("Headers, Metadata, Playback Flow, Blank Lines & EOF (#8-#12)", () => {
+    it("preserves string literals inside metadata lines without mangling pipes or spaces (#8)", () => {
+      const input = `::SCORE::
+** Metadata Test **
+!= 120
+?= C
+<4/4>
+
+~   "Lyrics: Alice | Bob   123"
+=~: __CUSTOM_META__ = "Value   with | pipe   and 1234"
+
+verse:Piano@|0|{
+    <4*>
+    | 1 2 3 4 |
+}
+
+-> verse ->#
+`;
+      const formatted = TmdRefactor.format(input);
+      expect(formatted).toContain('~ "Lyrics: Alice | Bob   123"');
+      expect(formatted).toContain('=~:__CUSTOM_META__= "Value   with | pipe   and 1234"');
+    });
+
+    it("normalizes abstract prototype headers like Theme{ and Theme   { to Theme { (#9)", () => {
+      const input = `::SCORE::
+** Prototype Test **
+!= 120
+?= C
+<4/4>
+
+Theme1{
+    <4*>
+    1 2 3 4
+}
+
+Theme2   {
+    <4*>
+    5 6 7 1^
+}
+
+-> (play Theme1 Piano) -> (play Theme2 Violin) ->#
+`;
+      const formatted = TmdRefactor.format(input);
+      expect(formatted).toContain("Theme1 {\n    <4*>\n    | 1 2 3 4 |\n}");
+      expect(formatted).toContain("Theme2 {\n    <4*>\n    | 5 6 7 1^ |\n}");
+    });
+
+    it("compacts entry header timing and show headers (#10)", () => {
+      const input = `::SCORE::
+** Header Compaction **
+!= 120
+?= C
+<4/4>
+
+intro : Piano @ | 0 | {
+    <4*>
+    | 1 2 3 4 |
+}
+
+show : Lighting @ intro {
+"""
+cue black
+wait 4
+"""
+}
+
+-> intro ->#
+`;
+      const formatted = TmdRefactor.format(input);
+      expect(formatted).toContain("intro:Piano@|0|{");
+      expect(formatted).toContain("show:Lighting@intro{");
+    });
+
+    it("normalizes top-level blank lines, inner entry blank lines, and single trailing EOF newline (#11)", () => {
+      const input = `::SCORE::
+** Blank Line Test **
+!= 120
+?= C
+<4/4>
+~ "Composer: Alice"
+intro:Piano@|0|{
+
+    <4*>
+    | 1 2 3 4 |
+
+
+
+    | 5 6 7 1^ |
+
+}
+verse:Piano@|0|{
+    <4*>
+    | 1 2 3 4 |
+}
+-> intro -> verse ->#
+
+
+`;
+      const formatted = TmdRefactor.format(input);
+      expect(formatted).toBe(`::SCORE::
+** Blank Line Test **
+!= 120
+?= C
+<4/4>
+
+~ "Composer: Alice"
+
+intro:Piano@|0|{
+    <4*>
+    | 1 2 3 4 |
+
+    | 5 6 7 1^ |
+}
+
+verse:Piano@|0|{
+    <4*>
+    | 1 2 3 4 |
+}
+
+-> intro -> verse ->#
+`);
+      expect(formatted.endsWith("\n")).toBe(true);
+      expect(formatted.endsWith("\n\n")).toBe(false);
+    });
+
+    it("indents multi-line playback continuation lines with 4 spaces and compacts stanza tags (#12)", () => {
+      const input = `::SCORE::
+** Playback Test **
+!= 120
+?= C
+<4/4>
+
+verse:Vocal@|0|{
+    <4*>
+    | 1 2 3 4 |
+}
+
+chorus:Vocal@|0|{
+    <4*>
+    | 5 6 7 1^ |
+}
+
+-> verse[ L1 ] -> { ? + 2 } -> chorus
+-> verse [ L2 ] -> chorus -> #
+`;
+      const formatted = TmdRefactor.format(input);
+      expect(formatted).toContain(
+        "-> verse[L1] -> {?+2} -> chorus\n    -> verse[L2] -> chorus ->#\n"
+      );
+    });
+  });
 });
 
