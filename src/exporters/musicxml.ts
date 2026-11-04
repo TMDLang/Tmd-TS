@@ -1,5 +1,5 @@
 import { SheetInstrumentHelper } from "../domain/index.js";
-import { Measure, PlaybackDirectiveEvent, TmdMeasureRenderer } from "../playback/index.js";
+import { Measure, PlaybackDirectiveEvent, PlaybackLyric, TmdMeasureRenderer } from "../playback/index.js";
 import { Beat, ChordSymbol, metronomeTempoForBeat, Note, PercussionStroke, PitchMapping, Sheet } from "../syntax/index.js";
 
 function beatsEqual(a: Beat, b: Beat): boolean {
@@ -248,6 +248,14 @@ export class TmdMusicXMLGenerator {
                 }
                 const subTieStop = isFirstChunk ? event.tieStop : true;
                 const subTieStart = isLastChunk ? event.tieStart : true;
+                const noteLyrics =
+                  isFirstChunk && !isChord && (!event.tieStop || event.lyric?.kind === "tie")
+                    ? event.stanzaLyrics && event.stanzaLyrics.length > 0
+                      ? event.stanzaLyrics
+                      : event.lyric
+                        ? [event.lyric]
+                        : undefined
+                    : undefined;
                 content += TmdMusicXMLGenerator.generateNoteXML(
                   event.content.note,
                   chunkDur,
@@ -256,7 +264,8 @@ export class TmdMusicXMLGenerator {
                   subTieStart,
                   subTieStop,
                   isChord,
-                  accidentalText
+                  accidentalText,
+                  noteLyrics
                 );
                 emittedNoteInGroup = true;
                 break;
@@ -525,7 +534,8 @@ export class TmdMusicXMLGenerator {
     tieStart = false,
     tieStop = false,
     isChord = false,
-    accidentalText?: string
+    accidentalText?: string,
+    lyrics?: PlaybackLyric[]
   ): string {
     const { step, alter, octave } = TmdMusicXMLGenerator.pitchToStepAlterOctave(note, keyOffset);
     let xml = `      <note>\n`;
@@ -553,6 +563,29 @@ export class TmdMusicXMLGenerator {
         xml += `          <tied type="start"/>\n`;
       }
       xml += `        </notations>\n`;
+    }
+    if (lyrics && lyrics.length > 0) {
+      for (const lyr of lyrics) {
+        const num = lyr.stanza ?? 1;
+        if (lyr.kind === "syllable") {
+          const textContent =
+            lyr.isHyphenated && lyr.rawText.endsWith("-")
+              ? lyr.rawText.slice(0, -1)
+              : lyr.rawText;
+          const syllabic = lyr.syllabic ?? "single";
+          xml += `        <lyric number="${num}">\n`;
+          xml += `          <syllabic>${syllabic}</syllabic>\n`;
+          xml += `          <text>${TmdMusicXMLGenerator.escapeXML(textContent)}</text>\n`;
+          if (lyr.melismaStart) {
+            xml += `          <extend type="start"/>\n`;
+          }
+          xml += `        </lyric>\n`;
+        } else if (lyr.kind === "tie") {
+          xml += `        <lyric number="${num}">\n`;
+          xml += `          <extend type="continue"/>\n`;
+          xml += `        </lyric>\n`;
+        }
+      }
     }
     xml += `      </note>\n`;
     return xml;

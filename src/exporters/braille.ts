@@ -286,6 +286,8 @@ export class TmdBrailleGenerator {
             effectiveLineWidth
           );
           asciiLines.push(...wrappedLines);
+          const lyricLines = TmdBrailleGenerator.renderTrackLyricLinesAscii(inst, workingSheet);
+          asciiLines.push(...lyricLines);
         }
       } else {
         for (const track of renderedTracks) {
@@ -856,7 +858,8 @@ export class TmdBrailleGenerator {
           pitchState
         );
       if (sighted) {
-        sightedTokens.push(sighted);
+        const lyrText = primary.lyric?.kind === "syllable" ? ` "${primary.lyric.rawText}"` : "";
+        sightedTokens.push(`${sighted}${lyrText}`);
       }
       groupTokens.push(`${pendingTempoInterruptAscii}${groupAscii}`);
     }
@@ -899,6 +902,74 @@ export class TmdBrailleGenerator {
       )
     );
     return { instrument, measures: outMeasures };
+  }
+
+  private static renderTrackLyricLinesAscii(
+    instrument: string,
+    sheet: Sheet
+  ): string[] {
+    const measures = TmdMeasureRenderer.renderMeasures(sheet, instrument);
+    const stanzaIds: number[] = [];
+    for (const measure of measures) {
+      for (const ev of measure.events) {
+        if (ev.stanzaLyrics && ev.stanzaLyrics.length > 0) {
+          for (const sl of ev.stanzaLyrics) {
+            const st = sl.stanza ?? 1;
+            if (!stanzaIds.includes(st)) stanzaIds.push(st);
+          }
+        } else if (ev.lyric) {
+          const st = ev.lyric.stanza ?? 1;
+          if (!stanzaIds.includes(st)) stanzaIds.push(st);
+        }
+      }
+    }
+    if (stanzaIds.length === 0) return [];
+    stanzaIds.sort((a, b) => a - b);
+    const isMultiStanza = stanzaIds.length > 1;
+    const out: string[] = [];
+
+    for (const st of stanzaIds) {
+      const words: string[] = [];
+      for (const measure of measures) {
+        const groups = TmdMeasureRenderer.groupSimultaneousEvents(measure.events);
+        for (const group of groups) {
+          const primary = group.find((ev) => ev.content.type === "note") ?? group[0];
+          if (!primary) continue;
+          const lyr =
+            primary.stanzaLyrics?.find((l) => (l.stanza ?? 1) === st) ??
+            (st === (primary.lyric?.stanza ?? 1) ? primary.lyric : undefined);
+          if (lyr?.kind === "syllable") {
+            words.push(TmdBrailleGenerator.encodeVocalLyricToken(lyr.rawText));
+          }
+        }
+      }
+      if (words.length > 0) {
+        const prefix = isMultiStanza
+          ? `;;#${TmdBrailleGenerator.encodeUpperDigits(st)} `
+          : ";; ";
+        out.push(`${prefix}${words.join(" ")}`);
+      }
+    }
+    return out;
+  }
+
+  private static encodeVocalLyricToken(rawText: string): string {
+    let out = "";
+    for (const ch of rawText) {
+      if (ch.charCodeAt(0) <= 0x7f) {
+        if (ch === ",") out += "1";
+        else if (ch === ";") out += "2";
+        else if (ch === ":") out += "3";
+        else if (ch === ".") out += "4";
+        else if (ch === "!") out += "6";
+        else if (ch === "?") out += "8";
+        else if (ch === "\"") out += "8";
+        else out += TmdBrailleGenerator.encodeLiteraryText(ch);
+      } else {
+        out += ch;
+      }
+    }
+    return out;
   }
 
   private static renderPartByPartTrackLines(

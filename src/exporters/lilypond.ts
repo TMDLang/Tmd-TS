@@ -1,5 +1,5 @@
 import { SheetInstrumentHelper } from "../domain/index.js";
-import { MeasureEvent, PlaybackDirectiveEvent, TmdMeasureRenderer } from "../playback/index.js";
+import { MeasureEvent, PlaybackDirectiveEvent, PlaybackLyric, TmdMeasureRenderer } from "../playback/index.js";
 import { ChordSymbol, metronomeTempoForBeat, Note, PercussionStroke, PitchMapping, Sheet } from "../syntax/index.js";
 
 export class TmdLilyPondGenerator {
@@ -34,12 +34,18 @@ export class TmdLilyPondGenerator {
       identifierMap.set(inst, name);
     });
 
+    const trackLyricsMap = new Map<string, string[]>();
+
     instruments.forEach((inst) => {
       const varName = identifierMap.get(inst) || "Track";
       const isDrum = SheetInstrumentHelper.containsPercussionUnits(sheet, inst);
       ly += `${varName} = ${isDrum ? "\\drummode " : ""}{\n  \\global\n`;
       ly += TmdLilyPondGenerator.generateTrackMusic(inst, sheet, isDrum);
       ly += `}\n\n`;
+      const lyricBlocks = TmdLilyPondGenerator.generateTrackLyrics(inst, sheet);
+      if (lyricBlocks.length > 0) {
+        trackLyricsMap.set(inst, lyricBlocks);
+      }
     });
 
     ly += `\\score {\n  <<\n`;
@@ -50,7 +56,14 @@ export class TmdLilyPondGenerator {
       ly += `    \\new ${staffType} = "${TmdLilyPondGenerator.escapeLilyPond(inst)}" \\with {\n`;
       ly += `      instrumentName = "${TmdLilyPondGenerator.escapeLilyPond(inst)}"\n`;
       ly += `      shortInstrumentName = "${TmdLilyPondGenerator.escapeLilyPond(inst.slice(0, 3))}"\n`;
-      ly += `    } {\n      \\${varName}\n    }\n\n`;
+      ly += `    } {\n      \\${varName}\n    }\n`;
+      const lyricBlocks = trackLyricsMap.get(inst);
+      if (lyricBlocks && lyricBlocks.length > 0) {
+        for (const lyrBody of lyricBlocks) {
+          ly += `    \\addlyrics \\lyricmode {\n${lyrBody}    }\n`;
+        }
+      }
+      ly += `\n`;
     });
     ly += `  >>\n  \\layout { }\n  \\midi { }\n}\n`;
 
@@ -103,6 +116,79 @@ export class TmdLilyPondGenerator {
     }
 
     return result.trim() + "\n";
+  }
+
+  private static generateTrackLyrics(instrument: string, sheet: Sheet): string[] {
+    const measures = TmdMeasureRenderer.renderMeasures(sheet, instrument);
+    const stanzaIds: number[] = [];
+    for (const measure of measures) {
+      for (const ev of measure.events) {
+        if (ev.stanzaLyrics && ev.stanzaLyrics.length > 0) {
+          for (const sl of ev.stanzaLyrics) {
+            const st = sl.stanza ?? 1;
+            if (!stanzaIds.includes(st)) stanzaIds.push(st);
+          }
+        } else if (ev.lyric) {
+          const st = ev.lyric.stanza ?? 1;
+          if (!stanzaIds.includes(st)) stanzaIds.push(st);
+        }
+      }
+    }
+    if (stanzaIds.length === 0) return [];
+    stanzaIds.sort((a, b) => a - b);
+    const isMultiStanza = stanzaIds.length > 1;
+
+    const blocks: string[] = [];
+    for (const st of stanzaIds) {
+      const lines: string[] = [];
+      if (isMultiStanza) {
+        lines.push(`      \\set stanza = "${st}."`);
+      }
+      for (const measure of measures) {
+        const groups = TmdMeasureRenderer.groupSimultaneousEvents(measure.events);
+        const tokens: string[] = [];
+        for (let gIdx = 0; gIdx < groups.length; gIdx++) {
+          const group = groups[gIdx];
+          const noteEvent = group.find((ev) => ev.content.type === "note");
+          if (!noteEvent) continue;
+          const lyr: PlaybackLyric | undefined =
+            noteEvent.stanzaLyrics?.find((l) => (l.stanza ?? 1) === st) ??
+            (st === (noteEvent.lyric?.stanza ?? 1) ? noteEvent.lyric : undefined);
+          if (!lyr) continue;
+          if (lyr.kind === "syllable") {
+            const raw =
+              lyr.isHyphenated && lyr.rawText.endsWith("-")
+                ? lyr.rawText.slice(0, -1)
+                : lyr.rawText;
+            const formatted = /^[A-Za-z]+$/.test(raw)
+              ? raw
+              : `"${TmdLilyPondGenerator.escapeLilyPond(raw)}"`;
+            tokens.push(formatted);
+            if (lyr.isHyphenated) {
+              tokens.push("--");
+            } else if (lyr.melismaStart) {
+              const nextGroup = gIdx + 1 < groups.length ? groups[gIdx + 1] : undefined;
+              const nextNote = nextGroup?.find((ev) => ev.content.type === "note");
+              const nextLyr =
+                nextNote?.stanzaLyrics?.find((l) => (l.stanza ?? 1) === st) ??
+                nextNote?.lyric;
+              if (nextLyr?.kind !== "tie") {
+                tokens.push("__");
+              }
+            }
+          } else if (lyr.kind === "tie") {
+            tokens.push("__");
+          }
+        }
+        if (tokens.length > 0) {
+          lines.push(`      ${tokens.join(" ")}`);
+        }
+      }
+      if (lines.length > 0) {
+        blocks.push(lines.join("\n") + "\n");
+      }
+    }
+    return blocks;
   }
 
   public static resolveTempo(beat: { count: number; noteValue: number }, quarterBPM: number): string {

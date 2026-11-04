@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  TmdABCGenerator,
+  TmdBrailleGenerator,
+  TmdChordProGenerator,
+  TmdLilyPondGenerator,
   TmdMIDIGenerator,
+  TmdMusicXMLGenerator,
   TmdUSTGenerator,
   TmdVSQGenerator,
   TmdVSQXGenerator,
@@ -501,5 +506,113 @@ verse:Vocal@|0|{
     expect(ust).not.toContain("Lyric=-");
     // 'free' spans 3 quarter notes = 3 * 480 = 1440 ticks
     expect(ust).toContain("Length=1440\r\nLyric=free\r\n");
+  });
+});
+
+describe("Sheet Engraving Exporters with Lyrics (Issue #80 - Commit 5)", () => {
+  const engravingSource = `::SCORE::
+** Engraving Lyrics **
+!= 120
+?= C
+<4/4>
+
+verse:Vocal@|0|{
+    <4*>
+    | 1    2    3   0 | 5 -  3 1 |
+    L1| 「 yes- ter- day 」 0 | 我 - 很 好？ |
+    L2| to-  day  I   0 | 唱 - 首歌 吧！ |
+}
+
+-> verse ->#
+`;
+
+  it("exports MusicXML <lyric> tags with rawText, syllabic states, multi-stanza numbers, and melisma <extend/> while omitting lyrics on rests", () => {
+    const sheet = TmdParser.parse(engravingSource);
+    const xml = TmdMusicXMLGenerator.generateMusicXML(sheet);
+
+    expect(xml).toContain('<lyric number="1">');
+    expect(xml).toContain("<syllabic>begin</syllabic>");
+    expect(xml).toContain("<text>「yes</text>");
+    expect(xml).toContain("<syllabic>middle</syllabic>");
+    expect(xml).toContain("<text>ter</text>");
+    expect(xml).toContain("<syllabic>end</syllabic>");
+    expect(xml).toContain("<text>day」</text>");
+    expect(xml).toContain("<text>好？</text>");
+    expect(xml).toContain('<extend type="start"/>');
+    expect(xml).toContain('<lyric number="2">');
+    expect(xml).toContain("<text>to</text>");
+    expect(xml).toContain("<text>吧！</text>");
+
+    // Also test melisma continuation across separate notes (- on note)
+    const melismaNotesScore = `::SCORE::
+** Melisma Notes **
+!= 120
+?= C
+<4/4>
+
+verse:Vocal@|0|{
+    <4*>
+    | 1 2 3 4 |
+    L| I free - - |
+}
+
+-> verse ->#
+`;
+    const melismaXml = TmdMusicXMLGenerator.generateMusicXML(TmdParser.parse(melismaNotesScore));
+    expect(melismaXml).toContain('<extend type="start"/>');
+    expect(melismaXml).toContain('<extend type="continue"/>');
+  });
+
+  it("exports LilyPond \\lyricmode with rawText, -- hyphenation, __ melisma, rest skipping, and multi-stanza labels", () => {
+    const sheet = TmdParser.parse(engravingSource);
+    const ly = TmdLilyPondGenerator.generateLilyPond(sheet);
+
+    expect(ly).toContain("\\lyricmode");
+    expect(ly).toContain("\\addlyrics");
+    expect(ly).toContain('\\set stanza = "1."');
+    expect(ly).toContain('\\set stanza = "2."');
+    expect(ly).toContain('"「yes" -- ter -- "day」"');
+    expect(ly).toContain('to -- day');
+    expect(ly).toContain('"我" __ "很" "好？"');
+  });
+
+  it("exports ABC w: lyric lines with rawText, _ melisma, * rest placeholders, and numbered stanzas", () => {
+    const sheet = TmdParser.parse(engravingSource);
+    const abc = TmdABCGenerator.generateABC(sheet);
+
+    expect(abc).toContain("w: 1. 「yes- ter- day」 * | 我 _ 很 好？ |");
+    expect(abc).toContain("w: 2. to- day I * | 唱 _ 首歌 吧！ |");
+  });
+
+  it("exports ChordPro inline chord-over-lyric temporal intersection", () => {
+    const chordProSource = `::SCORE::
+** ChordPro Song **
+!= 120
+?= C
+<4/4>
+
+verse:CHORD@|0|{
+    <4*>
+    | [C] - [G] - |
+}
+
+verse:Vocal@|0|{
+    <4*>
+    | 1 2 3 4 |
+    L| 你 好 嗎？ 喔 |
+}
+
+-> verse ->#
+`;
+    const sheet = TmdParser.parse(chordProSource);
+    const cho = TmdChordProGenerator.generateChordPro(sheet);
+    expect(cho).toContain("[C]你 好 [G]嗎？ 喔");
+  });
+
+  it("exports Music Braille vocal lyrics with rawText and literary braille encoding", () => {
+    const sheet = TmdParser.parse(engravingSource);
+    const preview = TmdBrailleGenerator.generateBraillePreview(sheet);
+    expect(preview.asciiText).toContain(";;");
+    expect(preview.tracks[0].measures[0].sightedSummary).toContain("「yes-");
   });
 });

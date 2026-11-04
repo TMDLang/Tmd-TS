@@ -78,7 +78,13 @@ export class TmdChordProGenerator {
         const sectionSheet: Sheet = {
           ...sheet,
           entries: sectionEntries,
-          playback: [{ type: 'name', name: pName }],
+          playback: [
+            {
+              type: 'name',
+              name: pName,
+              ...(order.stanza !== undefined ? { stanza: order.stanza } : {}),
+            },
+          ],
           keySignature: keySignatureForOffset(currentKeyOffset),
         };
 
@@ -100,7 +106,20 @@ export class TmdChordProGenerator {
           sectionInstrument
         );
 
-        if (sectionMeasures.length === 0) continue;
+        const vocalEntry = sectionEntries.find((entry) =>
+          entry.sections.some((sec) => sec.lyrics && sec.lyrics.length > 0)
+        );
+        const vocalInstrument = vocalEntry?.assignment;
+        const vocalMeasures = vocalInstrument
+          ? vocalInstrument === sectionInstrument
+            ? sectionMeasures
+            : TmdMeasureRenderer.renderMeasures(sectionSheet, vocalInstrument)
+          : [];
+        const hasVocalLyrics = vocalMeasures.some((m) =>
+          m.events.some((ev) => ev.lyric !== undefined)
+        );
+
+        if (sectionMeasures.length === 0 && vocalMeasures.length === 0) continue;
 
         lines.push('');
         if (currentKeyOffset !== emittedKeyOffset) {
@@ -108,6 +127,78 @@ export class TmdChordProGenerator {
           emittedKeyOffset = currentKeyOffset;
         }
         lines.push(`{comment: ${pName}}`);
+
+        if (hasVocalLyrics) {
+          const lyricMeasureStrings: string[] = [];
+          const maxLen = Math.max(sectionMeasures.length, vocalMeasures.length);
+          for (let mIdx = 0; mIdx < maxLen; mIdx++) {
+            const cMeasure = sectionMeasures[mIdx];
+            const vMeasure = vocalMeasures[mIdx];
+            const chordEvents: Array<{ offset: number; text: string; consumed: boolean }> = [];
+            if (cMeasure) {
+              for (const ev of cMeasure.events) {
+                if (ev.content.type === 'chord' && !ev.tieStop) {
+                  chordEvents.push({
+                    offset: ev.startOffset,
+                    text: `[${chordText(ev.content.chord, ev.state.keyOffset)}]`,
+                    consumed: false,
+                  });
+                }
+              }
+            }
+            if (vMeasure && vMeasure !== cMeasure) {
+              for (const ev of vMeasure.events) {
+                if (ev.content.type === 'chord' && !ev.tieStop) {
+                  chordEvents.push({
+                    offset: ev.startOffset,
+                    text: `[${chordText(ev.content.chord, ev.state.keyOffset)}]`,
+                    consumed: false,
+                  });
+                }
+              }
+            }
+            chordEvents.sort((a, b) => a.offset - b.offset);
+
+            const tokens: string[] = [];
+            if (vMeasure) {
+              const vGroups = TmdMeasureRenderer.groupSimultaneousEvents(vMeasure.events);
+              for (let gIdx = 0; gIdx < vGroups.length; gIdx++) {
+                const group = vGroups[gIdx];
+                const primary = group.find((e) => e.content.type === 'note') ?? group[0];
+                if (!primary) continue;
+                const nextOffset =
+                  gIdx + 1 < vGroups.length
+                    ? (vGroups[gIdx + 1][0]?.startOffset ?? vMeasure.nominalDuration)
+                    : vMeasure.nominalDuration;
+                const matchingChords = chordEvents.filter(
+                  (ce) => !ce.consumed && ce.offset < nextOffset - 1e-4
+                );
+                for (const ce of matchingChords) {
+                  ce.consumed = true;
+                }
+                const chordPrefix = matchingChords.map((ce) => ce.text).join('');
+                const lyr = primary.lyric;
+                if (lyr && lyr.kind === 'syllable') {
+                  tokens.push(`${chordPrefix}${lyr.rawText}`);
+                } else if (chordPrefix.length > 0) {
+                  tokens.push(chordPrefix);
+                }
+              }
+            }
+            const unconsumed = chordEvents.filter((ce) => !ce.consumed);
+            for (const ce of unconsumed) {
+              tokens.push(ce.text);
+            }
+            if (tokens.length > 0) {
+              lyricMeasureStrings.push(tokens.join(' '));
+            }
+          }
+          for (let i = 0; i < lyricMeasureStrings.length; i += measuresPerLine) {
+            const chunk = lyricMeasureStrings.slice(i, i + measuresPerLine);
+            lines.push(chunk.join(' '));
+          }
+          continue;
+        }
 
         const measureStrings: string[] = [];
 
