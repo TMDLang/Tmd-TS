@@ -7,6 +7,9 @@ import { handleLSPCommand } from "../src/commands/lsp.js";
 import { handleOutlineCommand } from "../src/commands/outline.js";
 import { handleRefactorCommand } from "../src/commands/refactor.js";
 import {
+  formatSection,
+  formatSheet,
+  formatUnitGroup,
   Lexer,
   TmdMeasureChecker,
   TmdMeasureIssue,
@@ -55,8 +58,8 @@ intro:Piano@|0|{
     expect(formatted).toContain("intro:Piano@|0|{");
     expect(formatted).toContain("    <4*>");
     expect(formatted).toContain("    | [1] - | - [7,] |");
-    expect(formatted).toContain("    1 2 3 4");
-    expect(formatted).toContain("    (1' 2, 3^ 4_)%(--)");
+    expect(formatted).toContain("    | 1 2 3 4 |");
+    expect(formatted).toContain("    | (1' 2, 3^ 4_)%(--) |");
     expect(formatted).toContain("}");
     expect(formatted).toContain("-> intro ->#");
 
@@ -1373,7 +1376,7 @@ describe("TMD CLI subcommands check, format, and refactor (TDD)", () => {
       // optimize-grid (Cello has 1_ - - - at <4*>, should compress to <1*>)
       expect(main(["refactor", "optimize-grid", file, "--instrument", "Cello", "-i"])).toBe(0);
       content = readFileSync(file, "utf-8");
-      expect(content).toContain("Chorus:Cello@|0|{\n    <1*>\n    1_\n}");
+      expect(content).toContain("Chorus:Cello@|0|{\n    <1*>\n    | 1_ |\n}");
       expect(content).toContain("Chorus:Fiddle@|0|{\n    <4*>");
 
       // duplicate-track
@@ -1761,3 +1764,459 @@ verse:Vocal@|0|{
     }
   });
 });
+
+describe("Issue #79: Formatter Semantics Alignment", () => {
+  describe("AST Serializer (formatSheet, formatSection, formatUnitGroup)", () => {
+    it("uses 4 spaces instead of tabs in formatSection() (#13)", () => {
+      const sheet = TmdParser.parse(`::SCORE::
+** Tab Check **
+!= 120
+?= C
+<4/4>
+
+intro:Piano@|0|{
+    <4*>
+    | 1 2 3 4 |
+}
+
+-> intro ->#
+`);
+      const sectionFormatted = formatSection(sheet.entries[0].sections[0], sheet.beat);
+      expect(sectionFormatted).not.toContain("\t");
+      expect(sectionFormatted).toContain("    <4*>\n    | 1 2 3 4 |");
+    });
+
+    it("normalizes header spacing with a space after = in formatSheet() (#14)", () => {
+      const sheet = TmdParser.parse(`::SCORE::
+** Header Check **
+!=120
+?=D
+key=Bm
+<4/4>
+
+intro:Piano@|0|{
+    <4*>
+    | 1 2 3 4 |
+}
+
+-> intro ->#
+`);
+      const serialized = formatSheet(sheet);
+      expect(serialized).toContain("!= 120\n");
+      expect(serialized).toContain("?= D\n");
+      expect(serialized).toContain("key= Bm\n");
+      expect(serialized).not.toContain("!=120");
+      expect(serialized).not.toContain("?=D");
+    });
+
+    it("always separates units with a single space in formatUnitGroup() (#15)", () => {
+      const sheet = TmdParser.parse(`::SCORE::
+** Tuplet Check **
+!= 120
+?= C
+<4/4>
+
+intro:Piano@|0|{
+    <4*>
+    | (12)%(-) 3 4 - |
+}
+
+-> intro ->#
+`);
+      const group = sheet.entries[0].sections[0].unitGroups[0];
+      expect(formatUnitGroup(group)).toBe("(1 2)%(-)");
+    });
+  });
+
+  describe("Musical Unit & Measure Line Formatting (#1-#6)", () => {
+    it("expands compact note sequences while preserving chords, directives, percussion, and multi-notes (#1)", () => {
+      const input = `::SCORE::
+** Compact Expansion **
+!= 120
+?= C
+<4/4>
+
+verse:Piano@|0|{
+    <16*>
+    | 1 234 | 1'2_3 0 | 10-2 | [Cmaj7]1 [Cadd9] 1+3+5 XsTt |
+}
+
+-> verse ->#
+`;
+      const formatted = TmdRefactor.format(input);
+      expect(formatted).toContain("    <16*>");
+      expect(formatted).toContain("    | 1 2 3 4 | 1' 2_ 3 0 | 1 0 - 2 | [Cmaj7] 1 [Cadd9] 1+3+5 XsTt |");
+    });
+
+    it("completes missing outer barlines on musical measure lines (#2)", () => {
+      const input = `::SCORE::
+** Barline Completion **
+!= 120
+?= C
+<4/4>
+
+verse:Piano@|0|{
+    <4*>
+    1 2 3 4 | 5 - 3 1
+    | 1 2 3 4
+    5 6 7 1^ |
+}
+
+-> verse ->#
+`;
+      const formatted = TmdRefactor.format(input);
+      expect(formatted).toContain("    | 1 2 3 4 | 5 - 3 1 |");
+      expect(formatted).toContain("    | 1 2 3 4 |");
+      expect(formatted).toContain("    | 5 6 7 1^ |");
+    });
+
+    it("normalizes tuplets and unit groups removing inner edge padding and spaces around % (#3)", () => {
+      const input = `::SCORE::
+** Tuplet Normalization **
+!= 120
+?= C
+<4/4>
+
+verse:Piano@|0|{
+    <4*>
+    | ( 1 2 ) % ( - ) ( 3 4)%(-) (12)%(- -) ( 5 6 ) |
+}
+
+-> verse ->#
+`;
+      const formatted = TmdRefactor.format(input);
+      expect(formatted).toContain("    | (1 2)%(-) (3 4)%(-) (1 2)%(--) (5 6) |");
+    });
+
+    it("compacts chord brackets and slash bass separators (#4)", () => {
+      const input = `::SCORE::
+** Chord Compaction **
+!= 120
+?= C
+<4/4>
+
+verse:Piano@|0|{
+    <4*>
+    | [ C ] - [ C / G ] - | [ Am7 / E ] - [ Gsus4 ] - |
+}
+
+-> verse ->#
+`;
+      const formatted = TmdRefactor.format(input);
+      expect(formatted).toContain("    | [C] - [C/G] - | [Am7/E] - [Gsus4] - |");
+    });
+
+    it("orders note modifiers canonically with accidental before octave displacement (#5)", () => {
+      const input = `::SCORE::
+** Modifier Order **
+!= 120
+?= C
+<4/4>
+
+verse:Piano@|0|{
+    <4*>
+    | 1^' 5_, 2^^' (3_' 4^,)%(-) | 1^'+3_, - - - |
+}
+
+-> verse ->#
+`;
+      const formatted = TmdRefactor.format(input);
+      expect(formatted).toContain("    | 1'^ 5,_ 2'^^ (3'_ 4,^)%(-) | 1'^+3,_ - - - |");
+    });
+
+    it("compacts multi-note + operators and inline directives {...} (#6)", () => {
+      const input = `::SCORE::
+** Multi-Note and Directives **
+!= 120
+?= C
+<4/4>
+
+verse:Piano@|0|{
+    <4*>
+    | { != 120 } 1 + 3 { ?= D } 2 + 4 + 6 { ? + 2 } 5 { key = C } 6 | { < 3 / 4 > } { mf } 1 2 3 |
+}
+
+-> verse ->#
+`;
+      const formatted = TmdRefactor.format(input);
+      expect(formatted).toContain(
+        "    | {!=120} 1+3 {?=D} 2+4+6 {?+2} 5 {key= C} 6 | {<3/4>} {mf} 1 2 3 |"
+      );
+    });
+  });
+
+  describe("Headers, Metadata, Playback Flow, Blank Lines & EOF (#8-#12)", () => {
+    it("preserves string literals inside metadata lines without mangling pipes or spaces (#8)", () => {
+      const input = `::SCORE::
+** Metadata Test **
+!= 120
+?= C
+<4/4>
+
+~   "Lyrics: Alice | Bob   123"
+=~: __CUSTOM_META__ = "Value   with | pipe   and 1234"
+
+verse:Piano@|0|{
+    <4*>
+    | 1 2 3 4 |
+}
+
+-> verse ->#
+`;
+      const formatted = TmdRefactor.format(input);
+      expect(formatted).toContain('~ "Lyrics: Alice | Bob   123"');
+      expect(formatted).toContain('=~:__CUSTOM_META__= "Value   with | pipe   and 1234"');
+    });
+
+    it("normalizes abstract prototype headers like Theme{ and Theme   { to Theme { (#9)", () => {
+      const input = `::SCORE::
+** Prototype Test **
+!= 120
+?= C
+<4/4>
+
+Theme1{
+    <4*>
+    1 2 3 4
+}
+
+Theme2   {
+    <4*>
+    5 6 7 1^
+}
+
+-> (play Theme1 Piano) -> (play Theme2 Violin) ->#
+`;
+      const formatted = TmdRefactor.format(input);
+      expect(formatted).toContain("Theme1 {\n    <4*>\n    | 1 2 3 4 |\n}");
+      expect(formatted).toContain("Theme2 {\n    <4*>\n    | 5 6 7 1^ |\n}");
+    });
+
+    it("compacts entry header timing and show headers (#10)", () => {
+      const input = `::SCORE::
+** Header Compaction **
+!= 120
+?= C
+<4/4>
+
+intro : Piano @ | 0 | {
+    <4*>
+    | 1 2 3 4 |
+}
+
+show : Lighting @ intro {
+"""
+cue black
+wait 4
+"""
+}
+
+-> intro ->#
+`;
+      const formatted = TmdRefactor.format(input);
+      expect(formatted).toContain("intro:Piano@|0|{");
+      expect(formatted).toContain("show:Lighting@intro{");
+    });
+
+    it("normalizes top-level blank lines, inner entry blank lines, and single trailing EOF newline (#11)", () => {
+      const input = `::SCORE::
+** Blank Line Test **
+!= 120
+?= C
+<4/4>
+~ "Composer: Alice"
+intro:Piano@|0|{
+
+    <4*>
+    | 1 2 3 4 |
+
+
+
+    | 5 6 7 1^ |
+
+}
+verse:Piano@|0|{
+    <4*>
+    | 1 2 3 4 |
+}
+-> intro -> verse ->#
+
+
+`;
+      const formatted = TmdRefactor.format(input);
+      expect(formatted).toBe(`::SCORE::
+** Blank Line Test **
+!= 120
+?= C
+<4/4>
+
+~ "Composer: Alice"
+
+intro:Piano@|0|{
+    <4*>
+    | 1 2 3 4 |
+
+    | 5 6 7 1^ |
+}
+
+verse:Piano@|0|{
+    <4*>
+    | 1 2 3 4 |
+}
+
+-> intro -> verse ->#
+`);
+      expect(formatted.endsWith("\n")).toBe(true);
+      expect(formatted.endsWith("\n\n")).toBe(false);
+    });
+
+    it("indents multi-line playback continuation lines with 4 spaces and compacts stanza tags (#12)", () => {
+      const input = `::SCORE::
+** Playback Test **
+!= 120
+?= C
+<4/4>
+
+verse:Vocal@|0|{
+    <4*>
+    | 1 2 3 4 |
+}
+
+chorus:Vocal@|0|{
+    <4*>
+    | 5 6 7 1^ |
+}
+
+-> verse[ L1 ] -> { ? + 2 } -> chorus
+-> verse [ L2 ] -> chorus -> #
+`;
+      const formatted = TmdRefactor.format(input);
+      expect(formatted).toContain(
+        "-> verse[L1] -> {?+2} -> chorus\n    -> verse[L2] -> chorus ->#\n"
+      );
+    });
+  });
+
+  describe("Lyric Line Formatting, Stanza Sorting & Idempotency (#7, #16)", () => {
+    it("formats lyric lines normalizing prefix, outer barlines, token spacing, and parenthesized groups (#7)", () => {
+      const input = `::SCORE::
+** Lyric Formatting **
+!= 120
+?= C
+<4/4>
+
+verse:Vocal@|0|{
+    <4*>
+    1 2 3 4 | 5 - 3 1
+    L |   你   好   嗎   喔   |   我   -   很   好
+    | (1 1)%(--) 3 4 |
+    L| (  你   好  )   嗎   喔   |
+}
+
+-> verse ->#
+`;
+      const formatted = TmdRefactor.format(input);
+      expect(formatted).toContain("    | 1 2 3 4 | 5 - 3 1 |\n    L| 你 好 嗎 喔 | 我 - 很 好 |");
+      expect(formatted).toContain("    | (1 1)%(--) 3 4 |\n    L| (你 好) 嗎 喔 |");
+    });
+
+    it("sorts consecutive multi-stanza lyric lines in ascending numeric order (#7)", () => {
+      const input = `::SCORE::
+** Stanza Sorting **
+!= 120
+?= C
+<4/4>
+
+verse:Vocal@|0|{
+    <4*>
+    | 1 2 3 4 | 5 - 3 1 |
+    L10 | 第 十 段 詞 | 結 尾 啦 - |
+    L2 | 吃 飽 了 嗎 | 還 - 沒 吃 |
+    L1| 你 好 嗎 喔 | 我 - 很 好 |
+}
+
+-> verse[L1] -> verse[L2] -> verse[L10] ->#
+`;
+      const formatted = TmdRefactor.format(input);
+      expect(formatted).toContain(
+        [
+          "    | 1 2 3 4 | 5 - 3 1 |",
+          "    L1| 你 好 嗎 喔 | 我 - 很 好 |",
+          "    L2| 吃 飽 了 嗎 | 還 - 沒 吃 |",
+          "    L10| 第 十 段 詞 | 結 尾 啦 - |",
+        ].join("\n")
+      );
+    });
+
+    it("satisfies format idempotency and AST serializer compatibility (#16)", () => {
+      const messySource = `::SCORE::
+** Idempotency & Compatibility **
+!=128
+?=G
+key=Em
+<4/4>
+~   "Composer: Alice | Bob"
+=~: __ALBUM__ = "Greatest   Hits"
+Theme{
+<4*>
+1234
+}
+verse : Vocal [ pitchMode = fixed ] @ | 0 | {
+
+<4*>
+1^' 2_, ( 3 4 ) % ( - ) | [ C / G ] 1 + 3 0 -
+L2 | 第 二 段 ( 歌 詞 ) | 啦 - 0 -
+L1 | 第 一 段 ( 歌 詞 ) | 喔 - 0 -
+
+}
+show : Lighting @ verse {
+"""
+cue 1
+  wait   4
+"""
+}
+-> (play Theme Piano) -> verse[ L1 ]
+-> verse[ L2 ] -> #
+
+`;
+      const once = TmdRefactor.format(messySource);
+      const twice = TmdRefactor.format(once);
+      expect(twice).toBe(once);
+
+      const parseableSource = `::SCORE::
+** AST Round Trip **
+!= 120
+?= D
+key= Bm
+<4/4>
+
+~ "Composer: J.S. Bach"
+=~:__OPUS__= "BWV 1"
+
+Theme {
+    <4*>
+    | 1 2 3 4 |
+}
+
+verse:Piano[pitchMode=fixed]@|0|{
+    <4*>
+    | {!=100} (1 2)%(-) 3+5 [D/F#] - | 1'^ 5,_ 0 - |
+}
+
+show:Lighting@verse{
+"""
+cue black
+wait 4
+"""
+}
+
+-> (play Theme Violin) -> verse -> {?+2} -> verse
+    -> verse ->#
+`;
+      const sheet = TmdParser.parse(parseableSource);
+      const serialized = formatSheet(sheet);
+      expect(TmdRefactor.format(serialized)).toBe(serialized);
+    });
+  });
+});
+
