@@ -10,6 +10,7 @@ import {
   TmdVSQGenerator,
   TmdVSQXGenerator,
 } from "../src/exporters/index.js";
+import { TmdLSPCompletionEngine } from "../src/lsp/completion.js";
 import { TmdMeasureRenderer, TmdPlaybackRenderer } from "../src/playback/index.js";
 import { formatSheet } from "../src/syntax/format.js";
 import { TmdParser } from "../src/syntax/parser.js";
@@ -614,5 +615,36 @@ verse:Vocal@|0|{
     const preview = TmdBrailleGenerator.generateBraillePreview(sheet);
     expect(preview.asciiText).toContain(";;");
     expect(preview.tracks[0].measures[0].sightedSummary).toContain("「yes-");
+  });
+});
+
+describe("LSP Stanza Selector Auto-Completion (Issue #80 - Commit 6)", () => {
+  it("completes stanza selectors L1, L2 after -> verse[ and reuses closing ] when present", () => {
+    const source = `::SCORE::
+** Completion Song **
+!= 120
+?= C
+<4/4>
+
+verse:Vocal@|0|{
+    <4*>
+    | 1 2 3 4 |
+    L1| 你 好 嗎 喔 |
+    L2| 吃 飽 了 嗎 |
+}
+
+-> verse[
+`;
+    const items = TmdLSPCompletionEngine.complete(source, { line: 13, character: 9 });
+    expect(items.map((i) => i.label)).toEqual(["L1", "L2"]);
+    expect(items[0].insertText).toBe("L1]");
+
+    const sourceWithClosing = source.replace("-> verse[", "-> verse[]");
+    const itemsWithClosing = TmdLSPCompletionEngine.complete(sourceWithClosing, {
+      line: 13,
+      character: 9,
+    });
+    expect(itemsWithClosing.map((i) => i.label)).toEqual(["L1", "L2"]);
+    expect(itemsWithClosing[0].insertText).toBe("L1");
   });
 });
