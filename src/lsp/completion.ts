@@ -93,8 +93,26 @@ export class TmdLSPCompletionEngine {
       });
     }
 
-    // 2. Playback section completion: after "->"
+    // 2. Playback section or stanza selector completion: after "->"
     if (prefix.includes("->")) {
+      const stanzaMatch = prefix.match(/->\s*(?:.*->\s*)*([A-Za-z_][A-Za-z0-9_'-]*)\[\s*([A-Za-z0-9]*)$/);
+      if (stanzaMatch) {
+        const targetSection = stanzaMatch[1];
+        const typedStanza = stanzaMatch[2].toUpperCase();
+        const stanzas = this.extractStanzasForSection(source, targetSection);
+        const appendClosingBracket = nextChar !== "]";
+        return stanzas
+          .map((num) => `L${num}`)
+          .filter((tag) => typedStanza.length === 0 || tag.startsWith(typedStanza))
+          .map((tag) => ({
+            label: tag,
+            kind: TmdLSPCompletionItemKind.Value,
+            detail: `Stanza ${tag} for ${targetSection}`,
+            documentation: "Playback stanza selector",
+            insertText: appendClosingBracket ? `${tag}]` : tag,
+          }));
+      }
+
       const sectionNames = TmdOutlineGenerator.extractSectionNames(source);
       return sectionNames.map((name) => ({
         label: name,
@@ -176,6 +194,44 @@ export class TmdLSPCompletionEngine {
     }
 
     return [];
+  }
+
+  private static extractStanzasForSection(source: string, sectionName: string): number[] {
+    const stanzaSet = new Set<number>();
+    const rawLines = source.split("\n");
+    let inTargetEntry = false;
+    let braceDepth = 0;
+
+    for (const rawLine of rawLines) {
+      const trimmed = rawLine.trim();
+      if (!inTargetEntry) {
+        const headerMatch = trimmed.match(/^([A-Za-z_][A-Za-z0-9_'-]*)\s*(?::[^{]*)?\{/);
+        if (headerMatch && headerMatch[1] === sectionName) {
+          inTargetEntry = true;
+          braceDepth = 1;
+        }
+      } else {
+        const lMatch = trimmed.match(/^L(\d+)\s*\|/);
+        if (lMatch) {
+          const idx = parseInt(lMatch[1], 10);
+          if (idx >= 1 && idx <= 64) {
+            stanzaSet.add(idx);
+          }
+        }
+        for (const ch of trimmed) {
+          if (ch === "{") braceDepth++;
+          else if (ch === "}") {
+            braceDepth--;
+            if (braceDepth <= 0) {
+              inTargetEntry = false;
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    return Array.from(stanzaSet).sort((a, b) => a - b);
   }
 
   private static getDiatonicChords(keyStr: string): string[] {

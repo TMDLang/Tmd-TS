@@ -1,5 +1,5 @@
 import { TmdMacroEvaluator } from '../playback/macro.js';
-import { PlaybackContent, PlaybackDirectiveEvent, PlaybackEvent, PlaybackState, PlaybackTupletMetadata, TmdPlaybackRenderer } from '../playback/playback.js';
+import { PlaybackContent, PlaybackDirectiveEvent, PlaybackEvent, PlaybackLyric, PlaybackState, PlaybackTupletMetadata, TmdPlaybackRenderer } from '../playback/playback.js';
 import { Beat, clampTempo, DEFAULT_TEMPO_BPM, effectivePlaybackOrders, Sheet } from '../syntax/types.js';
 
 export interface NotationDurationAtom {
@@ -58,6 +58,8 @@ export interface MeasureEvent {
   tieStop: boolean;
   state: PlaybackState;
   tuplet?: PlaybackTupletMetadata;
+  lyric?: PlaybackLyric;
+  stanzaLyrics?: PlaybackLyric[];
 }
 
 export interface Measure {
@@ -188,6 +190,30 @@ export class TmdMeasureRenderer {
         const tieStop = isNote && evStart < mStart - 1e-6;
         const tieStart = isNote && evEnd > mEnd + 1e-6;
 
+        let eventLyric: PlaybackLyric | undefined;
+        let eventStanzaLyrics: PlaybackLyric[] | undefined;
+        if (!tieStop && event.lyric) {
+          eventLyric = event.lyric;
+          eventStanzaLyrics = event.stanzaLyrics;
+        } else if (tieStop && event.lyric) {
+          eventLyric = {
+            kind: 'tie',
+            text: '-',
+            rawText: '-',
+            cleanWord: '-',
+            ...(event.lyric.stanza !== undefined ? { stanza: event.lyric.stanza } : {}),
+          };
+          if (event.stanzaLyrics) {
+            eventStanzaLyrics = event.stanzaLyrics.map((sl) => ({
+              kind: 'tie' as const,
+              text: '-',
+              rawText: '-',
+              cleanWord: '-',
+              ...(sl.stanza !== undefined ? { stanza: sl.stanza } : {}),
+            }));
+          }
+        }
+
         rawMeasureEvents.push({
           startOffset: clStart - mStart,
           duration: clDur,
@@ -196,6 +222,8 @@ export class TmdMeasureRenderer {
           tieStop,
           state: event.state,
           tuplet: Math.abs(clDur - event.duration) < 1e-6 ? event.tuplet : undefined,
+          ...(eventLyric ? { lyric: eventLyric } : {}),
+          ...(eventStanzaLyrics ? { stanzaLyrics: eventStanzaLyrics } : {}),
         });
       }
 
@@ -228,6 +256,8 @@ export class TmdMeasureRenderer {
             tieStop: false,
             state: event.state,
             tuplet: Math.abs(clDur - event.duration) < 1e-6 ? event.tuplet : undefined,
+            ...(event.lyric ? { lyric: event.lyric } : {}),
+            ...(event.stanzaLyrics ? { stanzaLyrics: event.stanzaLyrics } : {}),
           });
         }
       }

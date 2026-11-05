@@ -75,7 +75,30 @@ export class TmdUSTGenerator {
     let noteIndex = 0;
     let lyricIndex = 0;
 
-    for (const event of TmdPlaybackRenderer.monophonicEvents(timeline)) {
+    const monophonic = TmdPlaybackRenderer.monophonicEvents(timeline).map((e) => ({ ...e }));
+    const mergedEvents: typeof monophonic = [];
+    for (const event of monophonic) {
+      if (
+        event.content.type === "note" &&
+        event.lyric?.kind === "tie" &&
+        mergedEvents.length > 0
+      ) {
+        const prev = mergedEvents[mergedEvents.length - 1];
+        if (
+          prev.content.type === "note" &&
+          Math.abs(prev.position + prev.duration - event.position) < 1e-6 &&
+          Math.abs(prev.state.tempo - event.state.tempo) <= 0.001 &&
+          TmdMIDIGenerator.noteToMIDIPitch(prev.content.note, prev.state.keyOffset) ===
+            TmdMIDIGenerator.noteToMIDIPitch(event.content.note, event.state.keyOffset)
+        ) {
+          prev.duration += event.duration;
+          continue;
+        }
+      }
+      mergedEvents.push(event);
+    }
+
+    for (const event of mergedEvents) {
       // Fill any timeline gap prior to this event with a Rest (Lyric=R)
       if (event.position > currentPosition) {
         const gapDuration = event.position - currentPosition;
@@ -90,7 +113,14 @@ export class TmdUSTGenerator {
       if (event.content.type === "note") {
         const ticks = Math.max(1, Math.round(event.duration * ticksPerQuarter));
         const pitch = TmdMIDIGenerator.noteToMIDIPitch(event.content.note, event.state.keyOffset);
-        const lyric = lyricIndex < lyrics.length ? lyrics[lyricIndex++] : defaultLyric;
+        const lyric =
+          lyricIndex < lyrics.length
+            ? lyrics[lyricIndex++]
+            : event.lyric?.kind === "syllable" && event.lyric.cleanWord.length > 0
+            ? event.lyric.cleanWord
+            : event.lyric?.kind === "tie"
+            ? "-"
+            : defaultLyric;
 
         const noteLines: string[] = [
           `[#${String(noteIndex).padStart(4, "0")}]`,

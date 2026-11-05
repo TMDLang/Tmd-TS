@@ -6,6 +6,7 @@ export type MIDIMessage =
   | { type: 'timeSignature'; beat: Beat }
   | { type: 'endOfTrack' }
   | { type: 'text'; text: string }
+  | { type: 'lyric'; text: string }
   | { type: 'customMeta'; metaType: number; data: Uint8Array | number[] }
   | { type: 'noteOn'; channel: number; note: number; velocity: number }
   | { type: 'noteOff'; channel: number; note: number }
@@ -130,6 +131,11 @@ export class TmdMIDIEncoder {
         const encoder = new TextEncoder();
         const data = Array.from(encoder.encode(message.text));
         return this.metaEvent(0x01, data);
+      }
+      case 'lyric': {
+        const encoder = new TextEncoder();
+        const data = Array.from(encoder.encode(message.text));
+        return this.metaEvent(0x05, data);
       }
       case 'customMeta': {
         const data = Array.from(message.data);

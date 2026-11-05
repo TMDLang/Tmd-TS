@@ -8,6 +8,15 @@ import {
   DEFAULT_TEMPO_BPM,
   Entry,
   KeySignature,
+  LyricBlock,
+  LyricElement,
+  LyricGroup,
+  LyricLine,
+  LyricMeasure,
+  LyricSlot,
+  LyricSoundingToken,
+  LyricTransparentToken,
+  MelodicMeasureSpan,
   Note,
   Playback,
   ScaleDegree,
@@ -285,11 +294,37 @@ export class TmdParserCore {
             }
             orders.push({ type: "macro", expr: sexpr as SExpr[], line: tok.line, column: tok.column });
           } else if (currType === "identifier") {
-            const idVal = this.advance().value;
+            const idTok = this.advance();
+            const idVal = idTok.value;
             if (idVal === "#") {
               break;
             }
-            orders.push({ type: "name", name: idVal });
+            let stanza: number | undefined;
+            let rawStanzaTag: string | undefined;
+            if (this.currentToken().type === "chord") {
+              const bracketVal = String(this.currentToken().value).trim();
+              rawStanzaTag = bracketVal;
+              const stanzaMatch = bracketVal.match(/^L(\d+)$/);
+              if (stanzaMatch) {
+                stanza = parseInt(stanzaMatch[1], 10);
+              }
+              this.advance();
+            }
+            const orderNode: Playback = {
+              type: "name",
+              name: idVal,
+              ...(stanza !== undefined ? { stanza } : {}),
+              ...(rawStanzaTag !== undefined
+                ? { rawStanzaTag, line: idTok.line, column: idTok.column }
+                : {}),
+            };
+            if (rawStanzaTag === undefined) {
+              Object.defineProperties(orderNode, {
+                line: { value: idTok.line, enumerable: false },
+                column: { value: idTok.column, enumerable: false },
+              });
+            }
+            orders.push(orderNode);
           } else {
             this.advance();
           }
@@ -427,13 +462,98 @@ export class TmdParserCore {
         const unitGroups: UnitGroup[] = [];
         const directives: SectionDirective[] = [];
         const barlinePositions: number[] = [];
+        const lyricBlocks: LyricBlock[] = [];
+        const lyrics: LyricLine[] = [];
+
+        let totalSectionMeasures = 0;
+        let currentMelodicLineMeasures: MelodicMeasureSpan[] = [];
+        let currentMeasureStartGroup: number | undefined;
+        let currentMeasureStartUnitPos: number | undefined;
+        let currentMeasureLine: number | undefined;
+        let currentMeasureCol: number | undefined;
+        let lastMelodicTokenLine: number | undefined;
+        let sawDirectiveSinceLastUnit = false;
+        let inExplicitOpenMeasure = false;
+        let sawPipeInSection = false;
+
+        const closeCurrentMelodicMeasure = () => {
+          if (currentMeasureStartGroup !== undefined && unitGroups.length > currentMeasureStartGroup) {
+            currentMelodicLineMeasures.push({
+              measureIndex: totalSectionMeasures++,
+              startGroupIndex: currentMeasureStartGroup,
+              endGroupIndex: unitGroups.length,
+              startUnitPosition: currentMeasureStartUnitPos ?? 0,
+              endUnitPosition: unitGroups.reduce((acc, g) => acc + g.length, 0),
+              line: currentMeasureLine,
+              column: currentMeasureCol,
+            });
+          }
+          currentMeasureStartGroup = undefined;
+          currentMeasureStartUnitPos = undefined;
+        };
+
+        const ensureMelodicMeasureOpen = (line: number, col: number) => {
+          if (lastMelodicTokenLine !== undefined && line !== lastMelodicTokenLine) {
+            if (!sawDirectiveSinceLastUnit && !inExplicitOpenMeasure) {
+              closeCurrentMelodicMeasure();
+              currentMelodicLineMeasures = [];
+            }
+          }
+          lastMelodicTokenLine = line;
+          if (currentMeasureStartGroup === undefined) {
+            currentMeasureStartGroup = unitGroups.length;
+            currentMeasureStartUnitPos = unitGroups.reduce((acc, g) => acc + g.length, 0);
+            currentMeasureLine = line;
+            currentMeasureCol = col;
+            if (sawPipeInSection) {
+              inExplicitOpenMeasure = true;
+            }
+          }
+        };
 
         while (this.current.type !== "openAngle" && this.current.type !== "closeBrace" && this.current.type !== "eof") {
           while (this.current.type === "pipe") {
+            const pipeTok = this.current;
+            sawPipeInSection = true;
+            if (lastMelodicTokenLine !== undefined && pipeTok.line !== lastMelodicTokenLine) {
+              if (!inExplicitOpenMeasure) {
+                closeCurrentMelodicMeasure();
+                currentMelodicLineMeasures = [];
+              }
+              lastMelodicTokenLine = pipeTok.line;
+            }
+            if (currentMeasureStartGroup !== undefined && unitGroups.length > currentMeasureStartGroup) {
+              closeCurrentMelodicMeasure();
+              inExplicitOpenMeasure = false;
+            } else {
+              ensureMelodicMeasureOpen(pipeTok.line, pipeTok.column);
+              inExplicitOpenMeasure = true;
+            }
             barlinePositions.push(unitGroups.reduce((acc, group) => acc + group.length, 0));
             this.advance();
           }
           if (this.current.type === "openAngle" || this.current.type === "closeBrace" || this.current.type === "eof") break;
+
+          if (this.current.type === "lyricLine") {
+            closeCurrentMelodicMeasure();
+            const blockLyricLines: LyricLine[] = [];
+            while (this.current.type === "lyricLine") {
+              const lyricTok = this.advance();
+              const parsedLine = this.parseLyricLineToken(lyricTok);
+              blockLyricLines.push(parsedLine);
+              lyrics.push(parsedLine);
+            }
+            lyricBlocks.push({
+              melodicMeasures: [...currentMelodicLineMeasures],
+              lyricLines: blockLyricLines,
+              line: blockLyricLines[0]?.line,
+            });
+            currentMelodicLineMeasures = [];
+            lastMelodicTokenLine = undefined;
+            sawDirectiveSinceLastUnit = false;
+            inExplicitOpenMeasure = false;
+            continue;
+          }
 
           if (
             this.current.type === "openBrace" ||
@@ -443,6 +563,7 @@ export class TmdParserCore {
             this.current.type === "relativeTempoPrefix" ||
             this.current.type === "explicitKeyPrefix"
           ) {
+            sawDirectiveSinceLastUnit = true;
             const dirPos = unitGroups.reduce((acc, g) => acc + g.length, 0);
             const directive = this.parseSectionDirective(dirPos);
             if (directive) directives.push(directive);
@@ -450,7 +571,11 @@ export class TmdParserCore {
             continue;
           }
 
+          const unitTokLine = this.current.line;
+          const unitTokCol = this.current.column;
           if (this.match("openParen")) {
+            ensureMelodicMeasureOpen(unitTokLine, unitTokCol);
+            sawDirectiveSinceLastUnit = false;
             this.skipPipes();
             const groupUnits: Unit[] = [];
             while (this.current.type !== "closeParen" && this.current.type !== "eof") {
@@ -476,6 +601,8 @@ export class TmdParserCore {
             }
             unitGroups.push({ units: groupUnits, length });
           } else {
+            ensureMelodicMeasureOpen(unitTokLine, unitTokCol);
+            sawDirectiveSinceLastUnit = false;
             const units = this.parseUnits();
             if (units.length > 0) {
               for (const u of units) {
@@ -487,7 +614,14 @@ export class TmdParserCore {
             }
           }
         }
-        sections.push({ noteLength, unitGroups, directives, barlinePositions });
+        closeCurrentMelodicMeasure();
+        sections.push({
+          noteLength,
+          unitGroups,
+          directives,
+          barlinePositions,
+          ...(lyricBlocks.length > 0 ? { lyricBlocks, lyrics } : {}),
+        });
       } else {
         this.recordFailure(this.pos, [tokenExpectedDescription("openAngle")]);
         return null;
@@ -784,5 +918,247 @@ export class TmdParserCore {
     }
     if (!this.require("closeParen")) return null;
     return items;
+  }
+
+  private parseLyricLineToken(tok: Token): LyricLine {
+    const { stanza, rawPrefix, content } = tok.value as {
+      stanza?: number;
+      rawPrefix: string;
+      content: string;
+    };
+    const rawParts = content.split("|");
+    if (content.trimEnd().endsWith("|") && rawParts.length > 0) {
+      rawParts.pop();
+    }
+
+    const lineState: {
+      inStraightQuote: boolean;
+      pendingPrefix: string;
+      lastSounding?: LyricSoundingToken;
+    } = {
+      inStraightQuote: false,
+      pendingPrefix: "",
+    };
+    const measures: LyricMeasure[] = [];
+    let currentCol = tok.column + rawPrefix.length;
+
+    for (const part of rawParts) {
+      measures.push(this.parseLyricMeasureString(part, tok.line, currentCol, lineState));
+      currentCol += part.length + 1;
+    }
+
+    return {
+      ...(stanza !== undefined ? { stanza } : {}),
+      rawPrefix,
+      measures,
+      line: tok.line,
+      column: tok.column,
+    };
+  }
+
+  private parseLyricMeasureString(
+    rawMeasure: string,
+    line: number,
+    baseColumn: number,
+    lineState: {
+      inStraightQuote: boolean;
+      pendingPrefix: string;
+      lastSounding?: LyricSoundingToken;
+    }
+  ): LyricMeasure {
+    const LEADING_TRANSPARENT = new Set(["「", "『", "“", "（", "【"]);
+    const TRAILING_TRANSPARENT = new Set(["」", "』", "”", "）", "】", "——", "……"]);
+
+    let pos = 0;
+    const directives: string[] = [];
+
+    const classifyWord = (word: string, col: number): LyricSoundingToken | LyricTransparentToken => {
+      if (LEADING_TRANSPARENT.has(word)) {
+        lineState.pendingPrefix += word;
+        return { type: "transparent", text: word, position: "leading", line, column: col };
+      }
+      if (TRAILING_TRANSPARENT.has(word)) {
+        if (lineState.lastSounding) {
+          lineState.lastSounding.rawText += word;
+        } else {
+          lineState.pendingPrefix += word;
+        }
+        return { type: "transparent", text: word, position: "trailing", line, column: col };
+      }
+      if (word === '"') {
+        if (!lineState.inStraightQuote) {
+          lineState.inStraightQuote = true;
+          lineState.pendingPrefix += word;
+          return { type: "transparent", text: word, position: "leading", line, column: col };
+        } else {
+          lineState.inStraightQuote = false;
+          if (lineState.lastSounding) {
+            lineState.lastSounding.rawText += word;
+          } else {
+            lineState.pendingPrefix += word;
+          }
+          return { type: "transparent", text: word, position: "trailing", line, column: col };
+        }
+      }
+      if (word === "-") {
+        const tieTok: LyricSoundingToken = {
+          type: "sounding",
+          kind: "tie",
+          text: "-",
+          rawText: "-",
+          cleanWord: "-",
+          line,
+          column: col,
+        };
+        return tieTok;
+      }
+      if (word === "0") {
+        const restTok: LyricSoundingToken = {
+          type: "sounding",
+          kind: "rest",
+          text: "0",
+          rawText: "0",
+          cleanWord: "0",
+          line,
+          column: col,
+        };
+        return restTok;
+      }
+
+      const isHyphenated =
+        word.length > 1 &&
+        word.endsWith("-") &&
+        !word.endsWith("--") &&
+        !word.endsWith("——");
+      const coreWithoutHyphen = isHyphenated ? word.slice(0, -1) : word;
+      const rawText = `${lineState.pendingPrefix}${word}`;
+      lineState.pendingPrefix = "";
+      const stripped = coreWithoutHyphen.replace(/^[\p{P}\p{S}]+|[\p{P}\p{S}]+$/gu, "");
+      const cleanWord = stripped.length > 0 ? stripped : coreWithoutHyphen;
+
+      const sylTok: LyricSoundingToken = {
+        type: "sounding",
+        kind: "syllable",
+        text: word,
+        rawText,
+        cleanWord,
+        ...(isHyphenated ? { isHyphenated: true } : {}),
+        line,
+        column: col,
+      };
+      lineState.lastSounding = sylTok;
+      return sylTok;
+    };
+
+    const parseSequence = (stopAtCloseParen: boolean): {
+      elements: LyricElement[];
+      slots: LyricSlot[];
+      soundingTokens: LyricSoundingToken[];
+    } => {
+      const elements: LyricElement[] = [];
+      const slots: LyricSlot[] = [];
+      const soundingTokens: LyricSoundingToken[] = [];
+
+      while (pos < rawMeasure.length) {
+        while (pos < rawMeasure.length && (rawMeasure[pos] === " " || rawMeasure[pos] === "\t")) {
+          pos++;
+        }
+        if (pos >= rawMeasure.length) break;
+
+        const ch = rawMeasure[pos];
+        const col = baseColumn + pos;
+
+        if (stopAtCloseParen && ch === ")") {
+          pos++;
+          break;
+        }
+
+        if (ch === "{") {
+          const start = pos;
+          pos++;
+          let braceDepth = 1;
+          while (pos < rawMeasure.length && braceDepth > 0) {
+            if (rawMeasure[pos] === "{") braceDepth++;
+            else if (rawMeasure[pos] === "}") braceDepth--;
+            pos++;
+          }
+          directives.push(rawMeasure.slice(start, pos));
+          continue;
+        }
+
+        if (ch === "}") {
+          pos++;
+          directives.push("}");
+          continue;
+        }
+
+        if (ch === "(") {
+          pos++;
+          const inner = parseSequence(true);
+          let hasInvalidRatio = false;
+          const restSlice = rawMeasure.slice(pos);
+          const ratioMatch = restSlice.match(/^\s*%\s*\([^)]*\)/);
+          if (ratioMatch) {
+            hasInvalidRatio = true;
+            pos += ratioMatch[0].length;
+          }
+          const group: LyricGroup = {
+            type: "group",
+            elements: inner.elements,
+            soundingTokens: inner.soundingTokens,
+            ...(hasInvalidRatio ? { hasInvalidRatio: true } : {}),
+            line,
+            column: col,
+          };
+          elements.push(group);
+          slots.push(group);
+          soundingTokens.push(...inner.soundingTokens);
+          continue;
+        }
+
+        if (ch === ")") {
+          pos++;
+          continue;
+        }
+
+        const start = pos;
+        while (
+          pos < rawMeasure.length &&
+          rawMeasure[pos] !== " " &&
+          rawMeasure[pos] !== "\t" &&
+          rawMeasure[pos] !== "(" &&
+          rawMeasure[pos] !== ")" &&
+          rawMeasure[pos] !== "{" &&
+          rawMeasure[pos] !== "}"
+        ) {
+          pos++;
+        }
+        if (pos === start) {
+          pos++;
+          continue;
+        }
+        const word = rawMeasure.slice(start, pos);
+        if (word.length > 0) {
+          const item = classifyWord(word, col);
+          elements.push(item);
+          if (item.type === "sounding") {
+            slots.push(item);
+            soundingTokens.push(item);
+          }
+        }
+      }
+
+      return { elements, slots, soundingTokens };
+    };
+
+    const parsed = parseSequence(false);
+    return {
+      elements: parsed.elements,
+      slots: parsed.slots,
+      soundingTokens: parsed.soundingTokens,
+      ...(directives.length > 0 ? { directives } : {}),
+      line,
+      column: baseColumn,
+    };
   }
 }

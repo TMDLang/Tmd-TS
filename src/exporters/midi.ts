@@ -166,12 +166,29 @@ export class TmdMIDIGenerator {
       });
     }
 
+    let lastLyricTick = -1;
+
     for (const event of timeline.events) {
       const start = this.midiTick(event.position, ticksPerQuarter);
       const duration = Math.max(1, this.midiTick(event.duration, ticksPerQuarter));
 
       switch (event.content.type) {
         case 'note': {
+          if (
+            event.lyric &&
+            event.lyric.kind === 'syllable' &&
+            event.lyric.cleanWord.length > 0 &&
+            start !== lastLyricTick
+          ) {
+            events.push({
+              tick: start,
+              message: {
+                type: 'lyric',
+                text: event.lyric.cleanWord,
+              },
+            });
+            lastLyricTick = start;
+          }
           const pitch = this.noteToMIDIPitch(
             event.content.note,
             event.state.keyOffset

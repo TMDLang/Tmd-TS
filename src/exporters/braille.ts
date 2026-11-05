@@ -286,6 +286,12 @@ export class TmdBrailleGenerator {
             effectiveLineWidth
           );
           asciiLines.push(...wrappedLines);
+          const lyricLines = TmdBrailleGenerator.renderTrackLyricLinesAscii(
+            inst,
+            workingSheet,
+            effectiveLineWidth
+          );
+          asciiLines.push(...lyricLines);
         }
       } else {
         for (const track of renderedTracks) {
@@ -307,6 +313,14 @@ export class TmdBrailleGenerator {
             const suffix = isLastMeasure ? "<K" : "";
             asciiLines.push(`  ${prefix} ${mAscii}${suffix}`);
           }
+        }
+        for (const track of renderedTracks) {
+          const lyricLines = TmdBrailleGenerator.renderTrackLyricLinesAscii(
+            track.instrument,
+            workingSheet,
+            effectiveLineWidth
+          );
+          asciiLines.push(...lyricLines);
         }
       }
     }
@@ -856,7 +870,8 @@ export class TmdBrailleGenerator {
           pitchState
         );
       if (sighted) {
-        sightedTokens.push(sighted);
+        const lyrText = primary.lyric?.kind === "syllable" ? ` "${primary.lyric.rawText}"` : "";
+        sightedTokens.push(`${sighted}${lyrText}`);
       }
       groupTokens.push(`${pendingTempoInterruptAscii}${groupAscii}`);
     }
@@ -899,6 +914,135 @@ export class TmdBrailleGenerator {
       )
     );
     return { instrument, measures: outMeasures };
+  }
+
+  private static renderTrackLyricLinesAscii(
+    instrument: string,
+    sheet: Sheet,
+    lineWidth: number | null = 40
+  ): string[] {
+    const measures = TmdMeasureRenderer.renderMeasures(sheet, instrument);
+    const hasSimultaneousStanzas = measures.some((m) =>
+      m.events.some((ev) => (ev.stanzaLyrics?.length ?? 0) > 1)
+    );
+    const stanzaIds: number[] = [];
+    if (hasSimultaneousStanzas) {
+      for (const measure of measures) {
+        for (const ev of measure.events) {
+          if (ev.stanzaLyrics && ev.stanzaLyrics.length > 0) {
+            for (const sl of ev.stanzaLyrics) {
+              const st = sl.stanza ?? 1;
+              if (!stanzaIds.includes(st)) stanzaIds.push(st);
+            }
+          } else if (ev.lyric) {
+            const st = ev.lyric.stanza ?? 1;
+            if (!stanzaIds.includes(st)) stanzaIds.push(st);
+          }
+        }
+      }
+      stanzaIds.sort((a, b) => a - b);
+    } else if (measures.some((m) => m.events.some((ev) => ev.lyric !== undefined))) {
+      stanzaIds.push(1);
+    }
+    if (stanzaIds.length === 0) return [];
+    const isMultiStanza = stanzaIds.length > 1;
+    const out: string[] = [];
+
+    for (const st of stanzaIds) {
+      const words: string[] = [];
+      let syllableCount = 0;
+      for (const measure of measures) {
+        const groups = TmdMeasureRenderer.groupSimultaneousEvents(measure.events);
+        for (const group of groups) {
+          const primary = group.find((ev) => ev.content.type === "note") ?? group[0];
+          if (!primary) continue;
+          const lyr = isMultiStanza
+            ? primary.stanzaLyrics?.find((l) => (l.stanza ?? 1) === st) ??
+              (st === (primary.lyric?.stanza ?? 1) ? primary.lyric : undefined)
+            : primary.lyric;
+          if (lyr?.kind === "syllable") {
+            syllableCount++;
+            const encoded = TmdBrailleGenerator.encodeVocalLyricToken(lyr.rawText);
+            if (encoded.length > 0) {
+              words.push(encoded);
+            }
+          }
+        }
+      }
+      if (words.length === 0 && syllableCount > 0) {
+        for (let i = 0; i < syllableCount; i++) {
+          words.push("-");
+        }
+      }
+      if (words.length > 0) {
+        const prefix = isMultiStanza
+          ? `;;#${TmdBrailleGenerator.encodeUpperDigits(st)} `
+          : ";; ";
+        if (lineWidth === null || lineWidth <= 0) {
+          out.push(`${prefix}${words.join(" ")}`);
+        } else {
+          let currentLine = prefix;
+          for (const word of words) {
+            if (currentLine === prefix) {
+              currentLine += word;
+            } else if (currentLine.length + 1 + word.length <= lineWidth) {
+              currentLine += ` ${word}`;
+            } else {
+              out.push(currentLine);
+              currentLine = `  ${word}`;
+            }
+          }
+          if (currentLine.trim().length > 0) {
+            out.push(currentLine);
+          }
+        }
+      }
+    }
+    return out;
+  }
+
+  private static encodeVocalLyricToken(rawText: string): string {
+    let out = "";
+    for (const ch of rawText) {
+      if (ch.charCodeAt(0) <= 0x7f) {
+        if (ch === ",") out += "1";
+        else if (ch === ";") out += "2";
+        else if (ch === ":") out += "3";
+        else if (ch === ".") out += "4";
+        else if (ch === "!") out += "6";
+        else if (ch === "?") out += "8";
+        else if (ch === "\"") out += "8";
+        else out += TmdBrailleGenerator.encodeLiteraryText(ch);
+      } else {
+        if (ch === "「" || ch === "『" || ch === "“" || ch === "‘" || ch === "（" || ch === "【") {
+          out += "8";
+        } else if (
+          ch === "」" ||
+          ch === "』" ||
+          ch === "”" ||
+          ch === "’" ||
+          ch === "）" ||
+          ch === "】"
+        ) {
+          out += "0";
+        } else if (ch === "，" || ch === "、") {
+          out += "1";
+        } else if (ch === "；") {
+          out += "2";
+        } else if (ch === "：") {
+          out += "3";
+        } else if (ch === "。" || ch === "．") {
+          out += "4";
+        } else if (ch === "！") {
+          out += "6";
+        } else if (ch === "？") {
+          out += "8";
+        } else if (ch === "—" || ch === "–" || ch === "ー" || ch === "－") {
+          out += "-";
+        }
+      }
+    }
+    return out;
   }
 
   private static renderPartByPartTrackLines(

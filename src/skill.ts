@@ -233,6 +233,31 @@ The number of dashes in \`%(...)\` defines how many base beats the group occupie
 - \`(7, 1)%(--)\`: 2 notes fitting into 2 base beats.
 - \`(1 2 3 4 5)%(--)\`: 5-tuplet over 2 base beats.
 
+### 5.10 Vocal Lyrics & Grid-Counting Alignment (\`L|\`, \`L1|\`..\`L64|\`)
+Vocal lyrics are placed directly beneath their corresponding melodic measure line using \`L|\` (single stanza) or \`L1|\`..\`L64|\` (multi-stanza verses):
+\`\`\`tmd
+verse:Vocal@|0|{
+    <4*>
+    | [C] 1 2 3 5 | [G] (6 5)%(--) 3 0 |
+    L1| 春 風 吹 過 | (山 崗) - 0 |
+    L2| 秋 雨 落 在 | (池 塘) - 0 |
+}
+\`\`\`
+- **The Grid-Counting Principle ("算格子精神")**:
+  - Every sounding melodic note slot in a measure must correspond **1:1** to a sounding lyric token.
+  - **Sounding Tokens (1 slot each)**:
+    - A sung syllable or word (e.g., \`春\`, \`風\`, \`twinkle\`, or hyphenated Western syllables \`to-\` \`day\`).
+    - \`-\` (Melisma tie): Sustains the previous syllable across another note or across a barline (\`| 5 - | - 0 |\` paired with \`L| 歌 - | - 0 |\`).
+    - \`0\` (Rest placeholder): Matches a melodic rest \`0\` (trailing rests at the end of a measure may also be omitted in the lyric line).
+  - **Transparent Tokens (0 slots)**:
+    - Standalone quotation marks and brackets (\`「\`, \`」\`, \`『\`, \`』\`, \`“\`, \`”\`, \`（\`, \`）\`) consume **zero** slots. They are attached to adjacent syllables in engraved sheet music (\`rawText\`) and stripped (\`cleanWord\`) when exporting to voice synthesizers (MIDI \`0xFF 0x05\`, VOCALOID \`.vsqx\`, UTAU \`.ust\`).
+  - **One Note = One Syllable Invariance (Tuplets)**:
+    - Never cram multiple space-separated syllables onto a single note. When singing multiple syllables inside one beat, subdivide the melody into a tuplet \`(1 1)%(--)\` and group the lyrics in matching parentheses \`(你 好)\`.
+  - **Simultaneous Multi-Notes (\`1+3\`)**:
+    - A simultaneous dyad/chord (\`1+3\` or \`1+3+5\`) is 1 rhythmic slot and takes 1 lyric token.
+  - **Stanza Numbering**:
+    - Stanzas are indexed \`L1|\` through \`L64|\` (\`L0|\` is invalid). When a measure has multiple stanzas, \`tmd format\` sorts them numerically (\`L1|\` before \`L2|\`).
+
 ---
 
 ## 6. Section Directives (Mid-Score & Local Track Changes)
@@ -268,6 +293,9 @@ The playback arrangement directs the performance flow and modulations from begin
 Rules:
 - Starts with \`->\`.
 - References section names defined in paragraphs: \`-> intro -> verse -> chorus\`.
+- Supports multi-stanza lyric selectors (\`section[Lk]\`):
+  - \`-> verse[L1] -> chorus -> verse[L2] -> chorus ->#\` selects stanza \`L1\` on the first pass of \`verse\` and \`L2\` on the second pass.
+  - Broadcasts globally across all tracks in that section defining \`Lk\`; auxiliary tracks (e.g. \`BackingVocal\`) with only default \`L|\` automatically fall back to \`L|\`.
 - Supports movable-do playback transposition:
   - \`{?+3}\`: Transpose playback up 3 semitones.
   - \`{?-2}\`: Transpose playback down 2 semitones.
@@ -408,7 +436,7 @@ tmd --install-mcp
 tmd score.tmd --force -m score.mid
 \`\`\`
 
-For AI self-verification, write a small section first—even if its final note count is not yet calculated—then run \`tmd check <file.tmd>\`. The checker reports syntax, S-expression/macro expansion, timeline overlap, conflicting tempo directives, measure-beat, chord, unused-entry, instrument, section-length, and tempo-range diagnostics; it reports expected/found beat counts but does not invent missing notes. Use its suggestions to add ties (\`-\`) or rests (\`0\`) and iterate. In particular, write \`1+3+5\`, not \`[1 3 5]\`, for simultaneous numbered notes. Follow with \`tmd format\`, \`tmd outline\`, and \`tmd inspect --json\` when structural or musical-profile feedback is useful. Use \`tmd -p\` to inspect the parsed summary, and \`tmd --play\` or \`tmd -w preview.wav\` for an ear check. MCP exposes \`get_tmd_skill\`, \`parse_tmd\`, \`check_tmd\`, \`convert_tmd\`, and \`tmd_export_braille\`; LSP provides editor-integrated diagnostics and completion.
+For AI self-verification, write a small section first—even if its final note count is not yet calculated—then run \`tmd check <file.tmd>\`. The checker reports syntax, S-expression/macro expansion, timeline overlap, conflicting tempo directives, measure-beat, vocal lyric 1:1 grid slot alignment (\`E-LYRIC-SLOT-MISMATCH\`, \`E-LYRIC-GROUP\`, \`E-STANZA-ZERO\`, \`E-STANZA-RANGE\`, \`E-STANZA-DUPLICATE\`, \`W-STANZA-GAP\`), chord, unused-entry, instrument, section-length, and tempo-range diagnostics; it reports expected/found beat counts and lyric slot counts but does not invent missing notes. Use its suggestions to add ties (\`-\`) or rests (\`0\`) and iterate. In particular, write \`1+3+5\`, not \`[1 3 5]\`, for simultaneous numbered notes. Follow with \`tmd format\` (which normalizes compact note sequences like \`1 234\` ➔ \`1 2 3 4\`, completes outer barlines \`| ... |\`, strips inner tuplet/chord padding \`(1 2)%(-)\` / \`[C]\`, orders note modifiers \`1'^\`, and sorts \`L1|\`..\`L64|\` stanzas), \`tmd outline\`, and \`tmd inspect --json\` when structural or musical-profile feedback is useful. Use \`tmd -p\` to inspect the parsed summary, and \`tmd --play\` or \`tmd -w preview.wav\` for an ear check. MCP exposes \`get_tmd_skill\`, \`parse_tmd\`, \`check_tmd\`, \`convert_tmd\`, and \`tmd_export_braille\`; LSP provides editor-integrated diagnostics and completion.
 
 ---
 

@@ -1,5 +1,5 @@
 import { SheetInstrumentHelper } from "../domain/index.js";
-import { MeasureEvent, PlaybackDirectiveEvent, TmdMeasureRenderer } from "../playback/index.js";
+import { Measure, MeasureEvent, PlaybackDirectiveEvent, PlaybackLyric, TmdMeasureRenderer } from "../playback/index.js";
 import { KeySignature, metronomeTempoForBeat, Note, PercussionStroke, PitchMapping, Sheet } from "../syntax/index.js";
 
 export class TmdABCGenerator {
@@ -48,6 +48,31 @@ export class TmdABCGenerator {
     const initialKey = sheet.declaredKey || sheet.keySignature.toString();
     let currentKeyStepAlters = PitchMapping.keySignatureStepAlters(initialKey);
 
+    const hasSimultaneousStanzas = measures.some((m) =>
+      m.events.some((ev) => (ev.stanzaLyrics?.length ?? 0) > 1)
+    );
+    const stanzaIds: number[] = [];
+    if (hasSimultaneousStanzas) {
+      for (const measure of measures) {
+        for (const ev of measure.events) {
+          if (ev.stanzaLyrics && ev.stanzaLyrics.length > 0) {
+            for (const sl of ev.stanzaLyrics) {
+              const st = sl.stanza ?? 1;
+              if (!stanzaIds.includes(st)) stanzaIds.push(st);
+            }
+          } else if (ev.lyric) {
+            const st = ev.lyric.stanza ?? 1;
+            if (!stanzaIds.includes(st)) stanzaIds.push(st);
+          }
+        }
+      }
+      stanzaIds.sort((a, b) => a - b);
+    } else if (measures.some((m) => m.events.some((ev) => ev.lyric !== undefined))) {
+      stanzaIds.push(1);
+    }
+    const isMultiStanza = stanzaIds.length > 1;
+    let lineStartMeasureIdx = 0;
+
     for (let mIdx = 0; mIdx < measures.length; mIdx++) {
       const measure = measures[mIdx];
       const measureStepAlters = new Map<number, number[]>();
@@ -82,14 +107,66 @@ export class TmdABCGenerator {
         result += " ";
       }
       result += "|";
-      if ((mIdx + 1) % 4 === 0 && mIdx < measures.length - 1) {
+      const isLineEnd = (mIdx + 1) % 4 === 0 || mIdx === measures.length - 1;
+      if (isLineEnd) {
         result += "\n";
+        if (stanzaIds.length > 0) {
+          const chunkMeasures = measures.slice(lineStartMeasureIdx, mIdx + 1);
+          const wLines = TmdABCGenerator.formatLyricLinesForMeasures(chunkMeasures, stanzaIds, isMultiStanza);
+          for (const wLine of wLines) {
+            result += `${wLine}\n`;
+          }
+        }
+        lineStartMeasureIdx = mIdx + 1;
       } else {
         result += " ";
       }
     }
 
     return result.trim() + "\n";
+  }
+
+  private static formatLyricLinesForMeasures(
+    measures: Measure[],
+    stanzaIds: number[],
+    isMultiStanza: boolean
+  ): string[] {
+    const out: string[] = [];
+    for (const st of stanzaIds) {
+      const measureParts: string[] = [];
+      let hasAnyToken = false;
+      for (const measure of measures) {
+        const groups = TmdMeasureRenderer.groupSimultaneousEvents(measure.events);
+        const tokens: string[] = [];
+        for (let gIdx = 0; gIdx < groups.length; gIdx++) {
+          const group = groups[gIdx];
+          const noteEvent = group.find((ev) => ev.content.type === "note");
+          if (!noteEvent) continue;
+          const lyr: PlaybackLyric | undefined = isMultiStanza
+            ? noteEvent.stanzaLyrics?.find((l) => (l.stanza ?? 1) === st) ??
+              (st === (noteEvent.lyric?.stanza ?? 1) ? noteEvent.lyric : undefined)
+            : noteEvent.lyric;
+          if (!lyr) {
+            if (!noteEvent.tieStop) {
+              tokens.push("*");
+            }
+            continue;
+          }
+          hasAnyToken = true;
+          if (lyr.kind === "syllable") {
+            tokens.push(lyr.rawText);
+          } else if (lyr.kind === "tie") {
+            tokens.push("_");
+          }
+        }
+        measureParts.push(`${tokens.join(" ")} |`);
+      }
+      if (hasAnyToken) {
+        const prefix = isMultiStanza ? `w: ${st}.~` : "w: ";
+        out.push(`${prefix}${measureParts.join(" ")}`);
+      }
+    }
+    return out;
   }
 
   private static formatDirective(directive: PlaybackDirectiveEvent): string {
