@@ -286,7 +286,11 @@ export class TmdBrailleGenerator {
             effectiveLineWidth
           );
           asciiLines.push(...wrappedLines);
-          const lyricLines = TmdBrailleGenerator.renderTrackLyricLinesAscii(inst, workingSheet);
+          const lyricLines = TmdBrailleGenerator.renderTrackLyricLinesAscii(
+            inst,
+            workingSheet,
+            effectiveLineWidth
+          );
           asciiLines.push(...lyricLines);
         }
       } else {
@@ -309,6 +313,14 @@ export class TmdBrailleGenerator {
             const suffix = isLastMeasure ? "<K" : "";
             asciiLines.push(`  ${prefix} ${mAscii}${suffix}`);
           }
+        }
+        for (const track of renderedTracks) {
+          const lyricLines = TmdBrailleGenerator.renderTrackLyricLinesAscii(
+            track.instrument,
+            workingSheet,
+            effectiveLineWidth
+          );
+          asciiLines.push(...lyricLines);
         }
       }
     }
@@ -906,7 +918,8 @@ export class TmdBrailleGenerator {
 
   private static renderTrackLyricLinesAscii(
     instrument: string,
-    sheet: Sheet
+    sheet: Sheet,
+    lineWidth: number | null = 40
   ): string[] {
     const measures = TmdMeasureRenderer.renderMeasures(sheet, instrument);
     const stanzaIds: number[] = [];
@@ -930,6 +943,7 @@ export class TmdBrailleGenerator {
 
     for (const st of stanzaIds) {
       const words: string[] = [];
+      let syllableCount = 0;
       for (const measure of measures) {
         const groups = TmdMeasureRenderer.groupSimultaneousEvents(measure.events);
         for (const group of groups) {
@@ -939,15 +953,41 @@ export class TmdBrailleGenerator {
             primary.stanzaLyrics?.find((l) => (l.stanza ?? 1) === st) ??
             (st === (primary.lyric?.stanza ?? 1) ? primary.lyric : undefined);
           if (lyr?.kind === "syllable") {
-            words.push(TmdBrailleGenerator.encodeVocalLyricToken(lyr.rawText));
+            syllableCount++;
+            const encoded = TmdBrailleGenerator.encodeVocalLyricToken(lyr.rawText);
+            if (encoded.length > 0) {
+              words.push(encoded);
+            }
           }
+        }
+      }
+      if (words.length === 0 && syllableCount > 0) {
+        for (let i = 0; i < syllableCount; i++) {
+          words.push("-");
         }
       }
       if (words.length > 0) {
         const prefix = isMultiStanza
           ? `;;#${TmdBrailleGenerator.encodeUpperDigits(st)} `
           : ";; ";
-        out.push(`${prefix}${words.join(" ")}`);
+        if (lineWidth === null || lineWidth <= 0) {
+          out.push(`${prefix}${words.join(" ")}`);
+        } else {
+          let currentLine = prefix;
+          for (const word of words) {
+            if (currentLine === prefix) {
+              currentLine += word;
+            } else if (currentLine.length + 1 + word.length <= lineWidth) {
+              currentLine += ` ${word}`;
+            } else {
+              out.push(currentLine);
+              currentLine = `  ${word}`;
+            }
+          }
+          if (currentLine.trim().length > 0) {
+            out.push(currentLine);
+          }
+        }
       }
     }
     return out;
@@ -966,7 +1006,32 @@ export class TmdBrailleGenerator {
         else if (ch === "\"") out += "8";
         else out += TmdBrailleGenerator.encodeLiteraryText(ch);
       } else {
-        out += ch;
+        if (ch === "「" || ch === "『" || ch === "“" || ch === "‘" || ch === "（" || ch === "【") {
+          out += "8";
+        } else if (
+          ch === "」" ||
+          ch === "』" ||
+          ch === "”" ||
+          ch === "’" ||
+          ch === "）" ||
+          ch === "】"
+        ) {
+          out += "0";
+        } else if (ch === "，" || ch === "、") {
+          out += "1";
+        } else if (ch === "；") {
+          out += "2";
+        } else if (ch === "：") {
+          out += "3";
+        } else if (ch === "。" || ch === "．") {
+          out += "4";
+        } else if (ch === "！") {
+          out += "6";
+        } else if (ch === "？") {
+          out += "8";
+        } else if (ch === "—" || ch === "–" || ch === "ー" || ch === "－") {
+          out += "-";
+        }
       }
     }
     return out;

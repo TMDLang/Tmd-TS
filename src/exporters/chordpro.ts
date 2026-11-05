@@ -95,11 +95,23 @@ export class TmdChordProGenerator {
               .filter((inst): inst is string => Boolean(inst && inst.trim()))
           )
         );
-        const sectionInstrument = sectionInstruments.includes(targetInstrument)
-          ? targetInstrument
-          : sectionInstruments.find((inst) => /guitar|chord|lead|piano/i.test(inst)) ||
-            sectionInstruments[0] ||
-            targetInstrument;
+        const chordBearingInstruments = sectionInstruments.filter((inst) =>
+          sectionEntries.some(
+            (entry) =>
+              entry.assignment === inst &&
+              entry.sections.some((sec) =>
+                sec.unitGroups.some((ug) => ug.units.some((u) => u.type === 'chord'))
+              )
+          )
+        );
+        const sectionInstrument =
+          chordBearingInstruments.find((inst) => /chord|guitar|lead|piano/i.test(inst)) ||
+          chordBearingInstruments[0] ||
+          (sectionInstruments.includes(targetInstrument)
+            ? targetInstrument
+            : sectionInstruments.find((inst) => /guitar|chord|lead|piano/i.test(inst)) ||
+              sectionInstruments[0] ||
+              targetInstrument);
 
         const sectionMeasures = TmdMeasureRenderer.renderMeasures(
           sectionSheet,
@@ -129,31 +141,43 @@ export class TmdChordProGenerator {
         lines.push(`{comment: ${pName}}`);
 
         if (hasVocalLyrics) {
+          const allChordTrackMeasures = (
+            chordBearingInstruments.length > 0
+              ? chordBearingInstruments
+              : [sectionInstrument, ...(vocalInstrument ? [vocalInstrument] : [])]
+          ).map((inst) =>
+            inst === sectionInstrument
+              ? sectionMeasures
+              : inst === vocalInstrument
+                ? vocalMeasures
+                : TmdMeasureRenderer.renderMeasures(sectionSheet, inst)
+          );
           const lyricMeasureStrings: string[] = [];
-          const maxLen = Math.max(sectionMeasures.length, vocalMeasures.length);
+          const maxLen = Math.max(
+            sectionMeasures.length,
+            vocalMeasures.length,
+            ...allChordTrackMeasures.map((tm) => tm.length)
+          );
           for (let mIdx = 0; mIdx < maxLen; mIdx++) {
-            const cMeasure = sectionMeasures[mIdx];
             const vMeasure = vocalMeasures[mIdx];
             const chordEvents: Array<{ offset: number; text: string; consumed: boolean }> = [];
-            if (cMeasure) {
+            for (const trackMeasures of allChordTrackMeasures) {
+              const cMeasure = trackMeasures[mIdx];
+              if (!cMeasure) continue;
               for (const ev of cMeasure.events) {
                 if (ev.content.type === 'chord' && !ev.tieStop) {
-                  chordEvents.push({
-                    offset: ev.startOffset,
-                    text: `[${chordText(ev.content.chord, ev.state.keyOffset)}]`,
-                    consumed: false,
-                  });
-                }
-              }
-            }
-            if (vMeasure && vMeasure !== cMeasure) {
-              for (const ev of vMeasure.events) {
-                if (ev.content.type === 'chord' && !ev.tieStop) {
-                  chordEvents.push({
-                    offset: ev.startOffset,
-                    text: `[${chordText(ev.content.chord, ev.state.keyOffset)}]`,
-                    consumed: false,
-                  });
+                  const text = `[${chordText(ev.content.chord, ev.state.keyOffset)}]`;
+                  const isDup = chordEvents.some(
+                    (existing) =>
+                      Math.abs(existing.offset - ev.startOffset) < 1e-4 && existing.text === text
+                  );
+                  if (!isDup) {
+                    chordEvents.push({
+                      offset: ev.startOffset,
+                      text,
+                      consumed: false,
+                    });
+                  }
                 }
               }
             }

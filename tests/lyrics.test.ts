@@ -839,3 +839,91 @@ verse:Vocal@|0|{
     expect(ust).toContain("Lyric=-\r\nNoteNum=62\r\n");
   });
 });
+
+describe("Review Batch 3: ChordPro & Braille Exporter Fixes (Issue #80)", () => {
+  it("discovers chords from chord-bearing tracks in ChordPro even when another lead/guitar track precedes it", () => {
+    const source = `::SCORE::
+** Multi-Track ChordPro **
+!= 120
+?= C
+<4/4>
+
+verse:Guitar@|0|{
+    <4*>
+    | 5 3 2 1 |
+}
+
+verse:Piano@|0|{
+    <4*>
+    | [C] - [G] - |
+}
+
+verse:Vocal@|0|{
+    <4*>
+    | 1 2 3 4 |
+    L| 你 好 嗎 喔 |
+}
+
+-> verse ->#
+`;
+    const sheet = TmdParser.parse(source);
+    const cho = TmdChordProGenerator.generateChordPro(sheet);
+    expect(cho).toContain("[C]你 好 [G]嗎 喔");
+  });
+
+  it("supports barOverBar vocal lyrics, effectiveLineWidth wrapping, and ASCII-safe tactile braille without CJK/fullwidth leakage", () => {
+    const source = `::SCORE::
+** Song **
+!= 120
+?= C
+<4/4>
+
+verse:Piano@|0|{
+    <4*>
+    | 1 2 3 4 | 5 6 7 1^ |
+}
+
+verse:Vocal@|0|{
+    <4*>
+    | 1    2        3        4        | 5        6    7    1^     |
+    L| 「hello wonderful beautiful world」 | singing「你 好嗎？」today! |
+}
+
+-> verse ->#
+`;
+    const sheet = TmdParser.parse(source);
+    const barOverBarPreview = TmdBrailleGenerator.generateBraillePreview(sheet, {
+      layout: "barOverBar",
+      lineWidth: 24,
+    });
+
+    // 1. barOverBar must include vocal lyric lines (;;)
+    expect(barOverBarPreview.asciiText).toContain(";; ");
+
+    // 2. Every line in asciiText must respect lineWidth (24) and continuation lines start with 2 spaces
+    const lines = barOverBarPreview.asciiText.trimEnd().split("\n");
+    for (const line of lines) {
+      expect(line.length).toBeLessThanOrEqual(24);
+    }
+    const lyricStartIdx = lines.findIndex((l) => l.startsWith(";; "));
+    expect(lyricStartIdx).toBeGreaterThanOrEqual(0);
+    expect(lines[lyricStartIdx + 1]?.startsWith("  ")).toBe(true);
+
+    // 3. No non-ASCII characters may leak into asciiText (.brf), and unicodeText (.brl) must only contain Braille cells + whitespace
+    for (const ch of barOverBarPreview.asciiText) {
+      expect(ch.charCodeAt(0)).toBeLessThanOrEqual(0x7f);
+    }
+    for (const ch of barOverBarPreview.unicodeText) {
+      if (ch === "\n" || ch === "\r" || ch === " ") continue;
+      const code = ch.charCodeAt(0);
+      expect(code).toBeGreaterThanOrEqual(0x2800);
+      expect(code).toBeLessThanOrEqual(0x28ff);
+    }
+
+    // 4. Sighted summary still preserves original rawText including CJK and fullwidth punctuation
+    const vocalTrack = barOverBarPreview.tracks.find((t) => t.instrument === "Vocal");
+    expect(vocalTrack?.measures[1].sightedSummary).toContain("「你");
+    expect(vocalTrack?.measures[1].sightedSummary).toContain("好嗎？」");
+  });
+});
+
