@@ -504,11 +504,11 @@ export class TmdPlaybackRenderer {
 
   private static nextTupletId = 1;
 
-  private static resolveSectionLyrics(
-    section: Section,
+  private static resolveParagraphLyrics(
+    sections: Section[],
     selectedStanza?: number
   ): Map<string, { lyric: PlaybackLyric; stanzaLyrics: PlaybackLyric[] }> | undefined {
-    if (!section.lyricBlocks || section.lyricBlocks.length === 0) return undefined;
+    if (!sections.some((s) => s.lyricBlocks && s.lyricBlocks.length > 0)) return undefined;
 
     const selectLineForBlock = (lines: LyricLine[]): LyricLine | undefined => {
       if (lines.length === 0) return undefined;
@@ -560,10 +560,12 @@ export class TmdPlaybackRenderer {
           ) {
             tieCount++;
           }
-          const isMelismaLeadIn = Boolean(token.isHyphenated && tieCount > 0);
-          const currHyphenated = Boolean(token.isHyphenated && !isMelismaLeadIn);
+          const isCjkMelismaLeadIn = Boolean(
+            token.isHyphenated && tieCount > 0 && /\p{Script=Han}/u.test(token.cleanWord)
+          );
+          const currHyphenated = Boolean(token.isHyphenated && !isCjkMelismaLeadIn);
           const effectiveRawText =
-            isMelismaLeadIn && token.rawText.endsWith("-")
+            isCjkMelismaLeadIn && token.rawText.endsWith("-")
               ? token.rawText.slice(0, -1)
               : token.rawText;
 
@@ -591,6 +593,8 @@ export class TmdPlaybackRenderer {
     };
 
     const collectBlockMeasureSlots = (
+      section: Section,
+      sectionIdx: number,
       mSpanStartGroup: number,
       mSpanEndGroup: number
     ): string[] => {
@@ -599,7 +603,7 @@ export class TmdPlaybackRenderer {
         const g = section.unitGroups[gIdx];
         if (!g) continue;
         for (let uIdx = 0; uIdx < g.units.length; uIdx++) {
-          slotKeys.push(`${gIdx}:${uIdx}`);
+          slotKeys.push(`${sectionIdx}:${gIdx}:${uIdx}`);
         }
       }
       return slotKeys;
@@ -611,52 +615,59 @@ export class TmdPlaybackRenderer {
       Array<{ key: string; token: LyricSoundingToken; stanza?: number }>
     >();
 
-    for (const block of section.lyricBlocks) {
-      const activeLine = selectLineForBlock(block.lyricLines);
-      const sortedLines = [...block.lyricLines].sort(
-        (a, b) => (a.stanza ?? 0) - (b.stanza ?? 0)
-      );
-      const candidateLines =
-        selectedStanza !== undefined
-          ? activeLine
-            ? [activeLine]
-            : []
-          : sortedLines;
+    for (let sectionIdx = 0; sectionIdx < sections.length; sectionIdx++) {
+      const section = sections[sectionIdx];
+      if (!section.lyricBlocks || section.lyricBlocks.length === 0) continue;
 
-      for (let mIdx = 0; mIdx < block.melodicMeasures.length; mIdx++) {
-        const mSpan = block.melodicMeasures[mIdx];
-        const slotKeys = collectBlockMeasureSlots(
-          mSpan.startGroupIndex,
-          mSpan.endGroupIndex
+      for (const block of section.lyricBlocks) {
+        const activeLine = selectLineForBlock(block.lyricLines);
+        const sortedLines = [...block.lyricLines].sort(
+          (a, b) => (a.stanza ?? 0) - (b.stanza ?? 0)
         );
+        const candidateLines =
+          selectedStanza !== undefined
+            ? activeLine
+              ? [activeLine]
+              : []
+            : sortedLines;
 
-        if (activeLine && activeLine.measures[mIdx]) {
-          const tokens = activeLine.measures[mIdx].soundingTokens;
-          const count = Math.min(slotKeys.length, tokens.length);
-          for (let s = 0; s < count; s++) {
-            activeSeq.push({
-              key: slotKeys[s],
-              token: tokens[s],
-              stanza: activeLine.stanza,
-            });
-          }
-        }
+        for (let mIdx = 0; mIdx < block.melodicMeasures.length; mIdx++) {
+          const mSpan = block.melodicMeasures[mIdx];
+          const slotKeys = collectBlockMeasureSlots(
+            section,
+            sectionIdx,
+            mSpan.startGroupIndex,
+            mSpan.endGroupIndex
+          );
 
-        for (const lLine of candidateLines) {
-          const stanzaId = lLine.stanza ?? "default";
-          if (!stanzaSeqs.has(stanzaId)) {
-            stanzaSeqs.set(stanzaId, []);
-          }
-          const seq = stanzaSeqs.get(stanzaId)!;
-          if (lLine.measures[mIdx]) {
-            const tokens = lLine.measures[mIdx].soundingTokens;
+          if (activeLine && activeLine.measures[mIdx]) {
+            const tokens = activeLine.measures[mIdx].soundingTokens;
             const count = Math.min(slotKeys.length, tokens.length);
             for (let s = 0; s < count; s++) {
-              seq.push({
+              activeSeq.push({
                 key: slotKeys[s],
                 token: tokens[s],
-                stanza: lLine.stanza ?? 1,
+                stanza: activeLine.stanza,
               });
+            }
+          }
+
+          for (const lLine of candidateLines) {
+            const stanzaId = lLine.stanza ?? "default";
+            if (!stanzaSeqs.has(stanzaId)) {
+              stanzaSeqs.set(stanzaId, []);
+            }
+            const seq = stanzaSeqs.get(stanzaId)!;
+            if (lLine.measures[mIdx]) {
+              const tokens = lLine.measures[mIdx].soundingTokens;
+              const count = Math.min(slotKeys.length, tokens.length);
+              for (let s = 0; s < count; s++) {
+                seq.push({
+                  key: slotKeys[s],
+                  token: tokens[s],
+                  stanza: lLine.stanza ?? 1,
+                });
+              }
             }
           }
         }
@@ -700,13 +711,14 @@ export class TmdPlaybackRenderer {
     let position = start;
     const effectiveMinTimeSigPos = minTimeSignaturePosition ?? start;
     const deferredTimeSignatures: { position: number; kind: SectionDirectiveKind }[] = [];
+    const paragraphLyrics = TmdPlaybackRenderer.resolveParagraphLyrics(paragraph.sections, selectedStanza);
 
-    for (const section of paragraph.sections) {
+    for (let sectionIdx = 0; sectionIdx < paragraph.sections.length; sectionIdx++) {
+      const section = paragraph.sections[sectionIdx];
       const unitDuration = 4.0 / Math.max(1, section.noteLength);
       const sortedDirectives = [...section.directives].sort((a, b) => a.position - b.position);
       let directiveIndex = 0;
       let sectionPosition = 0;
-      const sectionLyrics = TmdPlaybackRenderer.resolveSectionLyrics(section, selectedStanza);
 
       for (let groupIdx = 0; groupIdx < section.unitGroups.length; groupIdx++) {
         const group = section.unitGroups[groupIdx];
@@ -736,7 +748,7 @@ export class TmdPlaybackRenderer {
               events[i] = { ...events[i], duration: events[i].duration + groupDuration, tuplet: undefined };
             }
           } else {
-            const slotLyric = sectionLyrics?.get(`${groupIdx}:0`);
+            const slotLyric = paragraphLyrics?.get(`${sectionIdx}:${groupIdx}:0`);
             events.push({
               position,
               duration: groupDuration,
@@ -772,7 +784,7 @@ export class TmdPlaybackRenderer {
           let currentEventIndices: number[] = [];
 
           group.units.forEach((unit, idx) => {
-            const slotLyric = sectionLyrics?.get(`${groupIdx}:${idx}`);
+            const slotLyric = paragraphLyrics?.get(`${sectionIdx}:${groupIdx}:${idx}`);
             if (unit.type === "tie") {
               if (currentEventIndices.length > 0) {
                 for (const index of currentEventIndices) {

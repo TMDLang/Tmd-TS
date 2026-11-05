@@ -310,12 +310,21 @@ export class TmdParserCore {
               }
               this.advance();
             }
-            orders.push({
+            const orderNode: Playback = {
               type: "name",
               name: idVal,
               ...(stanza !== undefined ? { stanza } : {}),
-              ...(rawStanzaTag !== undefined ? { rawStanzaTag } : {}),
-            });
+              ...(rawStanzaTag !== undefined
+                ? { rawStanzaTag, line: idTok.line, column: idTok.column }
+                : {}),
+            };
+            if (rawStanzaTag === undefined) {
+              Object.defineProperties(orderNode, {
+                line: { value: idTok.line, enumerable: false },
+                column: { value: idTok.column, enumerable: false },
+              });
+            }
+            orders.push(orderNode);
           } else {
             this.advance();
           }
@@ -904,12 +913,19 @@ export class TmdParserCore {
       rawParts.pop();
     }
 
-    const quoteState = { inStraightQuote: false };
+    const lineState: {
+      inStraightQuote: boolean;
+      pendingPrefix: string;
+      lastSounding?: LyricSoundingToken;
+    } = {
+      inStraightQuote: false,
+      pendingPrefix: "",
+    };
     const measures: LyricMeasure[] = [];
     let currentCol = tok.column + rawPrefix.length;
 
     for (const part of rawParts) {
-      measures.push(this.parseLyricMeasureString(part, tok.line, currentCol, quoteState));
+      measures.push(this.parseLyricMeasureString(part, tok.line, currentCol, lineState));
       currentCol += part.length + 1;
     }
 
@@ -926,40 +942,42 @@ export class TmdParserCore {
     rawMeasure: string,
     line: number,
     baseColumn: number,
-    quoteState: { inStraightQuote: boolean }
+    lineState: {
+      inStraightQuote: boolean;
+      pendingPrefix: string;
+      lastSounding?: LyricSoundingToken;
+    }
   ): LyricMeasure {
     const LEADING_TRANSPARENT = new Set(["「", "『", "“", "（", "【"]);
     const TRAILING_TRANSPARENT = new Set(["」", "』", "”", "）", "】", "——", "……"]);
 
     let pos = 0;
-    let pendingPrefix = "";
-    let lastSounding: LyricSoundingToken | undefined;
     const directives: string[] = [];
 
     const classifyWord = (word: string, col: number): LyricSoundingToken | LyricTransparentToken => {
       if (LEADING_TRANSPARENT.has(word)) {
-        pendingPrefix += word;
+        lineState.pendingPrefix += word;
         return { type: "transparent", text: word, position: "leading", line, column: col };
       }
       if (TRAILING_TRANSPARENT.has(word)) {
-        if (lastSounding) {
-          lastSounding.rawText += word;
+        if (lineState.lastSounding) {
+          lineState.lastSounding.rawText += word;
         } else {
-          pendingPrefix += word;
+          lineState.pendingPrefix += word;
         }
         return { type: "transparent", text: word, position: "trailing", line, column: col };
       }
       if (word === '"') {
-        if (!quoteState.inStraightQuote) {
-          quoteState.inStraightQuote = true;
-          pendingPrefix += word;
+        if (!lineState.inStraightQuote) {
+          lineState.inStraightQuote = true;
+          lineState.pendingPrefix += word;
           return { type: "transparent", text: word, position: "leading", line, column: col };
         } else {
-          quoteState.inStraightQuote = false;
-          if (lastSounding) {
-            lastSounding.rawText += word;
+          lineState.inStraightQuote = false;
+          if (lineState.lastSounding) {
+            lineState.lastSounding.rawText += word;
           } else {
-            pendingPrefix += word;
+            lineState.pendingPrefix += word;
           }
           return { type: "transparent", text: word, position: "trailing", line, column: col };
         }
@@ -995,8 +1013,8 @@ export class TmdParserCore {
         !word.endsWith("--") &&
         !word.endsWith("——");
       const coreWithoutHyphen = isHyphenated ? word.slice(0, -1) : word;
-      const rawText = `${pendingPrefix}${word}`;
-      pendingPrefix = "";
+      const rawText = `${lineState.pendingPrefix}${word}`;
+      lineState.pendingPrefix = "";
       const stripped = coreWithoutHyphen.replace(/^[\p{P}\p{S}]+|[\p{P}\p{S}]+$/gu, "");
       const cleanWord = stripped.length > 0 ? stripped : coreWithoutHyphen;
 
@@ -1010,7 +1028,7 @@ export class TmdParserCore {
         line,
         column: col,
       };
-      lastSounding = sylTok;
+      lineState.lastSounding = sylTok;
       return sylTok;
     };
 
@@ -1040,13 +1058,19 @@ export class TmdParserCore {
         if (ch === "{") {
           const start = pos;
           pos++;
-          while (pos < rawMeasure.length && rawMeasure[pos] !== "}") {
-            pos++;
-          }
-          if (pos < rawMeasure.length && rawMeasure[pos] === "}") {
+          let braceDepth = 1;
+          while (pos < rawMeasure.length && braceDepth > 0) {
+            if (rawMeasure[pos] === "{") braceDepth++;
+            else if (rawMeasure[pos] === "}") braceDepth--;
             pos++;
           }
           directives.push(rawMeasure.slice(start, pos));
+          continue;
+        }
+
+        if (ch === "}") {
+          pos++;
+          directives.push("}");
           continue;
         }
 
@@ -1090,6 +1114,10 @@ export class TmdParserCore {
           rawMeasure[pos] !== "}"
         ) {
           pos++;
+        }
+        if (pos === start) {
+          pos++;
+          continue;
         }
         const word = rawMeasure.slice(start, pos);
         if (word.length > 0) {

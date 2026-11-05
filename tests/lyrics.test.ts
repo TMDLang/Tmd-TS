@@ -649,3 +649,124 @@ verse:Vocal@|0|{
     expect(itemsWithClosing[0].insertText).toBe("L1");
   });
 });
+
+describe("Review Batch 1: Parser, Validator & Playback Edge Cases (Issue #80)", () => {
+  it("handles nested or stray closing braces/parens in lyric lines without infinite loop and emits E-LYRIC-DIRECTIVE", () => {
+    const source = `::SCORE::
+** Stray Brace **
+!= 120
+?= C
+<4/4>
+
+verse:Vocal@|0|{
+    <4*>
+    | 1 2 3 4 |
+    L| { {mp} } ) A B C D |
+}
+
+-> verse ->#
+`;
+    const diags = TmdScoreValidator.validate(source);
+    expect(diags.some((d) => d.rule === "E-LYRIC-DIRECTIVE")).toBe(true);
+  });
+
+  it("preserves line and column on Playback order nodes for accurate stanza diagnostics", () => {
+    const source = `::SCORE::
+** Playback Location **
+!= 120
+?= C
+<4/4>
+
+verse:Vocal@|0|{
+    <4*>
+    | 1 2 3 4 |
+    L1| A B C D |
+}
+
+-> verse[L0] -> verse[L65] ->#
+`;
+    const diags = TmdScoreValidator.validate(source);
+    const zeroDiag = diags.find((d) => d.rule === "E-STANZA-ZERO");
+    const rangeDiag = diags.find((d) => d.rule === "E-STANZA-RANGE");
+    expect(zeroDiag?.line).toBe(13);
+    expect(zeroDiag?.column).toBeGreaterThan(1);
+    expect(rangeDiag?.line).toBe(13);
+    expect(rangeDiag?.column).toBeGreaterThan(10);
+  });
+
+  it("carries pending transparent prefix and trailing punctuation across measure barlines on the same lyric line", () => {
+    const source = `::SCORE::
+** Cross-Barline Punctuation **
+!= 120
+?= C
+<4/4>
+
+verse:Vocal@|0|{
+    <4*>
+    | 1 2 3 4 | 5 6 7 1^ |
+    L| A B C D 「 | E F G H 」 |
+}
+
+-> verse ->#
+`;
+    const sheet = TmdParser.parse(source);
+    const lLine = sheet.entries[0].sections[0].lyricBlocks![0].lyricLines[0];
+    expect(lLine.measures[1].soundingTokens[0].rawText).toBe("「E");
+    expect(lLine.measures[1].soundingTokens[3].rawText).toBe("H」");
+  });
+
+  it("emits E-LYRIC-SLOT-MISMATCH when lyric rest 0 is paired with a sounding note or syllable is paired with melodic rest 0", () => {
+    const source = `::SCORE::
+** Rest Kind Mismatch **
+!= 120
+?= C
+<4/4>
+
+verse:Vocal@|0|{
+    <4*>
+    | 1 2 0 4 |
+    L| A 0 B C |
+}
+
+-> verse ->#
+`;
+    const diags = TmdScoreValidator.validate(source);
+    const mismatches = diags.filter((d) => d.rule === "E-LYRIC-SLOT-MISMATCH");
+    expect(mismatches.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("preserves hyphenated syllabic continuity across melisma ties (yes- - day) and across <N*> sections in the same Entry", () => {
+    const source = `::SCORE::
+** Hyphen Melisma & Cross-Section **
+!= 120
+?= C
+<4/4>
+
+verse:Vocal@|0|{
+    <4*>
+    | 1    2   3   4    |
+    L| yes- -   day yes- |
+    <8*>
+    | 5    6   7   1^  2^ 3^ 4^ 5^ |
+    L| ter- -   day ok  a  b  c  d  |
+}
+
+-> verse ->#
+`;
+    const sheet = TmdParser.parse(source);
+    const timeline = TmdPlaybackRenderer.render(sheet, "Vocal");
+    const syllables = timeline.events
+      .filter((e) => e.lyric?.kind === "syllable")
+      .map((e) => ({
+        rawText: e.lyric!.rawText,
+        syllabic: e.lyric!.syllabic,
+        melismaStart: e.lyric!.melismaStart,
+      }));
+
+    expect(syllables[0]).toEqual({ rawText: "yes-", syllabic: "begin", melismaStart: true });
+    expect(syllables[1]).toEqual({ rawText: "day", syllabic: "end", melismaStart: undefined });
+    expect(syllables[2]).toEqual({ rawText: "yes-", syllabic: "begin", melismaStart: undefined });
+    expect(syllables[3]).toEqual({ rawText: "ter-", syllabic: "middle", melismaStart: true });
+    expect(syllables[4]).toEqual({ rawText: "day", syllabic: "end", melismaStart: undefined });
+  });
+});
