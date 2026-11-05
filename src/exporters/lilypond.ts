@@ -120,22 +120,29 @@ export class TmdLilyPondGenerator {
 
   private static generateTrackLyrics(instrument: string, sheet: Sheet): string[] {
     const measures = TmdMeasureRenderer.renderMeasures(sheet, instrument);
+    const hasSimultaneousStanzas = measures.some((m) =>
+      m.events.some((ev) => (ev.stanzaLyrics?.length ?? 0) > 1)
+    );
     const stanzaIds: number[] = [];
-    for (const measure of measures) {
-      for (const ev of measure.events) {
-        if (ev.stanzaLyrics && ev.stanzaLyrics.length > 0) {
-          for (const sl of ev.stanzaLyrics) {
-            const st = sl.stanza ?? 1;
+    if (hasSimultaneousStanzas) {
+      for (const measure of measures) {
+        for (const ev of measure.events) {
+          if (ev.stanzaLyrics && ev.stanzaLyrics.length > 0) {
+            for (const sl of ev.stanzaLyrics) {
+              const st = sl.stanza ?? 1;
+              if (!stanzaIds.includes(st)) stanzaIds.push(st);
+            }
+          } else if (ev.lyric) {
+            const st = ev.lyric.stanza ?? 1;
             if (!stanzaIds.includes(st)) stanzaIds.push(st);
           }
-        } else if (ev.lyric) {
-          const st = ev.lyric.stanza ?? 1;
-          if (!stanzaIds.includes(st)) stanzaIds.push(st);
         }
       }
+      stanzaIds.sort((a, b) => a - b);
+    } else if (measures.some((m) => m.events.some((ev) => ev.lyric !== undefined))) {
+      stanzaIds.push(1);
     }
     if (stanzaIds.length === 0) return [];
-    stanzaIds.sort((a, b) => a - b);
     const isMultiStanza = stanzaIds.length > 1;
 
     const blocks: string[] = [];
@@ -151,9 +158,10 @@ export class TmdLilyPondGenerator {
           const group = groups[gIdx];
           const noteEvent = group.find((ev) => ev.content.type === "note");
           if (!noteEvent) continue;
-          const lyr: PlaybackLyric | undefined =
-            noteEvent.stanzaLyrics?.find((l) => (l.stanza ?? 1) === st) ??
-            (st === (noteEvent.lyric?.stanza ?? 1) ? noteEvent.lyric : undefined);
+          const lyr: PlaybackLyric | undefined = isMultiStanza
+            ? noteEvent.stanzaLyrics?.find((l) => (l.stanza ?? 1) === st) ??
+              (st === (noteEvent.lyric?.stanza ?? 1) ? noteEvent.lyric : undefined)
+            : noteEvent.lyric;
           if (!lyr) {
             if (!noteEvent.tieStop) {
               tokens.push("_");

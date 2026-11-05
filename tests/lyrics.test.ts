@@ -927,3 +927,121 @@ verse:Vocal@|0|{
   });
 });
 
+describe("Round 2 Review: Directive/Comment Lines Inside Melodic Phrase & Sequential Stanza Unrolling (Issue #80)", () => {
+  it("keeps melodic measure open across standalone directive line inside explicit barlines before L|", () => {
+    const source = `::SCORE::
+** Directive Line in Barlined Measure **
+!= 120
+?= C
+<4/4>
+
+verse:Vocal@|0|{
+    <4*>
+    | 1 2
+    {p}
+    3 4 |
+    L| 春 風 吹 過 |
+}
+
+-> verse ->#
+`;
+    const diags = TmdScoreValidator.validate(source);
+    expect(diags).toEqual([]);
+
+    const sheet = TmdParser.parse(source);
+    const timeline = TmdPlaybackRenderer.render(sheet, "Vocal");
+    const words = timeline.events
+      .filter((e) => e.lyric?.kind === "syllable")
+      .map((e) => e.lyric!.cleanWord);
+    expect(words).toEqual(["春", "風", "吹", "過"]);
+  });
+
+  it("keeps melodic measure open across standalone directive line in barless melodic phrase before L|", () => {
+    const source = `::SCORE::
+** Directive Line in Barless Phrase **
+!= 120
+?= C
+<4/4>
+
+verse:Vocal@|0|{
+    <4*>
+    1 2
+    {p}
+    3 4
+    L| 春 風 吹 過 |
+}
+
+-> verse ->#
+`;
+    const diags = TmdScoreValidator.validate(source);
+    expect(diags).toEqual([]);
+
+    const sheet = TmdParser.parse(source);
+    const timeline = TmdPlaybackRenderer.render(sheet, "Vocal");
+    const words = timeline.events
+      .filter((e) => e.lyric?.kind === "syllable")
+      .map((e) => e.lyric!.cleanWord);
+    expect(words).toEqual(["春", "風", "吹", "過"]);
+  });
+
+  it("keeps melodic measure open across standalone comment line inside explicit barlines before L|", () => {
+    const source = `::SCORE::
+** Comment Line in Barlined Measure **
+!= 120
+?= C
+<4/4>
+
+verse:Vocal@|0|{
+    <4*>
+    | 1 2
+    /* standalone comment inside open measure */
+    3 4 |
+    L| 春 風 吹 過 |
+}
+
+-> verse ->#
+`;
+    const diags = TmdScoreValidator.validate(source);
+    expect(diags).toEqual([]);
+
+    const sheet = TmdParser.parse(source);
+    const timeline = TmdPlaybackRenderer.render(sheet, "Vocal");
+    const words = timeline.events
+      .filter((e) => e.lyric?.kind === "syllable")
+      .map((e) => e.lyric!.cleanWord);
+    expect(words).toEqual(["春", "風", "吹", "過"]);
+  });
+
+  it("exports sequential stanza selectors (-> verse[L1] -> verse[L2] ->#) cleanly in MusicXML, LilyPond, and ABC without duplicating unselected stanzas", () => {
+    const source = `::SCORE::
+** Sequential Stanza Unrolling **
+!= 120
+?= C
+<4/4>
+
+verse:Vocal@|0|{
+    <4*>
+    | 1 2 3 4 |
+    L1| 春 風 吹 過 |
+    L2| 秋 雨 落 下 |
+}
+
+-> verse[L1] -> verse[L2] ->#
+`;
+    const sheet = TmdParser.parse(source);
+    const xml = TmdMusicXMLGenerator.generateMusicXML(sheet);
+    expect(xml).toContain("<text>春</text>");
+    expect(xml).toContain("<text>秋</text>");
+
+    const ly = TmdLilyPondGenerator.generateLilyPond(sheet);
+    expect(ly).toContain('"春" "風" "吹" "過"');
+    expect(ly).toContain('"秋" "雨" "落" "下"');
+    expect(ly).not.toContain("_ _ _ _");
+
+    const abc = TmdABCGenerator.generateABC(sheet);
+    expect(abc).toContain("w: 春 風 吹 過 | 秋 雨 落 下 |");
+    expect(abc).not.toContain("* * * *");
+  });
+});
+
+

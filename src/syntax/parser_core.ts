@@ -472,6 +472,9 @@ export class TmdParserCore {
         let currentMeasureLine: number | undefined;
         let currentMeasureCol: number | undefined;
         let lastMelodicTokenLine: number | undefined;
+        let sawDirectiveSinceLastUnit = false;
+        let inExplicitOpenMeasure = false;
+        let sawPipeInSection = false;
 
         const closeCurrentMelodicMeasure = () => {
           if (currentMeasureStartGroup !== undefined && unitGroups.length > currentMeasureStartGroup) {
@@ -491,8 +494,10 @@ export class TmdParserCore {
 
         const ensureMelodicMeasureOpen = (line: number, col: number) => {
           if (lastMelodicTokenLine !== undefined && line !== lastMelodicTokenLine) {
-            closeCurrentMelodicMeasure();
-            currentMelodicLineMeasures = [];
+            if (!sawDirectiveSinceLastUnit && !inExplicitOpenMeasure) {
+              closeCurrentMelodicMeasure();
+              currentMelodicLineMeasures = [];
+            }
           }
           lastMelodicTokenLine = line;
           if (currentMeasureStartGroup === undefined) {
@@ -500,21 +505,30 @@ export class TmdParserCore {
             currentMeasureStartUnitPos = unitGroups.reduce((acc, g) => acc + g.length, 0);
             currentMeasureLine = line;
             currentMeasureCol = col;
+            if (sawPipeInSection) {
+              inExplicitOpenMeasure = true;
+            }
           }
         };
 
         while (this.current.type !== "openAngle" && this.current.type !== "closeBrace" && this.current.type !== "eof") {
           while (this.current.type === "pipe") {
             const pipeTok = this.current;
+            sawPipeInSection = true;
             if (lastMelodicTokenLine !== undefined && pipeTok.line !== lastMelodicTokenLine) {
-              closeCurrentMelodicMeasure();
-              currentMelodicLineMeasures = [];
+              if (!inExplicitOpenMeasure) {
+                closeCurrentMelodicMeasure();
+                currentMelodicLineMeasures = [];
+              }
               lastMelodicTokenLine = pipeTok.line;
             }
             if (currentMeasureStartGroup !== undefined && unitGroups.length > currentMeasureStartGroup) {
               closeCurrentMelodicMeasure();
+              inExplicitOpenMeasure = false;
+            } else {
+              ensureMelodicMeasureOpen(pipeTok.line, pipeTok.column);
+              inExplicitOpenMeasure = true;
             }
-            ensureMelodicMeasureOpen(pipeTok.line, pipeTok.column);
             barlinePositions.push(unitGroups.reduce((acc, group) => acc + group.length, 0));
             this.advance();
           }
@@ -536,6 +550,8 @@ export class TmdParserCore {
             });
             currentMelodicLineMeasures = [];
             lastMelodicTokenLine = undefined;
+            sawDirectiveSinceLastUnit = false;
+            inExplicitOpenMeasure = false;
             continue;
           }
 
@@ -547,7 +563,7 @@ export class TmdParserCore {
             this.current.type === "relativeTempoPrefix" ||
             this.current.type === "explicitKeyPrefix"
           ) {
-            ensureMelodicMeasureOpen(this.current.line, this.current.column);
+            sawDirectiveSinceLastUnit = true;
             const dirPos = unitGroups.reduce((acc, g) => acc + g.length, 0);
             const directive = this.parseSectionDirective(dirPos);
             if (directive) directives.push(directive);
@@ -559,6 +575,7 @@ export class TmdParserCore {
           const unitTokCol = this.current.column;
           if (this.match("openParen")) {
             ensureMelodicMeasureOpen(unitTokLine, unitTokCol);
+            sawDirectiveSinceLastUnit = false;
             this.skipPipes();
             const groupUnits: Unit[] = [];
             while (this.current.type !== "closeParen" && this.current.type !== "eof") {
@@ -585,6 +602,7 @@ export class TmdParserCore {
             unitGroups.push({ units: groupUnits, length });
           } else {
             ensureMelodicMeasureOpen(unitTokLine, unitTokCol);
+            sawDirectiveSinceLastUnit = false;
             const units = this.parseUnits();
             if (units.length > 0) {
               for (const u of units) {

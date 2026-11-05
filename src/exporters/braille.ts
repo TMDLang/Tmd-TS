@@ -922,22 +922,29 @@ export class TmdBrailleGenerator {
     lineWidth: number | null = 40
   ): string[] {
     const measures = TmdMeasureRenderer.renderMeasures(sheet, instrument);
+    const hasSimultaneousStanzas = measures.some((m) =>
+      m.events.some((ev) => (ev.stanzaLyrics?.length ?? 0) > 1)
+    );
     const stanzaIds: number[] = [];
-    for (const measure of measures) {
-      for (const ev of measure.events) {
-        if (ev.stanzaLyrics && ev.stanzaLyrics.length > 0) {
-          for (const sl of ev.stanzaLyrics) {
-            const st = sl.stanza ?? 1;
+    if (hasSimultaneousStanzas) {
+      for (const measure of measures) {
+        for (const ev of measure.events) {
+          if (ev.stanzaLyrics && ev.stanzaLyrics.length > 0) {
+            for (const sl of ev.stanzaLyrics) {
+              const st = sl.stanza ?? 1;
+              if (!stanzaIds.includes(st)) stanzaIds.push(st);
+            }
+          } else if (ev.lyric) {
+            const st = ev.lyric.stanza ?? 1;
             if (!stanzaIds.includes(st)) stanzaIds.push(st);
           }
-        } else if (ev.lyric) {
-          const st = ev.lyric.stanza ?? 1;
-          if (!stanzaIds.includes(st)) stanzaIds.push(st);
         }
       }
+      stanzaIds.sort((a, b) => a - b);
+    } else if (measures.some((m) => m.events.some((ev) => ev.lyric !== undefined))) {
+      stanzaIds.push(1);
     }
     if (stanzaIds.length === 0) return [];
-    stanzaIds.sort((a, b) => a - b);
     const isMultiStanza = stanzaIds.length > 1;
     const out: string[] = [];
 
@@ -949,9 +956,10 @@ export class TmdBrailleGenerator {
         for (const group of groups) {
           const primary = group.find((ev) => ev.content.type === "note") ?? group[0];
           if (!primary) continue;
-          const lyr =
-            primary.stanzaLyrics?.find((l) => (l.stanza ?? 1) === st) ??
-            (st === (primary.lyric?.stanza ?? 1) ? primary.lyric : undefined);
+          const lyr = isMultiStanza
+            ? primary.stanzaLyrics?.find((l) => (l.stanza ?? 1) === st) ??
+              (st === (primary.lyric?.stanza ?? 1) ? primary.lyric : undefined)
+            : primary.lyric;
           if (lyr?.kind === "syllable") {
             syllableCount++;
             const encoded = TmdBrailleGenerator.encodeVocalLyricToken(lyr.rawText);
