@@ -494,7 +494,7 @@ verse:Vocal@|0|{
 
 verse:Vocal@|0|{
     <4*>
-    | 1 2 3 4 |
+    | 1 2 2 2 |
     L| I free! - - |
 }
 
@@ -506,7 +506,7 @@ verse:Vocal@|0|{
     expect(ust).toContain("Lyric=free\r\n");
     expect(ust).not.toContain("Lyric=free!");
     expect(ust).not.toContain("Lyric=-");
-    // 'free' spans 3 quarter notes = 3 * 480 = 1440 ticks
+    // 'free' on same pitch 2 spans 3 quarter notes = 3 * 480 = 1440 ticks
     expect(ust).toContain("Length=1440\r\nLyric=free\r\n");
   });
 });
@@ -578,12 +578,12 @@ verse:Vocal@|0|{
     expect(ly).toContain('"我" __ "很" "好？"');
   });
 
-  it("exports ABC w: lyric lines with rawText, _ melisma, * rest placeholders, and numbered stanzas", () => {
+  it("exports ABC w: lyric lines with rawText, _ melisma, * unlabelled note skips, and ~ numbered stanzas", () => {
     const sheet = TmdParser.parse(engravingSource);
     const abc = TmdABCGenerator.generateABC(sheet);
 
-    expect(abc).toContain("w: 1. 「yes- ter- day」 * | 我 _ 很 好？ |");
-    expect(abc).toContain("w: 2. to- day I * | 唱 _ 首歌 吧！ |");
+    expect(abc).toContain("w: 1.~「yes- ter- day」 | 我 很 好？ |");
+    expect(abc).toContain("w: 2.~to- day I | 唱 首歌 吧！ |");
   });
 
   it("exports ChordPro inline chord-over-lyric temporal intersection", () => {
@@ -768,5 +768,74 @@ verse:Vocal@|0|{
     expect(syllables[2]).toEqual({ rawText: "yes-", syllabic: "begin", melismaStart: undefined });
     expect(syllables[3]).toEqual({ rawText: "ter-", syllabic: "middle", melismaStart: true });
     expect(syllables[4]).toEqual({ rawText: "day", syllabic: "end", melismaStart: undefined });
+  });
+});
+
+describe("Review Batch 2: ABC, LilyPond & UST Exporter Alignment (Issue #80)", () => {
+  it("aligns ABC w: lines across unlabelled pitched notes (*), skips rests without *, emits _ only on separate melisma notes, and uses 1.~ stanza prefix", () => {
+    const source = `::SCORE::
+** ABC Alignment **
+!= 120
+?= C
+<4/4>
+
+verse:Vocal@|0|{
+    <4*>
+    | 1 2 3 4 |
+    | 1 2 3 0 | 5 - 3 1 |
+    L1| sing - it 0 | hold - on now |
+    L2| la   - da 0 | go   - on now |
+}
+
+-> verse ->#
+`;
+    const sheet = TmdParser.parse(source);
+    const abc = TmdABCGenerator.generateABC(sheet);
+    expect(abc).toContain("w: 1.~* * * * | sing _ it | hold on now |");
+    expect(abc).toContain("w: 2.~* * * * | la _ da | go on now |");
+  });
+
+  it("aligns LilyPond \\addlyrics across unlabelled note attacks (_) and untied melisma continuation notes (__ _)", () => {
+    const source = `::SCORE::
+** LilyPond Alignment **
+!= 120
+?= C
+<4/4>
+
+verse:Vocal@|0|{
+    <4*>
+    | 1 2 3 4 |
+    | 1 2 3 4 |
+    L| sing - - now |
+}
+
+-> verse ->#
+`;
+    const sheet = TmdParser.parse(source);
+    const ly = TmdLilyPondGenerator.generateLilyPond(sheet);
+    expect(ly).toContain("_ _ _ _");
+    expect(ly).toContain("sing __ _ _ now");
+  });
+
+  it("preserves tempo and pitch changes across melisma in UST instead of swallowing them", () => {
+    const source = `::SCORE::
+** UST Tempo Melisma **
+!= 120
+?= C
+<4/4>
+
+verse:Vocal@|0|{
+    <4*>
+    | 1 {!=60} 1 2 2 |
+    L| la - - - |
+}
+
+-> verse ->#
+`;
+    const sheet = TmdParser.parse(source);
+    const ust = TmdUSTGenerator.generateUST(sheet);
+    expect(ust).toContain("Lyric=la\r\n");
+    expect(ust).toContain("Tempo=60.00\r\n");
+    expect(ust).toContain("Lyric=-\r\nNoteNum=62\r\n");
   });
 });

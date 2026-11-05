@@ -81,11 +81,19 @@ export class TmdUSTGenerator {
       if (
         event.content.type === "note" &&
         event.lyric?.kind === "tie" &&
-        mergedEvents.length > 0 &&
-        mergedEvents[mergedEvents.length - 1].content.type === "note"
+        mergedEvents.length > 0
       ) {
-        mergedEvents[mergedEvents.length - 1].duration += event.duration;
-        continue;
+        const prev = mergedEvents[mergedEvents.length - 1];
+        if (
+          prev.content.type === "note" &&
+          Math.abs(prev.position + prev.duration - event.position) < 1e-6 &&
+          Math.abs(prev.state.tempo - event.state.tempo) <= 0.001 &&
+          TmdMIDIGenerator.noteToMIDIPitch(prev.content.note, prev.state.keyOffset) ===
+            TmdMIDIGenerator.noteToMIDIPitch(event.content.note, event.state.keyOffset)
+        ) {
+          prev.duration += event.duration;
+          continue;
+        }
       }
       mergedEvents.push(event);
     }
@@ -110,6 +118,8 @@ export class TmdUSTGenerator {
             ? lyrics[lyricIndex++]
             : event.lyric?.kind === "syllable" && event.lyric.cleanWord.length > 0
             ? event.lyric.cleanWord
+            : event.lyric?.kind === "tie"
+            ? "-"
             : defaultLyric;
 
         const noteLines: string[] = [

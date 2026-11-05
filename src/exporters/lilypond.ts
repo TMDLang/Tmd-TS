@@ -154,7 +154,12 @@ export class TmdLilyPondGenerator {
           const lyr: PlaybackLyric | undefined =
             noteEvent.stanzaLyrics?.find((l) => (l.stanza ?? 1) === st) ??
             (st === (noteEvent.lyric?.stanza ?? 1) ? noteEvent.lyric : undefined);
-          if (!lyr) continue;
+          if (!lyr) {
+            if (!noteEvent.tieStop) {
+              tokens.push("_");
+            }
+            continue;
+          }
           if (lyr.kind === "syllable") {
             const raw =
               lyr.isHyphenated && lyr.rawText.endsWith("-")
@@ -167,17 +172,12 @@ export class TmdLilyPondGenerator {
             if (lyr.isHyphenated) {
               tokens.push("--");
             } else if (lyr.melismaStart) {
-              const nextGroup = gIdx + 1 < groups.length ? groups[gIdx + 1] : undefined;
-              const nextNote = nextGroup?.find((ev) => ev.content.type === "note");
-              const nextLyr =
-                nextNote?.stanzaLyrics?.find((l) => (l.stanza ?? 1) === st) ??
-                nextNote?.lyric;
-              if (nextLyr?.kind !== "tie") {
-                tokens.push("__");
-              }
+              tokens.push("__");
             }
           } else if (lyr.kind === "tie") {
-            tokens.push("__");
+            if (!noteEvent.tieStop) {
+              tokens.push("_");
+            }
           }
         }
         if (tokens.length > 0) {
