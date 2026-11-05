@@ -12,6 +12,7 @@ import {
   VocaloidPhoneme,
 } from '../src/exporters/vocaloid.js';
 import { TmdMCPServer } from '../src/mcp/index.js';
+import { SheetInstrumentHelper } from '../src/domain/index.js';
 import { TmdParser } from '../src/syntax/index.js';
 
 describe('VocaloidPhoneme (Japanese to X-SAMPA)', () => {
@@ -190,6 +191,34 @@ Verse:Bass@|0|{
     expect(vsqx).toContain('<masterTrack>');
     expect(vsqx).toContain('<vsTrack>');
     expect(vsqx).toContain('<name><![CDATA[Hatsune Miku]]></name>');
+  });
+
+  it('prefers a lyric-bearing track when the track name has no vocal keyword', () => {
+    const sheet = TmdParser.parse(`::SCORE::
+** Lyric Track Selection **
+!= 120
+?= C
+<4/4>
+
+accompaniment:Accompaniment@|0|{
+  <4*>
+  1 2 3 4
+}
+
+verse:PartB@|0|{
+  <4*>
+  1 2 3 4
+  L| la la la la |
+}
+
+-> accompaniment -> verse ->#
+`)!;
+
+    expect(SheetInstrumentHelper.resolveVocalInstrument(sheet)).toBe('PartB');
+
+    const vsqx = TmdVSQXGenerator.generateVSQX(sheet);
+    expect(vsqx).toContain('<name><![CDATA[PartB]]></name>');
+    expect(vsqx).toContain('<y><![CDATA[la]]></y>');
   });
 
   it('correctly calculates tempo (scaled x100), time signature, and note ticks', () => {
