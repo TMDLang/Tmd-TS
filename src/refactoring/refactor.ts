@@ -14,6 +14,7 @@ import {
   classifyTopLevelLine,
   findInlineCommentStart,
   formatLine,
+  formatMusicalUnits,
   parseLyricStanzaIndex,
   reindentBlockComment,
   type TopLevelBlockKind,
@@ -96,6 +97,59 @@ export class TmdRefactor {
         }
         i++;
         continue;
+      }
+
+      const inlineCommentStart = findInlineCommentStart(line);
+      if (
+        inlineCommentStart !== -1 &&
+        !trimmed.startsWith("/*") &&
+        line.indexOf("*/", inlineCommentStart + 2) === -1
+      ) {
+        let commentEndLine = i;
+        let commentEndColumn = -1;
+        while (commentEndLine + 1 < rawLines.length) {
+          commentEndLine++;
+          commentEndColumn = rawLines[commentEndLine].indexOf("*/");
+          if (commentEndColumn !== -1) break;
+        }
+
+        if (commentEndColumn !== -1) {
+          const indentPrefix = "    ".repeat(indentLevel);
+          const prefix = formatMusicalUnits(line.slice(0, inlineCommentStart).trim());
+          const firstCommentLine = line.slice(inlineCommentStart).trimStart();
+          const lastCommentLine = rawLines[commentEndLine];
+          const commentContinuation = rawLines
+            .slice(i + 1, commentEndLine)
+            .map((commentLine) => `${indentPrefix}${commentLine.trimStart()}`);
+          const suffix = formatMusicalUnits(
+            lastCommentLine.slice(commentEndColumn + 2).trim()
+          );
+
+          let formattedPrefix = prefix;
+          let formattedSuffix = suffix;
+          if (formattedPrefix.length > 0 || formattedSuffix.length > 0) {
+            if (!formattedPrefix.startsWith("|")) {
+              formattedPrefix = formattedPrefix.length > 0 ? `| ${formattedPrefix}` : "|";
+            }
+            if (formattedSuffix.length > 0 && !formattedSuffix.endsWith("|")) {
+              formattedSuffix = `${formattedSuffix} |`;
+            }
+          }
+
+          resultLines.push(
+            `${indentPrefix}${[formattedPrefix, firstCommentLine]
+              .filter((part) => part.length > 0)
+              .join(" ")}`
+          );
+          resultLines.push(...commentContinuation);
+          resultLines.push(
+            `${indentPrefix}${[`${lastCommentLine.slice(0, commentEndColumn).trimStart()}*/`, formattedSuffix]
+              .filter((part) => part.length > 0)
+              .join(" ")}`
+          );
+          i = commentEndLine + 1;
+          continue;
+        }
       }
 
       // If line is starting a standalone block comment

@@ -323,6 +323,10 @@ export function findInlineCommentStart(line: string): number {
   return -1;
 }
 
+function findInlineCommentEnd(line: string, start: number): number {
+  return line.indexOf("*/", start + 2);
+}
+
 export type TopLevelBlockKind = "header" | "metadata" | "entry" | "playback" | "other";
 
 export function classifyTopLevelLine(trimmedLine: string): TopLevelBlockKind {
@@ -356,13 +360,25 @@ export function formatLine(line: string, indent = 0): string {
   const indentPrefix = "    ".repeat(indent);
   let working = line;
   let commentSuffix = "";
+  let formattedContentOverride: string | undefined;
 
   // Extract inline block comment if present at end of line (outside quotes)
   const commentStart = findInlineCommentStart(working);
   if (commentStart !== -1) {
-    const commentText = working.slice(commentStart);
-    working = working.slice(0, commentStart);
-    commentSuffix = "  " + commentText.trim();
+    const commentEnd = findInlineCommentEnd(working, commentStart);
+    if (commentEnd !== -1 && working.slice(commentEnd + 2).trim().length > 0) {
+      const beforeComment = formatMusicalUnits(working.slice(0, commentStart).trim());
+      const afterComment = formatMusicalUnits(working.slice(commentEnd + 2).trim());
+      const comment = working.slice(commentStart, commentEnd + 2).trim();
+      formattedContentOverride = [beforeComment, comment, afterComment]
+        .filter((part) => part.length > 0)
+        .join(" ");
+      working = "";
+    } else {
+      const commentText = working.slice(commentStart);
+      working = working.slice(0, commentStart);
+      commentSuffix = "  " + commentText.trim();
+    }
   }
 
   const trimmed = working.trim();
@@ -470,7 +486,7 @@ export function formatLine(line: string, indent = 0): string {
   }
 
   // Content / measure line
-  const formattedContent = formatMusicalUnits(trimmed);
+  const formattedContent = formattedContentOverride ?? formatMusicalUnits(trimmed);
   if (formattedContent.length === 0) {
     return commentSuffix.trimStart();
   }
