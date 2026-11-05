@@ -2220,3 +2220,49 @@ wait 4
   });
 });
 
+describe("Issue #83: Inline Block Comment Formatting", () => {
+  it("preserves musical units and measure boundaries around an inline block comment", () => {
+    const input = `::SCORE::
+** Inline Comment Test **
+!= 120
+?= C
+<4/4>
+
+verse:Piano@|0|{
+    <4*>
+    | 1 2 /* comment */ 3 4 |
+}
+
+-> verse ->#
+`;
+
+    const formatted = TmdRefactor.format(input);
+    expect(formatted).toContain("    | 1 2 /* comment */ 3 4 |");
+    expect(formatted).not.toContain("    | 1 2 |  /* comment */ 3 4 |");
+    expect(TmdRefactor.format(formatted)).toBe(formatted);
+  });
+
+  it("preserves musical units after a multiline inline block comment", () => {
+    const input = `::SCORE::
+** Multiline Inline Comment Test **
+!= 120
+?= C
+<4/4>
+
+verse:Piano@|0|{
+    <4*>
+    | 1 2 /* comment
+       continued */ 3 4 |
+}
+
+-> verse ->#
+`;
+
+    const formatted = TmdRefactor.format(input);
+    expect(formatted).toContain("1 2 /* comment");
+    expect(formatted).toContain("continued */ 3 4 |");
+    expect(formatted).not.toContain("1 2 |  /* comment");
+    expect(TmdRefactor.format(formatted)).toBe(formatted);
+  });
+});
+
