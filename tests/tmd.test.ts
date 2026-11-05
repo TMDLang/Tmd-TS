@@ -195,7 +195,10 @@ describe('Input utilities and platform features', () => {
     expect(String.fromCharCode(...wav.slice(8, 12))).toBe('WAVE');
     const dir = mkdtempSync(join(tmpdir(), 'tmd-skill-'));
     expect(TmdSkill.installSkills([dir])[0].installed).toBe(true);
-    expect(readFileSync(join(dir, 'SKILL.md'), 'utf8')).toContain('# TMD');
+    const skillText = readFileSync(join(dir, 'SKILL.md'), 'utf8');
+    expect(skillText).toContain('# TMD');
+    expect(skillText).toContain('Vocal Lyrics & Grid-Counting Alignment');
+    expect(skillText).toContain('verse[L1]');
     rmSync(dir, { recursive: true, force: true });
   });
 });
