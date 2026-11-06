@@ -262,7 +262,7 @@ verse:Piano@|0|{
     expect(issues).toHaveLength(0);
   });
 
-  it("Issue #86: grid refactors preserve lyric lines and stanza prefixes", () => {
+  it("grid refactors preserve lyric lines and stanza prefixes", () => {
     const input = `::SCORE::
 ** Lyric Grid Refactor **
 != 120
@@ -300,7 +300,19 @@ chorus:Vocal@|0|{
     const optimized = TmdRefactor.optimizeGrid(doubled);
     expect(optimized).toContain("<4*>");
     expect(optimized).toContain("L| 「春」 風 吹 過 |");
+    expect(TmdScoreValidator.validate(doubled).filter((diagnostic) => diagnostic.severity === "error")).toHaveLength(0);
     expect(TmdScoreValidator.validate(halved).filter((diagnostic) => diagnostic.severity === "error")).toHaveLength(0);
+
+    const edgeCases = input.replace(
+      "L| 「春」 風 吹 過 |\n    {!=120}",
+      "L| 春 /* c */ 風 吹 過 |\n    L1| (春 風) 吹 過 |\n    {p} {!=120}\n    {!=120} /* comment */",
+    );
+    const edgeCasesDoubled = TmdRefactor.doubleGrid(edgeCases);
+    expect(edgeCasesDoubled).toContain("L| 春 - 風 - 吹 - 過 - |");
+    expect(edgeCasesDoubled).toContain("/* c */");
+    expect(edgeCasesDoubled).toContain("L1| (春 風) 吹 - 過 - |");
+    expect(edgeCasesDoubled).toContain("{p} {!=120}");
+    expect(edgeCasesDoubled).toContain("{!=120}  /* comment */");
 
     const invalid = input.replace("L| 「春」 風 吹 過 |", "L| 春 夏 風 - |").replaceAll("<4*>", "<8*>");
     expect(() => TmdRefactor.halveGrid(invalid)).toThrow();

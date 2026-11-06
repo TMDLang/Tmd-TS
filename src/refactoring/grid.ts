@@ -328,17 +328,17 @@ function isLyricLine(line: string): boolean {
 }
 
 function isStandaloneDirective(line: string): boolean {
-  return /^\{[^{}]*\}$/.test(line);
+  const content = line.replace(/\/\*[\s\S]*?\*\//g, "").trim();
+  return /^(?:\{[^{}]*\}\s*)+$/.test(content);
 }
 
 function transformLyricLine(line: string, mode: LyricGridMode): string {
-  let working = line;
-  let commentSuffix = "";
-  const commentStart = working.indexOf("/*");
-  if (commentStart !== -1) {
-    commentSuffix = " " + working.slice(commentStart);
-    working = working.slice(0, commentStart).trim();
-  }
+  const comments: string[] = [];
+  const working = line.replace(/\/\*[\s\S]*?\*\//g, (comment) => {
+    comments.push(comment.trim());
+    return " ";
+  }).trim();
+  const commentSuffix = comments.length > 0 ? `  ${comments.join(" ")}` : "";
 
   const prefixEnd = working.indexOf("|");
   if (prefixEnd === -1) return line;
@@ -430,13 +430,13 @@ function halveLyricMeasure(tokens: string[]): string {
     }
     if (pending === undefined) {
       pending = token;
+      output.push(token);
       continue;
     }
     const collapsible = token === "-" || (pending === "0" && token === "0") || (pending === "-" && token === "-");
     if (!collapsible) {
       throw new TmdRefactorError(`Cannot halve lyric grid: unit '${pending} ${token}' would lose a lyric`);
     }
-    output.push(pending);
     pending = undefined;
   }
   if (pending !== undefined) {
