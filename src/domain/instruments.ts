@@ -135,32 +135,43 @@ export class SheetInstrumentHelper {
    * Checks requested instrument first, then matches vocal regex, or falls back to first track.
    */
   public static resolveVocalInstrument(sheet: Sheet, requested?: string): string {
-    const distinct = this.distinctInstruments(sheet, false);
-    if (requested && distinct.includes(requested)) {
-      return requested;
+    const expanded = TmdMacroEvaluator.expandThrowing(sheet);
+    const distinct = this.distinctInstrumentsFromExpanded(expanded, false);
+    const requestedMatch = requested && distinct.find(
+      (instrument) => instrument.toLowerCase() === requested.toLowerCase()
+    );
+    if (requestedMatch) {
+      return requestedMatch;
     }
 
+    const lyricBearing = distinct.filter((instrument) =>
+      expanded.entries
+        .filter((entry) => (entry.assignment ?? '').toLowerCase() === instrument.toLowerCase())
+        .some((entry) => entry.sections.some((section) => (section.lyricBlocks?.length ?? 0) > 0))
+    );
+    const candidates = lyricBearing.length > 0 ? lyricBearing : distinct;
+
     // Tier 1: Explicit primary vocal keywords (e.g. Vocal, MainVocal, LeadVocal, 主唱, 人聲, 歌)
-    const tier1Regex = /^(main_?vocal|lead_?vocal|vocal|voice|主唱|人聲|歌|vo)$/i;
-    const tier1Matched = distinct.find((inst) => tier1Regex.test(inst.trim()));
+    const tier1Regex = /^(main_?vocal|lead_?vocal|vocal|voice|主唱|人聲|歌聲|歌|vo)$/i;
+    const tier1Matched = candidates.find((inst) => tier1Regex.test(inst.trim()));
     if (tier1Matched) return tier1Matched;
 
     // Tier 2: Contains vocal / virtual singer tokens, excluding accompaniment/solo instrument indicators
     // (e.g., exclude guitar_lead, synth_lead, backing_vocal, vocal_harm if primary is available)
     const isExcluded = (name: string) => /backing|harm|choir|guitar|synth|pad|bass|drum|beat|solo/i.test(name);
-    const tier2Regex = /vocal|voice|miku|utau|teto|sing/i;
-    const tier2Matched = distinct.find((inst) => tier2Regex.test(inst) && !isExcluded(inst));
+    const tier2Regex = /vocal|voice|miku|utau|teto|sing|主唱|人聲|歌聲/i;
+    const tier2Matched = candidates.find((inst) => tier2Regex.test(inst) && !isExcluded(inst));
     if (tier2Matched) return tier2Matched;
 
     // Tier 3: Melody or lead keywords (not excluded)
-    const tier3Regex = /melody|lead|主旋律/i;
-    const tier3Matched = distinct.find((inst) => tier3Regex.test(inst) && !isExcluded(inst));
+    const tier3Regex = /melody|lead|主旋律|旋律/i;
+    const tier3Matched = candidates.find((inst) => tier3Regex.test(inst) && !isExcluded(inst));
     if (tier3Matched) return tier3Matched;
 
     // Tier 4: Any vocal keyword including backing/harm
-    const tier4Matched = distinct.find((inst) => /vocal|voice|miku|utau|teto|sing|melody/i.test(inst));
+    const tier4Matched = candidates.find((inst) => /vocal|voice|miku|utau|teto|sing|melody|choir|soprano|alto|tenor|主唱|人聲|歌聲|旋律/i.test(inst));
     if (tier4Matched) return tier4Matched;
 
-    return distinct[0] || 'Vocal';
+    return candidates[0] || 'Vocal';
   }
 }
