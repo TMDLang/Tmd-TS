@@ -16,6 +16,7 @@ import {
   TmdParser,
   TmdRefactor,
 } from "../src/index.js";
+import { TmdScoreValidator } from "../src/validation/index.js";
 import { diagnosticMeasureFixture } from "./conformanceFixtures.js";
 
 describe("TmdRefactor (TDD)", () => {
@@ -259,6 +260,50 @@ verse:Piano@|0|{
     // Must be valid TMD and pass measure checks
     const issues = TmdMeasureChecker.check(doubled);
     expect(issues).toHaveLength(0);
+  });
+
+  it("Issue #86: grid refactors preserve lyric lines and stanza prefixes", () => {
+    const input = `::SCORE::
+** Lyric Grid Refactor **
+!= 120
+?= C
+<4/4>
+
+verse:Vocal@|0|{
+    <4*>
+    | 1 2 3 4 |
+    L| 「春」 風 吹 過 |
+    {!=120}
+}
+
+chorus:Vocal@|0|{
+    <4*>
+    | 0 2 3 4 |
+    L1| 0 春 風 吹 |
+    L2| 0 風 吹 過 |
+}
+
+-> verse ->#
+`;
+
+    const doubled = TmdRefactor.doubleGrid(input);
+    expect(doubled).toContain("L| 「春」 - 風 - 吹 - 過 - |");
+    expect(doubled).toContain("L1| 0 0 春 - 風 - 吹 - |");
+    expect(doubled).toContain("L2| 0 0 風 - 吹 - 過 - |");
+    expect(doubled).toContain("{!=120}");
+
+    const halved = TmdRefactor.halveGrid(doubled);
+    expect(halved).toContain("L| 「春」 風 吹 過 |");
+    expect(halved).toContain("L1| 0 春 風 吹 |");
+    expect(halved).toContain("L2| 0 風 吹 過 |");
+
+    const optimized = TmdRefactor.optimizeGrid(doubled);
+    expect(optimized).toContain("<4*>");
+    expect(optimized).toContain("L| 「春」 風 吹 過 |");
+    expect(TmdScoreValidator.validate(halved).filter((diagnostic) => diagnostic.severity === "error")).toHaveLength(0);
+
+    const invalid = input.replace("L| 「春」 風 吹 過 |", "L| 春 夏 風 - |").replaceAll("<4*>", "<8*>");
+    expect(() => TmdRefactor.halveGrid(invalid)).toThrow();
   });
 
   it("doubles and halves grid resolution with tuplets and spaced %(...) syntax", () => {

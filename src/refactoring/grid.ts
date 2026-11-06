@@ -59,8 +59,12 @@ export function doubleGrid(
         continue;
       }
 
-      // If line is measure line / contains units
-      if (trimmed.startsWith("|") || trimmed.includes("|") || /[0-7\[\]\-]/.test(trimmed)) {
+      if (isLyricLine(trimmed)) {
+        const indent = rawLine.match(/^\s*/)?.[0] || "";
+        resultLines.push(indent + transformLyricLine(trimmed, "double"));
+      } else if (isStandaloneDirective(trimmed)) {
+        resultLines.push(rawLine);
+      } else if (trimmed.startsWith("|") || /[0-7\[\]\-]/.test(trimmed)) {
         const indent = rawLine.match(/^\s*/)?.[0] || "";
         const transformed = doubleGridInLine(trimmed);
         resultLines.push(indent + transformed);
@@ -120,7 +124,13 @@ export function halveGrid(
         continue;
       }
 
-      if (trimmed.startsWith("|") || trimmed.includes("|") || /[0-7\[\]\-]/.test(trimmed)) {
+      if (isLyricLine(trimmed)) {
+        const indent = rawLine.match(/^\s*/)?.[0] || "";
+        const transformed = transformLyricLine(trimmed, "halve");
+        resultLines.push(indent + transformed);
+      } else if (isStandaloneDirective(trimmed)) {
+        resultLines.push(rawLine);
+      } else if (trimmed.startsWith("|") || /[0-7\[\]\-]/.test(trimmed)) {
         const indent = rawLine.match(/^\s*/)?.[0] || "";
         const transformed = halveGridInLine(trimmed);
         resultLines.push(indent + transformed);
@@ -309,4 +319,128 @@ function halveGridInLine(line: string): string {
   }
 
   return outTokens.join(" ") + commentSuffix;
+}
+
+type LyricGridMode = "double" | "halve";
+
+function isLyricLine(line: string): boolean {
+  return /^L(?:[1-9][0-9]?)?\s*\|/.test(line);
+}
+
+function isStandaloneDirective(line: string): boolean {
+  return /^\{[^{}]*\}$/.test(line);
+}
+
+function transformLyricLine(line: string, mode: LyricGridMode): string {
+  let working = line;
+  let commentSuffix = "";
+  const commentStart = working.indexOf("/*");
+  if (commentStart !== -1) {
+    commentSuffix = " " + working.slice(commentStart);
+    working = working.slice(0, commentStart).trim();
+  }
+
+  const prefixEnd = working.indexOf("|");
+  if (prefixEnd === -1) return line;
+  const prefix = working.slice(0, prefixEnd + 1);
+  const body = working.slice(prefixEnd + 1);
+  const measures = splitLyricMeasures(body);
+  const transformed = measures.map((measure) => {
+    const tokens = splitLyricTokens(measure);
+    return mode === "double" ? doubleLyricMeasure(tokens) : halveLyricMeasure(tokens);
+  });
+
+  return `${prefix} ${transformed.join(" | ")} |${commentSuffix}`;
+}
+
+function splitLyricMeasures(body: string): string[] {
+  const measures: string[] = [];
+  let current = "";
+  let depth = 0;
+  for (const char of body) {
+    if (char === "(") depth++;
+    if (char === ")") depth = Math.max(0, depth - 1);
+    if (char === "|" && depth === 0) {
+      measures.push(current);
+      current = "";
+    } else {
+      current += char;
+    }
+  }
+  if (current.trim()) measures.push(current);
+  return measures.length > 0 ? measures : [""];
+}
+
+function splitLyricTokens(measure: string): string[] {
+  const tokens: string[] = [];
+  let current = "";
+  let depth = 0;
+  for (const char of measure.trim()) {
+    if (char === "(" ) depth++;
+    if (char === ")") depth = Math.max(0, depth - 1);
+    if (/\s/.test(char) && depth === 0) {
+      if (current) {
+        tokens.push(current);
+        current = "";
+      }
+    } else {
+      current += char;
+    }
+  }
+  if (current) tokens.push(current);
+  return tokens;
+}
+
+function isLyricGroup(token: string): boolean {
+  return token.startsWith("(") && token.endsWith(")");
+}
+
+function isTransparentLyricToken(token: string): boolean {
+  return /^[「」『』“”"‘’（）《》〈〉【】〔〕〖〗—…，。！？、；：～~,\.?!;:]+$/u.test(token);
+}
+
+function doubleLyricMeasure(tokens: string[]): string {
+  const output: string[] = [];
+  for (const token of tokens) {
+    if (isLyricGroup(token) || isTransparentLyricToken(token)) {
+      output.push(token);
+    } else if (token === "0") {
+      output.push("0", "0");
+    } else {
+      output.push(token, "-");
+    }
+  }
+  return output.join(" ");
+}
+
+function halveLyricMeasure(tokens: string[]): string {
+  const output: string[] = [];
+  let pending: string | undefined;
+  for (const token of tokens) {
+    if (isTransparentLyricToken(token)) {
+      output.push(token);
+      continue;
+    }
+    if (isLyricGroup(token)) {
+      if (pending !== undefined) {
+        throw new TmdRefactorError(`Cannot halve lyric measure: '${pending} ${token}' contains two distinct slots`);
+      }
+      output.push(token);
+      continue;
+    }
+    if (pending === undefined) {
+      pending = token;
+      continue;
+    }
+    const collapsible = token === "-" || (pending === "0" && token === "0") || (pending === "-" && token === "-");
+    if (!collapsible) {
+      throw new TmdRefactorError(`Cannot halve lyric grid: unit '${pending} ${token}' would lose a lyric`);
+    }
+    output.push(pending);
+    pending = undefined;
+  }
+  if (pending !== undefined) {
+    throw new TmdRefactorError(`Cannot halve lyric measure with odd number of units: '${pending}'`);
+  }
+  return output.join(" ");
 }
