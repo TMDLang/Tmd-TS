@@ -713,7 +713,23 @@ export class TmdScoreValidator {
 
               const melodicUnits = melodicGroups.flatMap((g) => g.units);
               const expectedSlots = melodicUnits.length;
-              const actualSlots = lMeasure.soundingTokens.length;
+              const trailingGroups = melodicGroups.slice(lMeasure.slots.length);
+              let previousWasRest = false;
+              const canAutoPadTrailingRests =
+                lMeasure.slots.length < melodicGroups.length &&
+                trailingGroups.every((group) =>
+                  group.units.every((unit) => {
+                    if (unit.type === "rest") {
+                      previousWasRest = true;
+                      return true;
+                    }
+                    if (unit.type === "tie" && previousWasRest) return true;
+                    return false;
+                  })
+                ) && previousWasRest;
+              const actualSlots = canAutoPadTrailingRests
+                ? expectedSlots
+                : lMeasure.soundingTokens.length;
               if (actualSlots !== expectedSlots) {
                 diagnostics.push({
                   file,
@@ -727,9 +743,11 @@ export class TmdScoreValidator {
                 });
               } else {
                 let previousWasRestOrRestTie = false;
-                for (let uIdx = 0; uIdx < expectedSlots; uIdx++) {
+                for (let uIdx = 0; uIdx < lMeasure.soundingTokens.length; uIdx++) {
                   const mUnit = melodicUnits[uIdx];
                   const lTok = lMeasure.soundingTokens[uIdx];
+                  const isRestContinuation =
+                    mUnit.type === "tie" && previousWasRestOrRestTie;
                   if (mUnit.type === "rest" && lTok.kind !== "rest") {
                     diagnostics.push({
                       file,
@@ -744,7 +762,7 @@ export class TmdScoreValidator {
                   } else if (
                     mUnit.type !== "rest" &&
                     lTok.kind === "rest" &&
-                    !previousWasRestOrRestTie
+                    !isRestContinuation
                   ) {
                     diagnostics.push({
                       file,

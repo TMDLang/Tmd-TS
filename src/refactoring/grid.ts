@@ -196,13 +196,12 @@ export function optimizeGrid(
 function doubleGridInLine(line: string): string {
   // Break line into tokens while preserving pipes and comments
   // Extract comment if present
-  let working = line;
-  let commentSuffix = "";
-  const commentStart = working.indexOf("/*");
-  if (commentStart !== -1) {
-    commentSuffix = " " + working.slice(commentStart);
-    working = working.slice(0, commentStart).trim();
-  }
+  const comments: string[] = [];
+  const working = line.replace(/\/\*[\s\S]*?\*\//g, (comment) => {
+    comments.push(comment.trim());
+    return " ";
+  }).trim();
+  const commentSuffix = comments.length > 0 ? `  ${comments.join(" ")}` : "";
 
   // Tokenize the measure content
   const tokens = measureUnits(working);
@@ -254,13 +253,12 @@ function splitUnspacedUnits(token: string): string[] {
 }
 
 function halveGridInLine(line: string): string {
-  let working = line;
-  let commentSuffix = "";
-  const commentStart = working.indexOf("/*");
-  if (commentStart !== -1) {
-    commentSuffix = " " + working.slice(commentStart);
-    working = working.slice(0, commentStart).trim();
-  }
+  const comments: string[] = [];
+  const working = line.replace(/\/\*[\s\S]*?\*\//g, (comment) => {
+    comments.push(comment.trim());
+    return " ";
+  }).trim();
+  const commentSuffix = comments.length > 0 ? `  ${comments.join(" ")}` : "";
 
   const tokens = measureUnits(working);
   const outTokens: string[] = [];
@@ -324,7 +322,7 @@ function halveGridInLine(line: string): string {
 type LyricGridMode = "double" | "halve";
 
 function isLyricLine(line: string): boolean {
-  return /^L(?:[1-9][0-9]?)?\s*\|/.test(line);
+  return /^L[0-9]*\s*\|/.test(line);
 }
 
 function isStandaloneDirective(line: string): boolean {
