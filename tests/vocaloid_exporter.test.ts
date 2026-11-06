@@ -221,6 +221,35 @@ verse:PartB@|0|{
     expect(vsqx).toContain('<y><![CDATA[la]]></y>');
   });
 
+  it('finds lyrics in macro-instantiated tracks and matches explicit instruments case-insensitively', () => {
+    const sheet = TmdParser.parse(`::SCORE::
+** Macro Lyric Track Selection **
+!= 120
+?= C
+<4/4>
+
+accompaniment:Accompaniment@|0|{
+  <4*>
+  1 2 3 4
+}
+
+Theme {
+  <4*>
+  1 2 3 4
+  L| do re mi fa |
+}
+
+-> accompaniment -> (play Theme PartB) ->#
+`)!;
+
+    expect(SheetInstrumentHelper.resolveVocalInstrument(sheet)).toBe('PartB');
+    expect(SheetInstrumentHelper.resolveVocalInstrument(sheet, 'partb')).toBe('PartB');
+
+    const vsqx = TmdVSQXGenerator.generateVSQX(sheet);
+    expect(vsqx).toContain('<name><![CDATA[PartB]]></name>');
+    expect(vsqx).toContain('<y><![CDATA[do]]></y>');
+  });
+
   it('correctly calculates tempo (scaled x100), time signature, and note ticks', () => {
     const sheet = TmdParser.parse(tmdSource)!;
     const vsqx = TmdVSQXGenerator.generateVSQX(sheet, {
