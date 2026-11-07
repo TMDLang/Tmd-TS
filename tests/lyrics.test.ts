@@ -1065,6 +1065,31 @@ TaiwanKoshinka:Piano@|0|{
     const lMeasure = sheet.entries[0].sections[0].lyricBlocks![0].lyricLines[0].measures[3];
     expect(lMeasure.soundingTokens[6].kind).toBe("rest");
     expect(lMeasure.soundingTokens[7].kind).toBe("tie");
+
+    const xml = TmdMusicXMLGenerator.generateMusicXML(sheet);
+    expect(xml).toContain("<text>る</text>");
+    expect(xml).not.toContain("<text>_</text>");
+
+    const ly = TmdLilyPondGenerator.generateLilyPond(sheet);
+    expect(ly).toContain('"る"');
+    expect(ly).not.toContain('"_"');
+
+    const abc = TmdABCGenerator.generateABC(sheet);
+    expect(abc).toContain("か ぜ か を | る");
+    expect(abc).not.toContain("る _");
+
+    const vsqx = TmdVSQXGenerator.generateVSQX(sheet);
+    expect(vsqx).toContain("<y><![CDATA[る]]></y>");
+    expect(vsqx).not.toContain("<y><![CDATA[_]]></y>");
+
+    const ust = TmdUSTGenerator.generateUST(sheet);
+    expect(ust).toContain("Lyric=る\r\n");
+    expect(ust).not.toContain("Lyric=_\r\n");
+
+    const midiBytes = TmdMIDIGenerator.generateMIDI(sheet);
+    const decodedMidi = new TextDecoder().decode(midiBytes);
+    expect(decodedMidi).toContain("る");
+    expect(decodedMidi).not.toContain("\xFF\x05\x01_");
   });
 });
 
