@@ -757,7 +757,7 @@ export class TmdScoreValidator {
                       endColumn: (lTok.column ?? lCol) + lTok.text.length,
                       severity: "error",
                       rule: "E-LYRIC-SLOT-MISMATCH",
-                      message: `Lyric token '${lTok.text}' in '${entry.name}' cannot be placed on a melodic rest '0'; use rest placeholder '0'.`,
+                      message: `Lyric token '${lTok.text}' in '${entry.name}' cannot be placed on a melodic rest '0'; use rest placeholder '0' or '_'.`,
                     });
                   } else if (
                     mUnit.type !== "rest" &&
@@ -772,7 +772,7 @@ export class TmdScoreValidator {
                       endColumn: (lTok.column ?? lCol) + lTok.text.length,
                       severity: "error",
                       rule: "E-LYRIC-SLOT-MISMATCH",
-                      message: `Lyric rest placeholder '0' in '${entry.name}' cannot be placed on a sounding melodic unit; only melodic rests '0' may pair with lyric '0'.`,
+                      message: `Lyric rest placeholder '${lTok.text}' in '${entry.name}' cannot be placed on a sounding melodic unit; only melodic rests '0' may pair with lyric '${lTok.text}'.`,
                     });
                   }
                   previousWasRestOrRestTie =

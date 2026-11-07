@@ -404,6 +404,8 @@ function doubleLyricMeasure(tokens: string[]): string {
       output.push(token);
     } else if (token === "0") {
       output.push("0", "0");
+    } else if (token === "_") {
+      output.push("_", "_");
     } else {
       output.push(token, "-");
     }
@@ -431,7 +433,11 @@ function halveLyricMeasure(tokens: string[]): string {
       output.push(token);
       continue;
     }
-    const collapsible = token === "-" || (pending === "0" && token === "0") || (pending === "-" && token === "-");
+    const collapsible =
+      token === "-" ||
+      (pending === "0" && token === "0") ||
+      (pending === "_" && token === "_") ||
+      (pending === "-" && token === "-");
     if (!collapsible) {
       throw new TmdRefactorError(`Cannot halve lyric grid: unit '${pending} ${token}' would lose a lyric`);
     }

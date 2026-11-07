@@ -1042,6 +1042,30 @@ verse:Vocal@|0|{
     expect(abc).toContain("w: 春 風 吹 過 | 秋 雨 落 下 |");
     expect(abc).not.toContain("* * * *");
   });
+
+  it("treats standalone '_' as a lyric rest placeholder alongside '0'", () => {
+    const source = `::SCORE::
+** Underscore Rest Placeholder **
+!= 112
+?= G
+<2/4>
+
+TaiwanKoshinka:Piano@|0|{
+    <16*>
+    | 5_ - - 5_ 1 - - 2 | 3 - - 2 1 - - 1 | 5 - - 5 3 - - 1 | 2 - - - - - 0 - |
+    L1| せ - - ん だ - - ん | の - - - は - - な | か - - ぜ か - - を | る - - - - - _ - |
+}
+
+-> TaiwanKoshinka ->#
+`;
+    const diags = TmdScoreValidator.validate(source);
+    expect(diags.filter((d) => d.severity === "error")).toEqual([]);
+
+    const sheet = TmdParser.parse(source);
+    const lMeasure = sheet.entries[0].sections[0].lyricBlocks![0].lyricLines[0].measures[3];
+    expect(lMeasure.soundingTokens[6].kind).toBe("rest");
+    expect(lMeasure.soundingTokens[7].kind).toBe("tie");
+  });
 });
 
 

@@ -1012,13 +1012,13 @@ export class TmdParserCore {
         };
         return tieTok;
       }
-      if (word === "0") {
+      if (word === "0" || word === "_") {
         const restTok: LyricSoundingToken = {
           type: "sounding",
           kind: "rest",
-          text: "0",
-          rawText: "0",
-          cleanWord: "0",
+          text: word,
+          rawText: word,
+          cleanWord: word,
           line,
           column: col,
         };

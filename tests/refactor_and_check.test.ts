@@ -337,6 +337,13 @@ chorus:Vocal@|0|{
     const misplacedRest = input.replace("L1| 0 春 風 吹 |", "L1| 0 0 風 吹 |");
     expect(TmdScoreValidator.validate(misplacedRest).filter((diagnostic) => diagnostic.severity === "error").length).toBeGreaterThan(0);
 
+    const underscoreInput = input.replace("L1| 0 春 風 吹 |", "L1| _ 春 風 吹 |");
+    const underscoreDoubled = TmdRefactor.doubleGrid(underscoreInput);
+    expect(underscoreDoubled).toContain("L1| _ _ 春 - 風 - 吹 - |");
+    expect(TmdScoreValidator.validate(underscoreDoubled).filter((diagnostic) => diagnostic.severity === "error")).toHaveLength(0);
+    const underscoreHalved = TmdRefactor.halveGrid(underscoreDoubled);
+    expect(underscoreHalved).toContain("L1| _ 春 風 吹 |");
+
     const invalid = input.replace("L| 「春」 風 吹 過 |", "L| 春 夏 風 - |").replaceAll("<4*>", "<8*>");
     expect(() => TmdRefactor.halveGrid(invalid)).toThrow();
   });

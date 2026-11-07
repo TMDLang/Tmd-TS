@@ -248,7 +248,7 @@ verse:Vocal@|0|{
   - **Sounding Tokens (1 slot each)**:
     - A sung syllable or word (e.g., \`春\`, \`風\`, \`twinkle\`, or hyphenated Western syllables \`to-\` \`day\`).
     - \`-\` (Melisma tie): Sustains the previous syllable across another note or across a barline (\`| 5 - | - 0 |\` paired with \`L| 歌 - | - 0 |\`).
-    - \`0\` (Rest placeholder): Matches a melodic rest \`0\` (trailing rests at the end of a measure may also be omitted in the lyric line).
+    - \`0\` or \`_\` (Rest placeholder): Matches a melodic rest \`0\` (trailing rests at the end of a measure may also be omitted in the lyric line).
   - **Transparent Tokens (0 slots)**:
     - Standalone quotation marks and brackets (\`「\`, \`」\`, \`『\`, \`』\`, \`“\`, \`”\`, \`（\`, \`）\`) consume **zero** slots. They are attached to adjacent syllables in engraved sheet music (\`rawText\`) and stripped (\`cleanWord\`) when exporting to voice synthesizers (MIDI \`0xFF 0x05\`, VOCALOID \`.vsqx\`, UTAU \`.ust\`).
   - **One Note = One Syllable Invariance (Tuplets)**:
