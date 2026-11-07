@@ -713,7 +713,23 @@ export class TmdScoreValidator {
 
               const melodicUnits = melodicGroups.flatMap((g) => g.units);
               const expectedSlots = melodicUnits.length;
-              const actualSlots = lMeasure.soundingTokens.length;
+              const trailingGroups = melodicGroups.slice(lMeasure.slots.length);
+              let previousWasRest = false;
+              const canAutoPadTrailingRests =
+                lMeasure.slots.length < melodicGroups.length &&
+                trailingGroups.every((group) =>
+                  group.units.every((unit) => {
+                    if (unit.type === "rest") {
+                      previousWasRest = true;
+                      return true;
+                    }
+                    if (unit.type === "tie" && previousWasRest) return true;
+                    return false;
+                  })
+                ) && previousWasRest;
+              const actualSlots = canAutoPadTrailingRests
+                ? expectedSlots
+                : lMeasure.soundingTokens.length;
               if (actualSlots !== expectedSlots) {
                 diagnostics.push({
                   file,
@@ -726,9 +742,12 @@ export class TmdScoreValidator {
                   message: `Lyric measure ${mSpan.measureIndex + 1} in '${entry.name}' has ${actualSlots} sounding token(s), but corresponding melodic measure has ${expectedSlots} slot(s).`,
                 });
               } else {
-                for (let uIdx = 0; uIdx < expectedSlots; uIdx++) {
+                let previousWasRestOrRestTie = false;
+                for (let uIdx = 0; uIdx < lMeasure.soundingTokens.length; uIdx++) {
                   const mUnit = melodicUnits[uIdx];
                   const lTok = lMeasure.soundingTokens[uIdx];
+                  const isRestContinuation =
+                    mUnit.type === "tie" && previousWasRestOrRestTie;
                   if (mUnit.type === "rest" && lTok.kind !== "rest") {
                     diagnostics.push({
                       file,
@@ -740,7 +759,11 @@ export class TmdScoreValidator {
                       rule: "E-LYRIC-SLOT-MISMATCH",
                       message: `Lyric token '${lTok.text}' in '${entry.name}' cannot be placed on a melodic rest '0'; use rest placeholder '0'.`,
                     });
-                  } else if (mUnit.type !== "rest" && lTok.kind === "rest") {
+                  } else if (
+                    mUnit.type !== "rest" &&
+                    lTok.kind === "rest" &&
+                    !isRestContinuation
+                  ) {
                     diagnostics.push({
                       file,
                       line: lLine,
@@ -752,6 +775,9 @@ export class TmdScoreValidator {
                       message: `Lyric rest placeholder '0' in '${entry.name}' cannot be placed on a sounding melodic unit; only melodic rests '0' may pair with lyric '0'.`,
                     });
                   }
+                  previousWasRestOrRestTie =
+                    mUnit.type === "rest" ||
+                    (mUnit.type === "tie" && previousWasRestOrRestTie);
                 }
               }
 
