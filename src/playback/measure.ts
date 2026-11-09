@@ -71,6 +71,11 @@ export interface Measure {
   keyOffset: number;
   events: MeasureEvent[];
   directives: PlaybackDirectiveEvent[];
+  sectionName?: string;
+  repeatStart?: boolean;
+  repeatCount?: number;
+  foldedIntoRepeat?: boolean;
+  scoreEnd?: boolean;
 }
 
 interface Interval {
@@ -345,7 +350,53 @@ export class TmdMeasureRenderer {
       activeState = { ...activeState, timeSignature: mBeat };
     }
 
-    return measures;
+    return this.annotateEngraving(measures, sheet);
+  }
+
+  private static annotateEngraving(measures: Measure[], sheet: Sheet): Measure[] {
+    if (measures.length === 0) return measures;
+    const result = measures.map((measure) => ({ ...measure }));
+    let cursor = 0;
+    const occurrences: Array<{ name: string; stanza?: number; start: number; end: number }> = [];
+    for (const order of effectivePlaybackOrders(sheet)) {
+      if (order.type !== 'name') continue;
+      const start = cursor;
+      const duration = TmdPlaybackRenderer.durationOf(order.name, sheet);
+      const startTime = measures[start]?.startTime ?? 0;
+      while (cursor < measures.length && measures[cursor].startTime < startTime + duration - 1e-5) cursor++;
+      if (cursor > start) occurrences.push({ name: order.name, stanza: order.stanza, start, end: cursor });
+    }
+    for (let i = 0; i < occurrences.length; i++) {
+      const occurrence = occurrences[i];
+      for (let m = occurrence.start; m < occurrence.end; m++) {
+        result[m] = { ...result[m], sectionName: occurrence.name, scoreEnd: m === measures.length - 1 };
+      }
+      let count = 1;
+      let next = i + 1;
+      while (next < occurrences.length && occurrences[next].name === occurrence.name) {
+        count++;
+        const later = occurrences[next];
+        for (let m = later.start; m < later.end; m++) {
+          const base = occurrence.start + (m - later.start);
+          if (base < result.length) {
+            const lhs = result[base];
+            const rhs = result[m];
+            const events = lhs.events.map((event, index) => ({
+              ...event,
+              stanzaLyrics: index < rhs.events.length
+                ? [...(event.stanzaLyrics ?? []), ...(rhs.events[index].stanzaLyrics ?? []).filter((lyric) =>
+                    !event.stanzaLyrics?.some((existing) => existing.stanza === lyric.stanza))]
+                : event.stanzaLyrics,
+            }));
+            result[base] = { ...lhs, events };
+          }
+          result[m] = { ...result[m], foldedIntoRepeat: true };
+        }
+        next++;
+      }
+      if (count > 1) result[occurrence.start] = { ...result[occurrence.start], repeatStart: true, repeatCount: count };
+    }
+    return result;
   }
 
   private static buildScoreTimeSignatures(sheet: Sheet, defaultBeat: Beat): { position: number; beat: Beat }[] {

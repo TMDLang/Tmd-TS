@@ -17,6 +17,57 @@ import {
 import { musicXmlExportFixture } from './conformanceFixtures.js';
 
 describe('NotationDuration and Measure Decomposition', () => {
+  it('folds consecutive stanza-selected playback into notation repeats', () => {
+    const sheet = TmdParser.parse(`
+::SCORE::
+** Engraving Repeat **
+!= 120
+?= C
+<4/4>
+
+verse:Vocal@|0|{
+  <4*>
+  | 1 2 3 4 |
+  L1| la li lu le |
+  L2| sa si su se |
+}
+
+-> verse[L1] -> verse[L2] ->#
+`);
+    const abc = TmdABCGenerator.generateABC(sheet);
+    const xml = TmdMusicXMLGenerator.generateMusicXML(sheet);
+    const lily = TmdLilyPondGenerator.generateLilyPond(sheet);
+
+    expect(abc).toContain('|:');
+    expect(abc).toContain(':|');
+    expect(abc).toContain('w: 1.');
+    expect(abc).toContain('w: 2.');
+    expect(xml).toContain('<repeat direction="backward"');
+    expect(xml).toContain('<ending number="1"');
+    expect(lily).toContain('\\repeat volta 2');
+    expect(lily).toContain('\\set stanza = "1."');
+    expect(lily).toContain('\\set stanza = "2."');
+  });
+
+  it('marks score endings in all engraving exporters', () => {
+    const sheet = TmdParser.parse(`
+::SCORE::
+** Engraving Ending **
+!= 120
+?= C
+<4/4>
+
+verse:Piano@|0|{
+  <4*>
+  | 1 2 3 4 |
+}
+-> verse ->#
+`);
+    expect(TmdABCGenerator.generateABC(sheet)).toContain('|]');
+    expect(TmdMusicXMLGenerator.generateMusicXML(sheet)).toContain('<bar-style>light-heavy</bar-style>');
+    expect(TmdLilyPondGenerator.generateLilyPond(sheet)).toContain('\\bar "|."');
+  });
+
   it('exposes an AST-first structural path', () => {
     const source = `::SCORE::
 <4/4>

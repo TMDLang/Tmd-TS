@@ -43,7 +43,7 @@ export class TmdABCGenerator {
   }
 
   private static generateTrackMusic(instrument: string, sheet: Sheet): string {
-    const measures = TmdMeasureRenderer.renderMeasures(sheet, instrument);
+    const measures = TmdMeasureRenderer.renderMeasures(sheet, instrument).filter((m) => !m.foldedIntoRepeat);
     let result = "";
     const initialKey = sheet.declaredKey || sheet.keySignature.toString();
     let currentKeyStepAlters = PitchMapping.keySignatureStepAlters(initialKey);
@@ -75,6 +75,7 @@ export class TmdABCGenerator {
 
     for (let mIdx = 0; mIdx < measures.length; mIdx++) {
       const measure = measures[mIdx];
+      if (measure.repeatStart) result += '|:';
       const measureStepAlters = new Map<number, number[]>();
 
       for (const directive of measure.directives) {
@@ -106,7 +107,16 @@ export class TmdABCGenerator {
         result += TmdABCGenerator.formatEventGroup(group, currentKeyStepAlters, measureStepAlters);
         result += " ";
       }
-      result += "|";
+      if ((measure.repeatCount ?? 0) > 1) {
+        result += ':|';
+        if (mIdx === measures.length - 1) result += ']';
+      } else if (mIdx === measures.length - 1) {
+        result += '|]';
+      } else if (mIdx + 1 < measures.length && measures[mIdx + 1].sectionName !== measure.sectionName) {
+        result += '||';
+      } else {
+        result += '|';
+      }
       const isLineEnd = (mIdx + 1) % 4 === 0 || mIdx === measures.length - 1;
       if (isLineEnd) {
         result += "\n";

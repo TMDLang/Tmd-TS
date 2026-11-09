@@ -41,7 +41,7 @@ export class TmdMusicXMLGenerator {
 
     const partMeasures = instruments.map((inst) => ({
       instrument: inst,
-      measures: TmdMeasureRenderer.renderMeasures(sheet, inst),
+      measures: TmdMeasureRenderer.renderMeasures(sheet, inst).filter((m) => !m.foldedIntoRepeat),
     }));
     const divisions = TmdMusicXMLGenerator.resolveDivisions(partMeasures.map((p) => p.measures));
 
@@ -132,7 +132,8 @@ export class TmdMusicXMLGenerator {
     let currentDivisions = divisions;
     let currentLocalBeat: Beat | null = null;
 
-    for (const measure of measures) {
+    for (let mIdx = 0; mIdx < measures.length; mIdx++) {
+      const measure = measures[mIdx];
       let content = "";
       const measureStepAlters = new Map<number, number[]>();
       const measureDivisions = TmdMusicXMLGenerator.resolveMeasureDivisions(measure, divisions);
@@ -296,7 +297,17 @@ export class TmdMusicXMLGenerator {
         });
       });
 
-      xml += `    <measure number="${measure.index + 1}">\n${content}    </measure>\n\n`;
+      if (measure.repeatStart) {
+        content += '        <barline location="left"><bar-style>heavy-light</bar-style><repeat direction="forward"/></barline>\n';
+      }
+      if ((measure.repeatCount ?? 0) > 1) {
+        content += `        <barline location="right"><bar-style>light-heavy</bar-style><repeat direction="backward" times="${measure.repeatCount}"/><ending number="1" type="start"/></barline>\n`;
+      } else if (mIdx === measures.length - 1) {
+        content += '        <barline location="right"><bar-style>light-heavy</bar-style></barline>\n';
+      } else if (measures[mIdx + 1].sectionName !== measure.sectionName) {
+        content += '        <barline location="right"><bar-style>light-light</bar-style></barline>\n';
+      }
+      xml += `    <measure number="${mIdx + 1}">\n${content}    </measure>\n\n`;
     }
 
     return xml;

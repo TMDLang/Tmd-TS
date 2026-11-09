@@ -71,8 +71,10 @@ export class TmdLilyPondGenerator {
   }
 
   private static generateTrackMusic(instrument: string, sheet: Sheet, percussion: boolean): string {
-    const measures = TmdMeasureRenderer.renderMeasures(sheet, instrument);
+    const measures = TmdMeasureRenderer.renderMeasures(sheet, instrument).filter((m) => !m.foldedIntoRepeat);
     let result = "  ";
+    const repeatCount = measures.find((m) => m.repeatStart)?.repeatCount ?? 0;
+    if (repeatCount > 1) result += `\\repeat volta ${repeatCount} { `;
 
     for (const measure of measures) {
       const pendingDirectives: Array<{ offset: number; directive: PlaybackDirectiveEvent }> = [];
@@ -112,14 +114,19 @@ export class TmdLilyPondGenerator {
         }
         dirIdx += 1;
       }
-      result += "|\n  ";
+      const nextMeasure = measures[measures.indexOf(measure) + 1];
+      const barline = measure.scoreEnd && repeatCount <= 1
+        ? '| \\bar "|."'
+        : nextMeasure && nextMeasure.sectionName !== measure.sectionName ? '| \\bar "||"' : '|';
+      result += barline + "\n  ";
     }
+    if (repeatCount > 1) result += ' }';
 
     return result.trim() + "\n";
   }
 
   private static generateTrackLyrics(instrument: string, sheet: Sheet): string[] {
-    const measures = TmdMeasureRenderer.renderMeasures(sheet, instrument);
+    const measures = TmdMeasureRenderer.renderMeasures(sheet, instrument).filter((m) => !m.foldedIntoRepeat);
     const hasSimultaneousStanzas = measures.some((m) =>
       m.events.some((ev) => (ev.stanzaLyrics?.length ?? 0) > 1)
     );
