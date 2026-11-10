@@ -853,7 +853,8 @@ export class TmdScoreValidator {
             }
           }
 
-          if (validStanzaNumbersInBlock.length > 0) {
+          const isSinglePass = block.lyricLines.length > 0 && block.lyricLines.every((line) => line.stanza === undefined);
+          if (validStanzaNumbersInBlock.length > 0 && !isSinglePass) {
             const sortedStanzas = [...new Set(validStanzaNumbersInBlock)].sort(
               (a, b) => a - b
             );

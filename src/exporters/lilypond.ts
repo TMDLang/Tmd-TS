@@ -73,12 +73,20 @@ export class TmdLilyPondGenerator {
   private static generateTrackMusic(instrument: string, sheet: Sheet, percussion: boolean): string {
     const measures = TmdMeasureRenderer.renderMeasures(sheet, instrument).filter((m) => !m.foldedIntoRepeat);
     let result = "  ";
-    const repeatCount = measures.find((m) => m.repeatStart)?.repeatCount ?? 0;
-    if (repeatCount > 1) result += `\\repeat volta ${repeatCount} { `;
+    let repeatOpen = false;
+    let inAlternative = false;
 
     for (const measure of measures) {
-      if (measure.voltaNumber === 1) result += ' } \\alternative { { ';
-      if (measure.voltaNumber === 2) result += ' } { ';
+      if (measure.repeatStart) {
+        result += `\\repeat volta ${measure.repeatCount} { `;
+        repeatOpen = true;
+      }
+      if (measure.voltaStartNumber === 1) {
+        result += ' } \\alternative { { ';
+        repeatOpen = false;
+        inAlternative = true;
+      }
+      if (measure.voltaStartNumber === 2) result += ' } { ';
       const pendingDirectives: Array<{ offset: number; directive: PlaybackDirectiveEvent }> = [];
       for (const directive of measure.directives) {
         if (directive.kind.type === "timeSignature") {
@@ -117,13 +125,17 @@ export class TmdLilyPondGenerator {
         dirIdx += 1;
       }
       const nextMeasure = measures[measures.indexOf(measure) + 1];
-      const barline = measure.scoreEnd && repeatCount <= 1
+      const barline = measure.scoreEnd && !inAlternative
         ? '| \\bar "|."'
         : nextMeasure && nextMeasure.sectionName !== measure.sectionName ? '| \\bar "||"' : '|';
       result += barline + "\n  ";
+      if ((measure.repeatEndCount ?? 0) > 1 && repeatOpen) {
+        result += ' }\n  ';
+        repeatOpen = false;
+      }
     }
-    if (measures.some((m) => m.voltaNumber !== undefined)) result += ' } }';
-    else if (repeatCount > 1) result += ' }';
+    if (inAlternative) result += ' } }';
+    else if (repeatOpen) result += ' }';
 
     return result.trim() + "\n";
   }

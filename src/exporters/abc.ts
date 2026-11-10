@@ -76,7 +76,7 @@ export class TmdABCGenerator {
     for (let mIdx = 0; mIdx < measures.length; mIdx++) {
       const measure = measures[mIdx];
       if (measure.repeatStart) result += '|:';
-      if (measure.voltaNumber !== undefined) result += `|${measure.voltaNumber} `;
+      if (measure.voltaStartNumber !== undefined) result += `|${measure.voltaStartNumber} `;
       const measureStepAlters = new Map<number, number[]>();
 
       for (const directive of measure.directives) {
@@ -108,9 +108,9 @@ export class TmdABCGenerator {
         result += TmdABCGenerator.formatEventGroup(group, currentKeyStepAlters, measureStepAlters);
         result += " ";
       }
-      if (measure.voltaNumber === 1) {
+      if (measure.voltaEndNumber === 1) {
         result += ':|';
-      } else if ((measure.repeatCount ?? 0) > 1) {
+      } else if ((measure.repeatEndCount ?? 0) > 1) {
         result += ':|';
         if (mIdx === measures.length - 1) result += ']';
       } else if (mIdx === measures.length - 1) {

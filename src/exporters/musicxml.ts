@@ -300,18 +300,20 @@ export class TmdMusicXMLGenerator {
       if (measure.repeatStart) {
         content += '        <barline location="left"><bar-style>heavy-light</bar-style><repeat direction="forward"/></barline>\n';
       }
-      if (measure.voltaNumber !== undefined) {
-        content += `        <barline location="left"><ending number="${measure.voltaNumber}" type="start"/></barline>\n`;
+      if (measure.voltaStartNumber !== undefined) {
+        content += `        <barline location="left"><ending number="${measure.voltaStartNumber}" type="start"/></barline>\n`;
       }
-      if ((measure.repeatCount ?? 0) > 1) {
-        content += `        <barline location="right"><bar-style>light-heavy</bar-style><repeat direction="backward" times="${measure.repeatCount}"/><ending number="1" type="start"/></barline>\n`;
+      if ((measure.repeatEndCount ?? 0) > 1) {
+        content += `        <barline location="right"><bar-style>light-heavy</bar-style><repeat direction="backward" times="${measure.repeatEndCount}"/></barline>\n`;
       } else if (mIdx === measures.length - 1) {
         content += '        <barline location="right"><bar-style>light-heavy</bar-style></barline>\n';
       } else if (measures[mIdx + 1].sectionName !== measure.sectionName) {
         content += '        <barline location="right"><bar-style>light-light</bar-style></barline>\n';
       }
-      if (measure.voltaNumber !== undefined) {
-        content += `        <barline location="right"><ending number="${measure.voltaNumber}" type="stop"/></barline>\n`;
+      if (measure.voltaEndNumber === 1) {
+        content += '        <barline location="right"><bar-style>light-heavy</bar-style><ending number="1" type="stop"/><repeat direction="backward"/></barline>\n';
+      } else if (measure.voltaEndNumber === 2) {
+        content += '        <barline location="right"><ending number="2" type="discontinue"/></barline>\n';
       }
       xml += `    <measure number="${mIdx + 1}">\n${content}    </measure>\n\n`;
     }

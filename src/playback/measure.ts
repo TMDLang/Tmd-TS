@@ -74,9 +74,11 @@ export interface Measure {
   sectionName?: string;
   repeatStart?: boolean;
   repeatCount?: number;
+  repeatEndCount?: number;
   foldedIntoRepeat?: boolean;
   scoreEnd?: boolean;
-  voltaNumber?: number;
+  voltaStartNumber?: number;
+  voltaEndNumber?: number;
 }
 
 interface Interval {
@@ -367,7 +369,8 @@ export class TmdMeasureRenderer {
       while (cursor < measures.length && measures[cursor].startTime < startTime + duration - 1e-5) cursor++;
       if (cursor > start) occurrences.push({ name: order.name, stanza: order.stanza, start, end: cursor });
     }
-    for (let i = 0; i < occurrences.length; i++) {
+    let i = 0;
+    while (i < occurrences.length) {
       const occurrence = occurrences[i];
       for (let m = occurrence.start; m < occurrence.end; m++) {
         result[m] = { ...result[m], sectionName: occurrence.name, scoreEnd: m === measures.length - 1 };
@@ -392,24 +395,65 @@ export class TmdMeasureRenderer {
             }));
             result[base] = { ...lhs, events };
           }
-          result[m] = { ...result[m], foldedIntoRepeat: true };
+          result[m] = { ...result[m], foldedIntoRepeat: true, repeatStart: false, repeatCount: 0, repeatEndCount: 0 };
         }
         next++;
       }
-      if (count > 1) result[occurrence.start] = { ...result[occurrence.start], repeatStart: true, repeatCount: count };
+      if (count > 1) {
+        result[occurrence.start] = { ...result[occurrence.start], repeatStart: true, repeatCount: count, repeatEndCount: 0 };
+        result[occurrence.end - 1] = { ...result[occurrence.end - 1], repeatEndCount: count };
+      } else {
+        const stanzaCount = this.stanzaCount(occurrence.name, sheet);
+        if (stanzaCount > 1) {
+          result[occurrence.start] = { ...result[occurrence.start], repeatStart: true, repeatCount: stanzaCount, repeatEndCount: 0 };
+          result[occurrence.end - 1] = { ...result[occurrence.end - 1], repeatEndCount: stanzaCount };
+        }
+      }
+      i = next;
     }
     for (let i = 0; i + 3 < occurrences.length; i++) {
       const first = occurrences[i];
       const endingOne = occurrences[i + 1];
       const repeated = occurrences[i + 2];
       const endingTwo = occurrences[i + 3];
-      if (first.name !== repeated.name || endingOne.name === first.name || endingTwo.name === first.name) continue;
+      if (first.name !== repeated.name || endingOne.name === endingTwo.name ||
+          !this.isQualifiedVoltaName(endingOne.name) || !this.isQualifiedVoltaName(endingTwo.name) ||
+          !this.engravingEquivalent(measures, first.start, first.end, repeated.start, repeated.end)) continue;
       result[first.start] = { ...result[first.start], repeatStart: true, repeatCount: 2 };
+      this.mergeLyrics(measures, repeated, first, result);
       for (let m = repeated.start; m < repeated.end; m++) result[m] = { ...result[m], foldedIntoRepeat: true };
-      for (let m = endingOne.start; m < endingOne.end; m++) result[m] = { ...result[m], voltaNumber: 1 };
-      for (let m = endingTwo.start; m < endingTwo.end; m++) result[m] = { ...result[m], voltaNumber: 2 };
+      result[first.end - 1] = { ...result[first.end - 1], repeatEndCount: 0 };
+      result[endingOne.start] = { ...result[endingOne.start], voltaStartNumber: 1 };
+      result[endingOne.end - 1] = { ...result[endingOne.end - 1], voltaEndNumber: 1 };
+      result[endingTwo.start] = { ...result[endingTwo.start], voltaStartNumber: 2 };
+      result[endingTwo.end - 1] = { ...result[endingTwo.end - 1], voltaEndNumber: 2 };
     }
     return result;
+  }
+
+  private static mergeLyrics(measures: Measure[], source: { start: number; end: number; stanza?: number }, target: { start: number; end: number }, result: Measure[]): void {
+    for (let offset = 0; offset < Math.min(source.end - source.start, target.end - target.start); offset++) {
+      const sourceEvents = measures[source.start + offset].events;
+      const targetIndex = target.start + offset;
+      result[targetIndex] = { ...result[targetIndex], events: result[targetIndex].events.map((event, index) => ({
+        ...event,
+        stanzaLyrics: index < sourceEvents.length
+          ? [...(event.stanzaLyrics ?? []), ...(sourceEvents[index].stanzaLyrics ?? []).filter((lyric) =>
+              !event.stanzaLyrics?.some((existing) => existing.stanza === lyric.stanza))]
+          : event.stanzaLyrics,
+      })) };
+    }
+  }
+
+  private static stanzaCount(name: string, sheet: Sheet): number {
+    const stanzas = sheet.entries.filter((entry) => entry.name === name)
+      .flatMap((entry) => entry.sections.flatMap((section) => (section.lyrics ?? []).map((line) => line.stanza)))
+      .filter((stanza): stanza is number => stanza !== undefined && stanza > 0);
+    return new Set(stanzas).size;
+  }
+
+  private static isQualifiedVoltaName(name: string): boolean {
+    return new Set(['ending1', 'ending2', 'a1', 'a2', 'e1', 'e2', 'volta1', 'volta2']).has(name.toLowerCase());
   }
 
   private static engravingEquivalent(measures: Measure[], lhsStart: number, lhsEnd: number, rhsStart: number, rhsEnd: number): boolean {

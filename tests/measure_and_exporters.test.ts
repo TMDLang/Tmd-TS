@@ -43,7 +43,7 @@ verse:Vocal@|0|{
     expect(abc).toContain('w: 1.');
     expect(abc).toContain('w: 2.');
     expect(xml).toContain('<repeat direction="backward"');
-    expect(xml).toContain('<ending number="1"');
+    expect(xml).not.toContain('<ending number="1"');
     expect(lily).toContain('\\repeat volta 2');
     expect(lily).toContain('\\set stanza = "1."');
     expect(lily).toContain('\\set stanza = "2."');
@@ -76,9 +76,9 @@ verse:Piano@|0|{
 ?= C
 <4/4>
 A:Piano@|0|{ <4*> 1 2 3 4 }
-B:Piano@|0|{ <4*> 5 6 7 1 }
-C:Piano@|0|{ <4*> 2 3 4 5 }
--> A -> B -> A -> C ->#
+ending1:Piano@|0|{ <4*> 5 6 7 1 }
+ending2:Piano@|0|{ <4*> 2 3 4 5 }
+-> A -> ending1 -> A -> ending2 ->#
 `);
     const abc = TmdABCGenerator.generateABC(sheet);
     const xml = TmdMusicXMLGenerator.generateMusicXML(sheet);
@@ -88,6 +88,39 @@ C:Piano@|0|{ <4*> 2 3 4 5 }
     expect(xml).toContain('<ending number="1"');
     expect(xml).toContain('<ending number="2"');
     expect(lily).toContain('\\alternative');
+  });
+
+  it('places repeat end metadata on the last measure and keeps ordinary repeats free of endings', () => {
+    const sheet = TmdParser.parse(`
+::SCORE::
+** Multi Measure Repeat **
+!= 120
+?= C
+<4/4>
+A:Piano@|0|{ <4*> | 1 2 3 4 | 5 6 7 1 | }
+-> A -> A ->#
+`);
+    const measures = TmdMeasureRenderer.renderMeasures(sheet, 'Piano');
+    expect(measures.filter((m) => !m.foldedIntoRepeat)).toHaveLength(2);
+    expect(measures[0].repeatStart).toBe(true);
+    expect(measures[0].repeatEndCount).toBe(0);
+    expect(measures.some((m) => m.repeatEndCount === 2)).toBe(true);
+    expect(TmdMusicXMLGenerator.generateMusicXML(sheet)).not.toContain('<ending number="1"');
+  });
+
+  it('does not classify a full song form as a volta', () => {
+    const sheet = TmdParser.parse(`
+::SCORE::
+** Full Form **
+!= 120
+?= C
+<4/4>
+verse:Piano@|0|{ <4*> 1 2 3 4 }
+chorus:Piano@|0|{ <4*> 5 6 7 1 }
+bridge:Piano@|0|{ <4*> 2 3 4 5 }
+-> verse -> chorus -> verse -> bridge ->#
+`);
+    expect(TmdLilyPondGenerator.generateLilyPond(sheet)).not.toContain('\\alternative');
   });
 
   it('exposes an AST-first structural path', () => {
