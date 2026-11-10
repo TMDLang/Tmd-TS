@@ -76,6 +76,7 @@ export interface Measure {
   repeatCount?: number;
   foldedIntoRepeat?: boolean;
   scoreEnd?: boolean;
+  voltaNumber?: number;
 }
 
 interface Interval {
@@ -373,7 +374,8 @@ export class TmdMeasureRenderer {
       }
       let count = 1;
       let next = i + 1;
-      while (next < occurrences.length && occurrences[next].name === occurrence.name) {
+      while (next < occurrences.length && occurrences[next].name === occurrence.name
+        && this.engravingEquivalent(measures, occurrence.start, occurrence.end, occurrences[next].start, occurrences[next].end)) {
         count++;
         const later = occurrences[next];
         for (let m = later.start; m < later.end; m++) {
@@ -396,7 +398,38 @@ export class TmdMeasureRenderer {
       }
       if (count > 1) result[occurrence.start] = { ...result[occurrence.start], repeatStart: true, repeatCount: count };
     }
+    for (let i = 0; i + 3 < occurrences.length; i++) {
+      const first = occurrences[i];
+      const endingOne = occurrences[i + 1];
+      const repeated = occurrences[i + 2];
+      const endingTwo = occurrences[i + 3];
+      if (first.name !== repeated.name || endingOne.name === first.name || endingTwo.name === first.name) continue;
+      result[first.start] = { ...result[first.start], repeatStart: true, repeatCount: 2 };
+      for (let m = repeated.start; m < repeated.end; m++) result[m] = { ...result[m], foldedIntoRepeat: true };
+      for (let m = endingOne.start; m < endingOne.end; m++) result[m] = { ...result[m], voltaNumber: 1 };
+      for (let m = endingTwo.start; m < endingTwo.end; m++) result[m] = { ...result[m], voltaNumber: 2 };
+    }
     return result;
+  }
+
+  private static engravingEquivalent(measures: Measure[], lhsStart: number, lhsEnd: number, rhsStart: number, rhsEnd: number): boolean {
+    if (lhsEnd - lhsStart !== rhsEnd - rhsStart) return false;
+    for (let offset = 0; offset < lhsEnd - lhsStart; offset++) {
+      const left = measures[lhsStart + offset];
+      const right = measures[rhsStart + offset];
+      if (left.nominalDuration !== right.nominalDuration ||
+          left.timeSignature.count !== right.timeSignature.count ||
+          left.timeSignature.noteValue !== right.timeSignature.noteValue ||
+          left.events.length !== right.events.length ||
+          left.directives.map((d) => JSON.stringify(d.kind)).join('|') !== right.directives.map((d) => JSON.stringify(d.kind)).join('|')) return false;
+      for (let i = 0; i < left.events.length; i++) {
+        const a = left.events[i];
+        const b = right.events[i];
+        if (a.startOffset !== b.startOffset || a.duration !== b.duration || JSON.stringify(a.content) !== JSON.stringify(b.content) ||
+            a.state.tempo !== b.state.tempo || a.state.keyOffset !== b.state.keyOffset || a.state.dynamicLevel !== b.state.dynamicLevel) return false;
+      }
+    }
+    return true;
   }
 
   private static buildScoreTimeSignatures(sheet: Sheet, defaultBeat: Beat): { position: number; beat: Beat }[] {

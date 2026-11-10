@@ -77,6 +77,8 @@ export class TmdLilyPondGenerator {
     if (repeatCount > 1) result += `\\repeat volta ${repeatCount} { `;
 
     for (const measure of measures) {
+      if (measure.voltaNumber === 1) result += ' } \\alternative { { ';
+      if (measure.voltaNumber === 2) result += ' } { ';
       const pendingDirectives: Array<{ offset: number; directive: PlaybackDirectiveEvent }> = [];
       for (const directive of measure.directives) {
         if (directive.kind.type === "timeSignature") {
@@ -120,7 +122,8 @@ export class TmdLilyPondGenerator {
         : nextMeasure && nextMeasure.sectionName !== measure.sectionName ? '| \\bar "||"' : '|';
       result += barline + "\n  ";
     }
-    if (repeatCount > 1) result += ' }';
+    if (measures.some((m) => m.voltaNumber !== undefined)) result += ' } }';
+    else if (repeatCount > 1) result += ' }';
 
     return result.trim() + "\n";
   }

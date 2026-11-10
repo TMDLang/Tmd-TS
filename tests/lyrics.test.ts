@@ -1039,7 +1039,9 @@ verse:Vocal@|0|{
     expect(ly).not.toContain("_ _ _ _");
 
     const abc = TmdABCGenerator.generateABC(sheet);
-    expect(abc).toContain("w: 春 風 吹 過 | 秋 雨 落 下 |");
+    expect(abc).toContain("|:");
+    expect(abc).toContain("w: 1.~春 風 吹 過 |");
+    expect(abc).toContain("w: 2.~秋 雨 落 下 |");
     expect(abc).not.toContain("* * * *");
   });
 

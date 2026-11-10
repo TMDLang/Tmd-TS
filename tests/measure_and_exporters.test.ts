@@ -68,6 +68,28 @@ verse:Piano@|0|{
     expect(TmdLilyPondGenerator.generateLilyPond(sheet)).toContain('\\bar "|."');
   });
 
+  it('renders two volta endings around a repeated section', () => {
+    const sheet = TmdParser.parse(`
+::SCORE::
+** Volta **
+!= 120
+?= C
+<4/4>
+A:Piano@|0|{ <4*> 1 2 3 4 }
+B:Piano@|0|{ <4*> 5 6 7 1 }
+C:Piano@|0|{ <4*> 2 3 4 5 }
+-> A -> B -> A -> C ->#
+`);
+    const abc = TmdABCGenerator.generateABC(sheet);
+    const xml = TmdMusicXMLGenerator.generateMusicXML(sheet);
+    const lily = TmdLilyPondGenerator.generateLilyPond(sheet);
+    expect(abc).toContain('|1');
+    expect(abc).toContain('|2');
+    expect(xml).toContain('<ending number="1"');
+    expect(xml).toContain('<ending number="2"');
+    expect(lily).toContain('\\alternative');
+  });
+
   it('exposes an AST-first structural path', () => {
     const source = `::SCORE::
 <4/4>
@@ -380,7 +402,7 @@ A:Piano@|0|{
     const measures = v1Section
       .split('|')
       .map((s) => s.trim())
-      .filter((s) => s.length > 0);
+      .filter((s) => s.length > 0 && s !== ']');
 
     expect(measures.length).toBeGreaterThanOrEqual(2);
 
@@ -1254,7 +1276,7 @@ A:Piano@|0|{
         const measures = musicBody
           .split('|')
           .map((m) => m.trim())
-          .filter((m) => m.length > 0);
+          .filter((m) => m.length > 0 && m !== ']');
 
         let expectedSixteenths = 16.0;
         for (let mIdx = 0; mIdx < measures.length; mIdx++) {
@@ -1374,14 +1396,17 @@ A:Drums@|0|{
 
       const timeRegex = /\\time\s+(\d+)\/(\d+)/g;
       const tokenRegex = /(?:<[^>]+>|[a-z]+[,']*)\s*(\d+)(\.*)(?:\*(\d+)\/(\d+))?/g;
-      const stripDirectivesRegex = /\\(?:time\s+\d+\/\d+|tempo\s+\S+\s*=\s*\d+|key\s+[a-z]+\s+\\[a-z]+|ppp|pp|mp|mf|fff|ff|p|f)\b/g;
+      const stripDirectivesRegex = /\\bar\s+"[^"]+"|\\(?:time\s+\d+\/\d+|tempo\s+\S+\s*=\s*\d+|key\s+[a-z]+\s+\\[a-z]+|ppp|pp|mp|mf|fff|ff|p|f)\b/g;
 
       for (const match of blockMatches) {
-        const body = match[2];
+        const body = match[2]
+          .replace(/\\bar\s+"[^"]+"/g, '')
+          .replace(/\\repeat\s+volta\s+\d+\s*\{/g, '')
+          .replace(/\\alternative\s*\{|\}/g, '');
         const rawMeasures = body
           .split('|')
           .map((m) => m.trim())
-          .filter((m) => m.length > 0);
+          .filter((m) => m.length > 0 && !m.includes('\\bar') && m !== '.');
 
         let expectedQuarters = 4.0;
         for (let mIdx = 0; mIdx < rawMeasures.length; mIdx++) {
