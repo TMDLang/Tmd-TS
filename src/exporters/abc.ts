@@ -112,7 +112,6 @@ export class TmdABCGenerator {
         result += ':|';
       } else if ((measure.repeatEndCount ?? 0) > 1) {
         result += ':|';
-        if (mIdx === measures.length - 1) result += ']';
       } else if (mIdx === measures.length - 1) {
         result += '|]';
       } else if (mIdx + 1 < measures.length && measures[mIdx + 1].sectionName !== measure.sectionName) {

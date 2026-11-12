@@ -404,9 +404,18 @@ export class TmdMeasureRenderer {
         result[occurrence.end - 1] = { ...result[occurrence.end - 1], repeatEndCount: count };
       } else {
         const stanzaCount = this.stanzaCount(occurrence.name, sheet);
-        if (stanzaCount > 1) {
-          result[occurrence.start] = { ...result[occurrence.start], repeatStart: true, repeatCount: stanzaCount, repeatEndCount: 0 };
-          result[occurrence.end - 1] = { ...result[occurrence.end - 1], repeatEndCount: stanzaCount };
+        if (occurrence.stanza === undefined && stanzaCount > 1) {
+          let rangeStart: number | undefined;
+          for (let m = occurrence.start; m < occurrence.end; m++) {
+            const hasMultipleStanzas = result[m].events.some((event) => (event.stanzaLyrics?.length ?? 0) > 1);
+            if (hasMultipleStanzas && rangeStart === undefined) rangeStart = m;
+            if ((!hasMultipleStanzas || m === occurrence.end - 1) && rangeStart !== undefined) {
+              const last = hasMultipleStanzas ? m : m - 1;
+              result[rangeStart] = { ...result[rangeStart], repeatStart: true, repeatCount: stanzaCount, repeatEndCount: 0 };
+              result[last] = { ...result[last], repeatEndCount: stanzaCount };
+              rangeStart = undefined;
+            }
+          }
         }
       }
       i = next;
@@ -427,6 +436,22 @@ export class TmdMeasureRenderer {
       result[endingOne.end - 1] = { ...result[endingOne.end - 1], voltaEndNumber: 1 };
       result[endingTwo.start] = { ...result[endingTwo.start], voltaStartNumber: 2 };
       result[endingTwo.end - 1] = { ...result[endingTwo.end - 1], voltaEndNumber: 2 };
+    }
+    for (let i = 0; i + 3 < occurrences.length; i++) {
+      const first = occurrences[i];
+      const second = occurrences[i + 1];
+      const repeatedFirst = occurrences[i + 2];
+      const repeatedSecond = occurrences[i + 3];
+      if (first.name !== repeatedFirst.name || second.name !== repeatedSecond.name ||
+          this.isQualifiedVoltaName(second.name) ||
+          !this.engravingEquivalent(measures, first.start, first.end, repeatedFirst.start, repeatedFirst.end) ||
+          !this.engravingEquivalent(measures, second.start, second.end, repeatedSecond.start, repeatedSecond.end)) continue;
+      this.mergeLyrics(measures, repeatedFirst, first, result);
+      this.mergeLyrics(measures, repeatedSecond, second, result);
+      for (let m = repeatedFirst.start; m < repeatedFirst.end; m++) result[m] = { ...result[m], foldedIntoRepeat: true };
+      for (let m = repeatedSecond.start; m < repeatedSecond.end; m++) result[m] = { ...result[m], foldedIntoRepeat: true };
+      result[first.start] = { ...result[first.start], repeatStart: true, repeatCount: 2, repeatEndCount: 0 };
+      result[second.end - 1] = { ...result[second.end - 1], repeatEndCount: 2 };
     }
     return result;
   }

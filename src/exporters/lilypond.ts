@@ -133,6 +133,10 @@ export class TmdLilyPondGenerator {
         result += ' }\n  ';
         repeatOpen = false;
       }
+      if (measure.voltaEndNumber === 2 && inAlternative) {
+        result += ' } }\n  ';
+        inAlternative = false;
+      }
     }
     if (inAlternative) result += ' } }';
     else if (repeatOpen) result += ' }';

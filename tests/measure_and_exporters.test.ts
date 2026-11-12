@@ -49,6 +49,21 @@ verse:Vocal@|0|{
     expect(lily).toContain('\\set stanza = "2."');
   });
 
+  it('does not infer a stanza repeat when the playback order selects one stanza', () => {
+    const sheet = TmdParser.parse(`
+::SCORE::
+** Explicit Stanza **
+!= 120
+?= C
+<4/4>
+verse:Vocal@|0|{ <4*> | 1 2 3 4 | L1| la li lu le | L2| sa si su se | }
+-> verse[L1] ->#
+`);
+    const lily = TmdLilyPondGenerator.generateLilyPond(sheet);
+    expect(lily).not.toContain('\\repeat volta 2');
+    expect(lily).toContain('\\bar "|."');
+  });
+
   it('marks score endings in all engraving exporters', () => {
     const sheet = TmdParser.parse(`
 ::SCORE::
@@ -88,6 +103,42 @@ ending2:Piano@|0|{ <4*> 2 3 4 5 }
     expect(xml).toContain('<ending number="1"');
     expect(xml).toContain('<ending number="2"');
     expect(lily).toContain('\\alternative');
+    expect((xml.match(/<barline location="right">/g) ?? []).length).toBe(3);
+  });
+
+  it('closes a volta alternative before the following section', () => {
+    const sheet = TmdParser.parse(`
+::SCORE::
+** Volta Followed By Outro **
+!= 120
+?= C
+<4/4>
+A:Piano@|0|{ <4*> 1 2 3 4 }
+ending1:Piano@|0|{ <4*> 5 6 7 1 }
+ending2:Piano@|0|{ <4*> 2 3 4 5 }
+outro:Piano@|0|{ <4*> 6 7 1 2 }
+-> A -> ending1 -> A -> ending2 -> outro ->#
+`);
+    const lily = TmdLilyPondGenerator.generateLilyPond(sheet);
+    expect(lily).toContain('} }');
+    expect(lily).not.toMatch(/\} \}\s*$/);
+  });
+
+  it('folds a repeated two-section tuple', () => {
+    const sheet = TmdParser.parse(`
+::SCORE::
+** Tuple Repeat **
+!= 120
+?= C
+<4/4>
+verse:Piano@|0|{ <4*> 1 2 3 4 }
+chorus:Piano@|0|{ <4*> 5 6 7 1 }
+-> verse[L1] -> chorus -> verse[L2] -> chorus ->#
+`);
+    const measures = TmdMeasureRenderer.renderMeasures(sheet, 'Piano');
+    expect(measures.filter((m) => !m.foldedIntoRepeat)).toHaveLength(2);
+    expect(measures[0].repeatStart).toBe(true);
+    expect(measures.some((m) => m.repeatEndCount === 2)).toBe(true);
   });
 
   it('places repeat end metadata on the last measure and keeps ordinary repeats free of endings', () => {
