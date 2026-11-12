@@ -71,10 +71,22 @@ export class TmdLilyPondGenerator {
   }
 
   private static generateTrackMusic(instrument: string, sheet: Sheet, percussion: boolean): string {
-    const measures = TmdMeasureRenderer.renderMeasures(sheet, instrument);
+    const measures = TmdMeasureRenderer.renderMeasures(sheet, instrument).filter((m) => !m.foldedIntoRepeat);
     let result = "  ";
+    let repeatOpen = false;
+    let inAlternative = false;
 
     for (const measure of measures) {
+      if (measure.repeatStart) {
+        result += `\\repeat volta ${measure.repeatCount} { `;
+        repeatOpen = true;
+      }
+      if (measure.voltaStartNumber === 1) {
+        result += ' } \\alternative { { ';
+        repeatOpen = false;
+        inAlternative = true;
+      }
+      if (measure.voltaStartNumber === 2) result += ' } { ';
       const pendingDirectives: Array<{ offset: number; directive: PlaybackDirectiveEvent }> = [];
       for (const directive of measure.directives) {
         if (directive.kind.type === "timeSignature") {
@@ -112,14 +124,28 @@ export class TmdLilyPondGenerator {
         }
         dirIdx += 1;
       }
-      result += "|\n  ";
+      if (measure.voltaEndNumber === 2 && inAlternative) {
+        result += ' } }\n  ';
+        inAlternative = false;
+      }
+      const nextMeasure = measures[measures.indexOf(measure) + 1];
+      const barline = measure.scoreEnd && !inAlternative
+        ? '| \\bar "|."'
+        : nextMeasure && nextMeasure.sectionName !== measure.sectionName ? '| \\bar "||"' : '|';
+      result += barline + "\n  ";
+      if ((measure.repeatEndCount ?? 0) > 1 && repeatOpen) {
+        result += ' }\n  ';
+        repeatOpen = false;
+      }
     }
+    if (inAlternative) result += ' } }';
+    else if (repeatOpen) result += ' }';
 
     return result.trim() + "\n";
   }
 
   private static generateTrackLyrics(instrument: string, sheet: Sheet): string[] {
-    const measures = TmdMeasureRenderer.renderMeasures(sheet, instrument);
+    const measures = TmdMeasureRenderer.renderMeasures(sheet, instrument).filter((m) => !m.foldedIntoRepeat);
     const hasSimultaneousStanzas = measures.some((m) =>
       m.events.some((ev) => (ev.stanzaLyrics?.length ?? 0) > 1)
     );

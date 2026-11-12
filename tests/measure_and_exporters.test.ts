@@ -17,6 +17,180 @@ import {
 import { musicXmlExportFixture } from './conformanceFixtures.js';
 
 describe('NotationDuration and Measure Decomposition', () => {
+  it('folds consecutive stanza-selected playback into notation repeats', () => {
+    const sheet = TmdParser.parse(`
+::SCORE::
+** Engraving Repeat **
+!= 120
+?= C
+<4/4>
+
+verse:Vocal@|0|{
+  <4*>
+  | 1 2 3 4 |
+  L1| la li lu le |
+  L2| sa si su se |
+}
+
+-> verse[L1] -> verse[L2] ->#
+`);
+    const abc = TmdABCGenerator.generateABC(sheet);
+    const xml = TmdMusicXMLGenerator.generateMusicXML(sheet);
+    const lily = TmdLilyPondGenerator.generateLilyPond(sheet);
+
+    expect(abc).toContain('|:');
+    expect(abc).toContain(':|');
+    expect(abc).toContain('w: 1.');
+    expect(abc).toContain('w: 2.');
+    expect(xml).toContain('<repeat direction="backward"');
+    expect(xml).not.toContain('<ending number="1"');
+    expect(lily).toContain('\\repeat volta 2');
+    expect(lily).toContain('\\set stanza = "1."');
+    expect(lily).toContain('\\set stanza = "2."');
+  });
+
+  it('does not infer a stanza repeat when the playback order selects one stanza', () => {
+    const sheet = TmdParser.parse(`
+::SCORE::
+** Explicit Stanza **
+!= 120
+?= C
+<4/4>
+verse:Vocal@|0|{ <4*> | 1 2 3 4 | L1| la li lu le | L2| sa si su se | }
+-> verse[L1] ->#
+`);
+    const lily = TmdLilyPondGenerator.generateLilyPond(sheet);
+    expect(lily).not.toContain('\\repeat volta 2');
+    expect(lily).toContain('\\bar "|."');
+  });
+
+  it('marks score endings in all engraving exporters', () => {
+    const sheet = TmdParser.parse(`
+::SCORE::
+** Engraving Ending **
+!= 120
+?= C
+<4/4>
+
+verse:Piano@|0|{
+  <4*>
+  | 1 2 3 4 |
+}
+-> verse ->#
+`);
+    expect(TmdABCGenerator.generateABC(sheet)).toContain('|]');
+    expect(TmdMusicXMLGenerator.generateMusicXML(sheet)).toContain('<bar-style>light-heavy</bar-style>');
+    expect(TmdLilyPondGenerator.generateLilyPond(sheet)).toContain('\\bar "|."');
+  });
+
+  it('renders two volta endings around a repeated section', () => {
+    const sheet = TmdParser.parse(`
+::SCORE::
+** Volta **
+!= 120
+?= C
+<4/4>
+A:Piano@|0|{ <4*> 1 2 3 4 }
+ending1:Piano@|0|{ <4*> 5 6 7 1 }
+ending2:Piano@|0|{ <4*> 2 3 4 5 }
+-> A -> ending1 -> A -> ending2 ->#
+`);
+    const abc = TmdABCGenerator.generateABC(sheet);
+    const xml = TmdMusicXMLGenerator.generateMusicXML(sheet);
+    const lily = TmdLilyPondGenerator.generateLilyPond(sheet);
+    expect(abc).toContain('|1');
+    expect(abc).toContain('|2');
+    expect(xml).toContain('<ending number="1"');
+    expect(xml).toContain('<ending number="2"');
+    expect(lily).toContain('\\alternative');
+    expect((xml.match(/<barline location="right">/g) ?? []).length).toBe(3);
+    expect(lily).toContain('\\bar "|."');
+  });
+
+  it('closes a volta alternative before the following section', () => {
+    const sheet = TmdParser.parse(`
+::SCORE::
+** Volta Followed By Outro **
+!= 120
+?= C
+<4/4>
+A:Piano@|0|{ <4*> 1 2 3 4 }
+ending1:Piano@|0|{ <4*> 5 6 7 1 }
+ending2:Piano@|0|{ <4*> 2 3 4 5 }
+outro:Piano@|0|{ <4*> 6 7 1 2 }
+-> A -> ending1 -> A -> ending2 -> outro ->#
+`);
+    const lily = TmdLilyPondGenerator.generateLilyPond(sheet);
+    expect(lily).toContain('} }');
+    expect(lily).not.toMatch(/\} \}\s*$/);
+  });
+
+  it('folds a repeated two-section tuple', () => {
+    const sheet = TmdParser.parse(`
+::SCORE::
+** Tuple Repeat **
+!= 120
+?= C
+<4/4>
+verse:Piano@|0|{ <4*> 1 2 3 4 }
+chorus:Piano@|0|{ <4*> 5 6 7 1 }
+-> verse[L1] -> chorus -> verse[L2] -> chorus ->#
+`);
+    const measures = TmdMeasureRenderer.renderMeasures(sheet, 'Piano');
+    expect(measures.filter((m) => !m.foldedIntoRepeat)).toHaveLength(2);
+    expect(measures[0].repeatStart).toBe(true);
+    expect(measures.some((m) => m.repeatEndCount === 2)).toBe(true);
+  });
+
+  it('does not fold an ordinary alternating song form as a tuple repeat', () => {
+    const sheet = TmdParser.parse(`
+::SCORE::
+** Alternating Form **
+!= 120
+?= C
+<4/4>
+verse:Piano@|0|{ <4*> 1 2 3 4 }
+chorus:Piano@|0|{ <4*> 5 6 7 1 }
+-> verse -> chorus -> verse -> chorus ->#
+`);
+    const measures = TmdMeasureRenderer.renderMeasures(sheet, 'Piano');
+    expect(measures.filter((m) => !m.foldedIntoRepeat)).toHaveLength(4);
+    expect(measures.some((m) => m.repeatEndCount === 2)).toBe(false);
+  });
+
+  it('places repeat end metadata on the last measure and keeps ordinary repeats free of endings', () => {
+    const sheet = TmdParser.parse(`
+::SCORE::
+** Multi Measure Repeat **
+!= 120
+?= C
+<4/4>
+A:Piano@|0|{ <4*> | 1 2 3 4 | 5 6 7 1 | }
+-> A -> A ->#
+`);
+    const measures = TmdMeasureRenderer.renderMeasures(sheet, 'Piano');
+    expect(measures.filter((m) => !m.foldedIntoRepeat)).toHaveLength(2);
+    expect(measures[0].repeatStart).toBe(true);
+    expect(measures[0].repeatEndCount).toBe(0);
+    expect(measures.some((m) => m.repeatEndCount === 2)).toBe(true);
+    expect(TmdMusicXMLGenerator.generateMusicXML(sheet)).not.toContain('<ending number="1"');
+  });
+
+  it('does not classify a full song form as a volta', () => {
+    const sheet = TmdParser.parse(`
+::SCORE::
+** Full Form **
+!= 120
+?= C
+<4/4>
+verse:Piano@|0|{ <4*> 1 2 3 4 }
+chorus:Piano@|0|{ <4*> 5 6 7 1 }
+bridge:Piano@|0|{ <4*> 2 3 4 5 }
+-> verse -> chorus -> verse -> bridge ->#
+`);
+    expect(TmdLilyPondGenerator.generateLilyPond(sheet)).not.toContain('\\alternative');
+  });
+
   it('exposes an AST-first structural path', () => {
     const source = `::SCORE::
 <4/4>
@@ -329,7 +503,7 @@ A:Piano@|0|{
     const measures = v1Section
       .split('|')
       .map((s) => s.trim())
-      .filter((s) => s.length > 0);
+      .filter((s) => s.length > 0 && s !== ']');
 
     expect(measures.length).toBeGreaterThanOrEqual(2);
 
@@ -1203,7 +1377,7 @@ A:Piano@|0|{
         const measures = musicBody
           .split('|')
           .map((m) => m.trim())
-          .filter((m) => m.length > 0);
+          .filter((m) => m.length > 0 && m !== ']');
 
         let expectedSixteenths = 16.0;
         for (let mIdx = 0; mIdx < measures.length; mIdx++) {
@@ -1323,14 +1497,17 @@ A:Drums@|0|{
 
       const timeRegex = /\\time\s+(\d+)\/(\d+)/g;
       const tokenRegex = /(?:<[^>]+>|[a-z]+[,']*)\s*(\d+)(\.*)(?:\*(\d+)\/(\d+))?/g;
-      const stripDirectivesRegex = /\\(?:time\s+\d+\/\d+|tempo\s+\S+\s*=\s*\d+|key\s+[a-z]+\s+\\[a-z]+|ppp|pp|mp|mf|fff|ff|p|f)\b/g;
+      const stripDirectivesRegex = /\\bar\s+"[^"]+"|\\(?:time\s+\d+\/\d+|tempo\s+\S+\s*=\s*\d+|key\s+[a-z]+\s+\\[a-z]+|ppp|pp|mp|mf|fff|ff|p|f)\b/g;
 
       for (const match of blockMatches) {
-        const body = match[2];
+        const body = match[2]
+          .replace(/\\bar\s+"[^"]+"/g, '')
+          .replace(/\\repeat\s+volta\s+\d+\s*\{/g, '')
+          .replace(/\\alternative\s*\{|\}/g, '');
         const rawMeasures = body
           .split('|')
           .map((m) => m.trim())
-          .filter((m) => m.length > 0);
+          .filter((m) => m.length > 0 && !m.includes('\\bar') && m !== '.');
 
         let expectedQuarters = 4.0;
         for (let mIdx = 0; mIdx < rawMeasures.length; mIdx++) {

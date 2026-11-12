@@ -71,6 +71,14 @@ export interface Measure {
   keyOffset: number;
   events: MeasureEvent[];
   directives: PlaybackDirectiveEvent[];
+  sectionName?: string;
+  repeatStart?: boolean;
+  repeatCount?: number;
+  repeatEndCount?: number;
+  foldedIntoRepeat?: boolean;
+  scoreEnd?: boolean;
+  voltaStartNumber?: number;
+  voltaEndNumber?: number;
 }
 
 interface Interval {
@@ -345,7 +353,153 @@ export class TmdMeasureRenderer {
       activeState = { ...activeState, timeSignature: mBeat };
     }
 
-    return measures;
+    return this.annotateEngraving(measures, sheet);
+  }
+
+  private static annotateEngraving(measures: Measure[], sheet: Sheet): Measure[] {
+    if (measures.length === 0) return measures;
+    const result = measures.map((measure) => ({ ...measure }));
+    let cursor = 0;
+    const occurrences: Array<{ name: string; stanza?: number; start: number; end: number }> = [];
+    for (const order of effectivePlaybackOrders(sheet)) {
+      if (order.type !== 'name') continue;
+      const start = cursor;
+      const duration = TmdPlaybackRenderer.durationOf(order.name, sheet);
+      const startTime = measures[start]?.startTime ?? 0;
+      while (cursor < measures.length && measures[cursor].startTime < startTime + duration - 1e-5) cursor++;
+      if (cursor > start) occurrences.push({ name: order.name, stanza: order.stanza, start, end: cursor });
+    }
+    let i = 0;
+    while (i < occurrences.length) {
+      const occurrence = occurrences[i];
+      for (let m = occurrence.start; m < occurrence.end; m++) {
+        result[m] = { ...result[m], sectionName: occurrence.name, scoreEnd: m === measures.length - 1 };
+      }
+      let count = 1;
+      let next = i + 1;
+      while (next < occurrences.length && occurrences[next].name === occurrence.name
+        && this.engravingEquivalent(measures, occurrence.start, occurrence.end, occurrences[next].start, occurrences[next].end)) {
+        count++;
+        const later = occurrences[next];
+        for (let m = later.start; m < later.end; m++) {
+          const base = occurrence.start + (m - later.start);
+          if (base < result.length) {
+            const lhs = result[base];
+            const rhs = result[m];
+            const events = lhs.events.map((event, index) => ({
+              ...event,
+              stanzaLyrics: index < rhs.events.length
+                ? [...(event.stanzaLyrics ?? []), ...(rhs.events[index].stanzaLyrics ?? []).filter((lyric) =>
+                    !event.stanzaLyrics?.some((existing) => existing.stanza === lyric.stanza))]
+                : event.stanzaLyrics,
+            }));
+            result[base] = { ...lhs, events };
+          }
+          result[m] = { ...result[m], foldedIntoRepeat: true, repeatStart: false, repeatCount: 0, repeatEndCount: 0 };
+        }
+        next++;
+      }
+      if (count > 1) {
+        result[occurrence.start] = { ...result[occurrence.start], repeatStart: true, repeatCount: count, repeatEndCount: 0 };
+        result[occurrence.end - 1] = { ...result[occurrence.end - 1], repeatEndCount: count };
+      } else {
+        const stanzaCount = this.stanzaCount(occurrence.name, sheet);
+        if (occurrence.stanza === undefined && stanzaCount > 1) {
+          let rangeStart: number | undefined;
+          for (let m = occurrence.start; m < occurrence.end; m++) {
+            const hasMultipleStanzas = result[m].events.some((event) => (event.stanzaLyrics?.length ?? 0) > 1);
+            if (hasMultipleStanzas && rangeStart === undefined) rangeStart = m;
+            if ((!hasMultipleStanzas || m === occurrence.end - 1) && rangeStart !== undefined) {
+              const last = hasMultipleStanzas ? m : m - 1;
+              result[rangeStart] = { ...result[rangeStart], repeatStart: true, repeatCount: stanzaCount, repeatEndCount: 0 };
+              result[last] = { ...result[last], repeatEndCount: stanzaCount };
+              rangeStart = undefined;
+            }
+          }
+        }
+      }
+      i = next;
+    }
+    for (let i = 0; i + 3 < occurrences.length; i++) {
+      const first = occurrences[i];
+      const endingOne = occurrences[i + 1];
+      const repeated = occurrences[i + 2];
+      const endingTwo = occurrences[i + 3];
+      if (first.name !== repeated.name || endingOne.name === endingTwo.name ||
+          !this.isQualifiedVoltaName(endingOne.name) || !this.isQualifiedVoltaName(endingTwo.name) ||
+          !this.engravingEquivalent(measures, first.start, first.end, repeated.start, repeated.end)) continue;
+      result[first.start] = { ...result[first.start], repeatStart: true, repeatCount: 2 };
+      this.mergeLyrics(measures, repeated, first, result);
+      for (let m = repeated.start; m < repeated.end; m++) result[m] = { ...result[m], foldedIntoRepeat: true };
+      result[first.end - 1] = { ...result[first.end - 1], repeatEndCount: 0 };
+      result[endingOne.start] = { ...result[endingOne.start], voltaStartNumber: 1 };
+      result[endingOne.end - 1] = { ...result[endingOne.end - 1], voltaEndNumber: 1 };
+      result[endingTwo.start] = { ...result[endingTwo.start], voltaStartNumber: 2 };
+      result[endingTwo.end - 1] = { ...result[endingTwo.end - 1], voltaEndNumber: 2 };
+    }
+    for (let i = 0; i + 3 < occurrences.length; i++) {
+      const first = occurrences[i];
+      const second = occurrences[i + 1];
+      const repeatedFirst = occurrences[i + 2];
+      const repeatedSecond = occurrences[i + 3];
+      if (first.name !== repeatedFirst.name || second.name !== repeatedSecond.name ||
+          first.stanza === undefined || repeatedFirst.stanza === undefined || first.stanza === repeatedFirst.stanza ||
+          this.isQualifiedVoltaName(second.name) ||
+          !this.engravingEquivalent(measures, first.start, first.end, repeatedFirst.start, repeatedFirst.end) ||
+          !this.engravingEquivalent(measures, second.start, second.end, repeatedSecond.start, repeatedSecond.end)) continue;
+      this.mergeLyrics(measures, repeatedFirst, first, result);
+      this.mergeLyrics(measures, repeatedSecond, second, result);
+      for (let m = repeatedFirst.start; m < repeatedFirst.end; m++) result[m] = { ...result[m], foldedIntoRepeat: true };
+      for (let m = repeatedSecond.start; m < repeatedSecond.end; m++) result[m] = { ...result[m], foldedIntoRepeat: true };
+      result[first.start] = { ...result[first.start], repeatStart: true, repeatCount: 2, repeatEndCount: 0 };
+      result[second.end - 1] = { ...result[second.end - 1], repeatEndCount: 2 };
+    }
+    return result;
+  }
+
+  private static mergeLyrics(measures: Measure[], source: { start: number; end: number; stanza?: number }, target: { start: number; end: number }, result: Measure[]): void {
+    for (let offset = 0; offset < Math.min(source.end - source.start, target.end - target.start); offset++) {
+      const sourceEvents = measures[source.start + offset].events;
+      const targetIndex = target.start + offset;
+      result[targetIndex] = { ...result[targetIndex], events: result[targetIndex].events.map((event, index) => ({
+        ...event,
+        stanzaLyrics: index < sourceEvents.length
+          ? [...(event.stanzaLyrics ?? []), ...(sourceEvents[index].stanzaLyrics ?? []).filter((lyric) =>
+              !event.stanzaLyrics?.some((existing) => existing.stanza === lyric.stanza))]
+          : event.stanzaLyrics,
+      })) };
+    }
+  }
+
+  private static stanzaCount(name: string, sheet: Sheet): number {
+    const stanzas = sheet.entries.filter((entry) => entry.name === name)
+      .flatMap((entry) => entry.sections.flatMap((section) => (section.lyrics ?? []).map((line) => line.stanza)))
+      .filter((stanza): stanza is number => stanza !== undefined && stanza > 0);
+    return new Set(stanzas).size;
+  }
+
+  private static isQualifiedVoltaName(name: string): boolean {
+    return new Set(['ending1', 'ending2', 'a1', 'a2', 'e1', 'e2', 'volta1', 'volta2']).has(name.toLowerCase());
+  }
+
+  private static engravingEquivalent(measures: Measure[], lhsStart: number, lhsEnd: number, rhsStart: number, rhsEnd: number): boolean {
+    if (lhsEnd - lhsStart !== rhsEnd - rhsStart) return false;
+    for (let offset = 0; offset < lhsEnd - lhsStart; offset++) {
+      const left = measures[lhsStart + offset];
+      const right = measures[rhsStart + offset];
+      if (left.nominalDuration !== right.nominalDuration ||
+          left.timeSignature.count !== right.timeSignature.count ||
+          left.timeSignature.noteValue !== right.timeSignature.noteValue ||
+          left.events.length !== right.events.length ||
+          left.directives.map((d) => JSON.stringify(d.kind)).join('|') !== right.directives.map((d) => JSON.stringify(d.kind)).join('|')) return false;
+      for (let i = 0; i < left.events.length; i++) {
+        const a = left.events[i];
+        const b = right.events[i];
+        if (a.startOffset !== b.startOffset || a.duration !== b.duration || JSON.stringify(a.content) !== JSON.stringify(b.content) ||
+            a.state.tempo !== b.state.tempo || a.state.keyOffset !== b.state.keyOffset || a.state.dynamicLevel !== b.state.dynamicLevel) return false;
+      }
+    }
+    return true;
   }
 
   private static buildScoreTimeSignatures(sheet: Sheet, defaultBeat: Beat): { position: number; beat: Beat }[] {

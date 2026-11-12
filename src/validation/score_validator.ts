@@ -595,7 +595,8 @@ export class TmdScoreValidator {
       for (const section of entry.sections) {
         if (!section.lyricBlocks || section.lyricBlocks.length === 0) continue;
 
-        const blockStanzaSets: Array<{ line: number; stanzas: Set<number> }> = [];
+        const blockStanzaSets: Array<{ line: number; stanzas: Set<number>; span: number }> = [];
+        let stanzaSpan = 0;
 
         for (const block of section.lyricBlocks) {
           const seenStanzasInBlock = new Set<number | string>();
@@ -852,7 +853,8 @@ export class TmdScoreValidator {
             }
           }
 
-          if (validStanzaNumbersInBlock.length > 0) {
+          const isSinglePass = block.lyricLines.length > 0 && block.lyricLines.every((line) => line.stanza === undefined);
+          if (validStanzaNumbersInBlock.length > 0 && !isSinglePass) {
             const sortedStanzas = [...new Set(validStanzaNumbersInBlock)].sort(
               (a, b) => a - b
             );
@@ -879,19 +881,28 @@ export class TmdScoreValidator {
             blockStanzaSets.push({
               line: blockLine,
               stanzas: new Set(sortedStanzas),
+              span: stanzaSpan,
             });
+          } else {
+            // An unnumbered L| block is a single-pass lyric line and separates
+            // numbered stanza spans rather than participating in their union.
+            stanzaSpan += 1;
           }
         }
 
-        if (blockStanzaSets.length >= 2) {
-          const unionStanzas = new Set<number>();
-          for (const b of blockStanzaSets) {
-            for (const s of b.stanzas) unionStanzas.add(s);
-          }
-          if (unionStanzas.size > 1) {
-            for (const b of blockStanzaSets) {
-              if (b.stanzas.size !== unionStanzas.size) {
-                diagnostics.push({
+        const spans = new Map<number, typeof blockStanzaSets>();
+        for (const block of blockStanzaSets) {
+          if (!spans.has(block.span)) spans.set(block.span, []);
+          spans.get(block.span)!.push(block);
+        }
+        for (const spanBlocks of spans.values()) {
+          if (spanBlocks.length >= 2) {
+            const unionStanzas = new Set<number>();
+            for (const b of spanBlocks) for (const s of b.stanzas) unionStanzas.add(s);
+            if (unionStanzas.size > 1) {
+              for (const b of spanBlocks) {
+                if (b.stanzas.size !== unionStanzas.size) {
+                  diagnostics.push({
                   file,
                   line: b.line,
                   column: 1,
@@ -900,7 +911,8 @@ export class TmdScoreValidator {
                   severity: "error",
                   rule: "E-STANZA-INCONSISTENT",
                   message: `Inconsistent stanza set across measures in '${entry.name}': expected stanza(s) ${Array.from(unionStanzas).sort((a, c) => a - c).map((n) => "L" + n).join(", ")}.`,
-                });
+                  });
+                }
               }
             }
           }
