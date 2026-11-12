@@ -104,6 +104,7 @@ ending2:Piano@|0|{ <4*> 2 3 4 5 }
     expect(xml).toContain('<ending number="2"');
     expect(lily).toContain('\\alternative');
     expect((xml.match(/<barline location="right">/g) ?? []).length).toBe(3);
+    expect(lily).toContain('\\bar "|."');
   });
 
   it('closes a volta alternative before the following section', () => {
@@ -139,6 +140,22 @@ chorus:Piano@|0|{ <4*> 5 6 7 1 }
     expect(measures.filter((m) => !m.foldedIntoRepeat)).toHaveLength(2);
     expect(measures[0].repeatStart).toBe(true);
     expect(measures.some((m) => m.repeatEndCount === 2)).toBe(true);
+  });
+
+  it('does not fold an ordinary alternating song form as a tuple repeat', () => {
+    const sheet = TmdParser.parse(`
+::SCORE::
+** Alternating Form **
+!= 120
+?= C
+<4/4>
+verse:Piano@|0|{ <4*> 1 2 3 4 }
+chorus:Piano@|0|{ <4*> 5 6 7 1 }
+-> verse -> chorus -> verse -> chorus ->#
+`);
+    const measures = TmdMeasureRenderer.renderMeasures(sheet, 'Piano');
+    expect(measures.filter((m) => !m.foldedIntoRepeat)).toHaveLength(4);
+    expect(measures.some((m) => m.repeatEndCount === 2)).toBe(false);
   });
 
   it('places repeat end metadata on the last measure and keeps ordinary repeats free of endings', () => {

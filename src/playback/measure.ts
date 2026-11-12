@@ -443,6 +443,7 @@ export class TmdMeasureRenderer {
       const repeatedFirst = occurrences[i + 2];
       const repeatedSecond = occurrences[i + 3];
       if (first.name !== repeatedFirst.name || second.name !== repeatedSecond.name ||
+          first.stanza === undefined || repeatedFirst.stanza === undefined || first.stanza === repeatedFirst.stanza ||
           this.isQualifiedVoltaName(second.name) ||
           !this.engravingEquivalent(measures, first.start, first.end, repeatedFirst.start, repeatedFirst.end) ||
           !this.engravingEquivalent(measures, second.start, second.end, repeatedSecond.start, repeatedSecond.end)) continue;

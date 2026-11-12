@@ -124,6 +124,10 @@ export class TmdLilyPondGenerator {
         }
         dirIdx += 1;
       }
+      if (measure.voltaEndNumber === 2 && inAlternative) {
+        result += ' } }\n  ';
+        inAlternative = false;
+      }
       const nextMeasure = measures[measures.indexOf(measure) + 1];
       const barline = measure.scoreEnd && !inAlternative
         ? '| \\bar "|."'
@@ -132,10 +136,6 @@ export class TmdLilyPondGenerator {
       if ((measure.repeatEndCount ?? 0) > 1 && repeatOpen) {
         result += ' }\n  ';
         repeatOpen = false;
-      }
-      if (measure.voltaEndNumber === 2 && inAlternative) {
-        result += ' } }\n  ';
-        inAlternative = false;
       }
     }
     if (inAlternative) result += ' } }';
