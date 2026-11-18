@@ -356,7 +356,12 @@ export function classifyTopLevelLine(trimmedLine: string): TopLevelBlockKind {
   return "other";
 }
 
-export function formatLine(line: string, indent = 0): string {
+export function formatLine(
+  line: string,
+  indent = 0,
+  addOuterBarlines = true,
+  playbackContinuation = false,
+): string {
   const indentPrefix = "    ".repeat(indent);
   let working = line;
   let commentSuffix = "";
@@ -382,6 +387,10 @@ export function formatLine(line: string, indent = 0): string {
   }
 
   const trimmed = working.trim();
+
+  if (playbackContinuation) {
+    return `${indentPrefix}${formatPlaybackContinuation(trimmed)}${commentSuffix}`;
+  }
 
   // Check if header line
   if (trimmed.startsWith("::SCORE::")) {
@@ -492,7 +501,7 @@ export function formatLine(line: string, indent = 0): string {
   }
   const hasOnlyDirectives = /^(\{[^}]*\}\s*)+$/.test(formattedContent);
   let measureLine = formattedContent;
-  if (!hasOnlyDirectives && measureLine !== "|") {
+  if (addOuterBarlines && !hasOnlyDirectives && measureLine !== "|") {
     if (!measureLine.startsWith("|")) {
       measureLine = `| ${measureLine}`;
     }
@@ -501,4 +510,12 @@ export function formatLine(line: string, indent = 0): string {
     }
   }
   return indentPrefix + measureLine + commentSuffix;
+}
+
+function formatPlaybackContinuation(text: string): string {
+  return text
+    .replace(/\s+/g, " ")
+    .replace(/\( /g, "(")
+    .replace(/ \)/g, ")")
+    .trim();
 }

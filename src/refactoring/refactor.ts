@@ -15,6 +15,7 @@ import {
   findInlineCommentStart,
   formatLine,
   formatMusicalUnits,
+  parseGridSubdivisionLine,
   parseLyricStanzaIndex,
   reindentBlockComment,
   type TopLevelBlockKind,
@@ -44,6 +45,7 @@ export class TmdRefactor {
     let lastBlockKind: TopLevelBlockKind | null = null;
     let hasBlankSinceLastBlock = false;
     let inPlaybackFlow = false;
+    let activeGridSize: number | undefined;
     let i = 0;
 
     while (i < rawLines.length) {
@@ -90,6 +92,9 @@ export class TmdRefactor {
         }
         indentLevel = Math.max(0, indentLevel - 1);
         resultLines.push(formatLine(line, indentLevel));
+        if (indentLevel === 0) {
+          activeGridSize = undefined;
+        }
         if (indentLevel === 0) {
           lastBlockKind = "entry";
           hasBlankSinceLastBlock = false;
@@ -200,6 +205,11 @@ export class TmdRefactor {
           i++;
           continue;
         } else {
+          if (inPlaybackFlow) {
+            resultLines.push(formatLine(line, 1, false, true));
+            i++;
+            continue;
+          }
           inPlaybackFlow = false;
         }
       }
@@ -226,10 +236,21 @@ export class TmdRefactor {
         continue;
       }
 
-      const formattedLine = formatLine(line, indentLevel);
+      if (indentLevel > 0) {
+        const gridSize = parseGridSubdivisionLine(trimmed);
+        if (gridSize !== undefined) {
+          activeGridSize = gridSize;
+        }
+      }
+      const formattedLine = formatLine(
+        line,
+        indentLevel,
+        indentLevel > 0 && (activeGridSize ?? 4) <= 32,
+      );
       resultLines.push(formattedLine);
 
       if (cleanForBrace.endsWith("{")) {
+        activeGridSize = undefined;
         indentLevel++;
       }
       i++;

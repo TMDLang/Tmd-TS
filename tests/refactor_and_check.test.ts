@@ -1957,6 +1957,35 @@ verse:Piano@|0|{
       expect(formatted).toContain("    | 5 6 7 1^ |");
     });
 
+    it("scopes automatic barlines to bodies and disables them above grid 32", () => {
+      const input = `::SCORE::
+** Scoped Barline Test **
+!= 120
+?= C
+<4/4>
+
+Theme{
+    <32*>
+    1 2 3 4
+    <64*>
+    5 6 7 1^
+    | 2 3 4 5 |
+}
+
+-> (layer
+(seq Theme Theme))
+->#
+`;
+      const formatted = TmdRefactor.format(input);
+
+      expect(formatted).toContain("    | 1 2 3 4 |\n");
+      expect(formatted).toContain("    5 6 7 1^\n");
+      expect(formatted).toContain("    | 2 3 4 5 |\n");
+      expect(formatted).toContain("-> (layer\n    (seq Theme Theme))\n    ->#\n");
+      expect(formatted).not.toContain("| (seq");
+      expect(TmdRefactor.format(formatted)).toBe(formatted);
+    });
+
     it("normalizes tuplets and unit groups removing inner edge padding and spaces around % (#3)", () => {
       const input = `::SCORE::
 ** Tuplet Normalization **
