@@ -201,7 +201,7 @@ export class TmdRefactor {
         if (kind === "playback") {
           const playbackIndent = inPlaybackFlow ? 1 : 0;
           resultLines.push(formatLine(line, playbackIndent));
-          inPlaybackFlow = true;
+          inPlaybackFlow = !trimmed.endsWith("->#");
           i++;
           continue;
         } else {

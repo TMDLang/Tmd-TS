@@ -1986,6 +1986,28 @@ Theme{
       expect(TmdRefactor.format(formatted)).toBe(formatted);
     });
 
+    it("ends playback flow before formatting declarations that follow ->#", () => {
+      const input = `::SCORE::
+** Declaration After Playback **
+!= 120
+?= C
+<4/4>
+
+-> A
+->#
+
+AfterEntry {
+    <4*>
+    1 2 3 4
+}
+`;
+      const formatted = TmdRefactor.format(input);
+
+      expect(formatted).toContain("-> A\n    ->#\n\nAfterEntry {\n    <4*>\n    | 1 2 3 4 |\n}");
+      expect(formatted).not.toContain("    AfterEntry {");
+      expect(TmdRefactor.format(formatted)).toBe(formatted);
+    });
+
     it("normalizes tuplets and unit groups removing inner edge padding and spaces around % (#3)", () => {
       const input = `::SCORE::
 ** Tuplet Normalization **
