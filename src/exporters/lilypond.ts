@@ -99,6 +99,9 @@ export class TmdLilyPondGenerator {
         }
       }
       const groups = TmdMeasureRenderer.groupSimultaneousEvents(measure.events);
+      if (measure.isPickup) {
+        result += `\\partial ${TmdLilyPondGenerator.decomposeLilyPondDurations(measure.nominalDuration)[0]} `;
+      }
       let dirIdx = 0;
       for (let gIdx = 0; gIdx < groups.length; gIdx++) {
         const group = groups[gIdx];
