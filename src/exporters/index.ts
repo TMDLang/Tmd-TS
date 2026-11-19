@@ -5,6 +5,7 @@ export * from './lilypond.js';
 export * from './midi.js';
 export * from './midi_encoder.js';
 export * from './musicxml.js';
+export * from './options.js';
 export * from './reaper.js';
 export * from './ust.js';
 export * from './vocaloid.js';

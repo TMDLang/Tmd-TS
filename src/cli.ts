@@ -56,6 +56,7 @@ OPTIONS:
   -x, --musicxml-output PATH  Export MusicXML 4.0.
   -l, --lilypond-output PATH  Export LilyPond source.
   -a, --abc-output PATH   Export ABC notation.
+      --flatten-repeats   Expand repeats into a linear lyric timeline for structured notation exports.
   -r, --reaper-output PATH Export REAPER project (.rpp).
       --rpp-output PATH   Export REAPER project (.rpp).
   -c, --chordpro-output PATH Export ChordPro lead sheet (.cho/.chordpro).
@@ -114,6 +115,7 @@ export function main(argv = process.argv.slice(2)): number {
     parseOnly = false,
     inspectSong = false,
     force = false,
+    flattenRepeats = false,
     play = false,
     installSkills = false,
     installMcp = false,
@@ -146,6 +148,10 @@ export function main(argv = process.argv.slice(2)): number {
     }
     if (arg === "-f" || arg === "--force") {
       force = true;
+      continue;
+    }
+    if (arg === "--flatten-repeats") {
+      flattenRepeats = true;
       continue;
     }
     if (arg === "--play") {
@@ -352,10 +358,10 @@ export function main(argv = process.argv.slice(2)): number {
         })
       );
     if (outputs.musicxml)
-      writeUTF8(outputs.musicxml, TmdMusicXMLGenerator.generateMusicXML(sheet));
+      writeUTF8(outputs.musicxml, TmdMusicXMLGenerator.generateMusicXML(sheet, { flattenRepeats }));
     if (outputs.lilypond)
-      writeUTF8(outputs.lilypond, TmdLilyPondGenerator.generateLilyPond(sheet));
-    if (outputs.abc) writeUTF8(outputs.abc, TmdABCGenerator.generateABC(sheet));
+      writeUTF8(outputs.lilypond, TmdLilyPondGenerator.generateLilyPond(sheet, { flattenRepeats }));
+    if (outputs.abc) writeUTF8(outputs.abc, TmdABCGenerator.generateABC(sheet, { flattenRepeats }));
     if (outputs.reaper)
       writeUTF8(outputs.reaper, TmdReaperGenerator.generateRPP(sheet));
     if (outputs.chordpro)
@@ -391,7 +397,7 @@ export function main(argv = process.argv.slice(2)): number {
       writeUTF8(outputs.ust, TmdUSTGenerator.generateUST(sheet, instrument));
     if (outputs.pdf) {
       const temp = path.join(os.tmpdir(), `tmd-${Date.now()}.ly`);
-      writeUTF8(temp, TmdLilyPondGenerator.generateLilyPond(sheet));
+      writeUTF8(temp, TmdLilyPondGenerator.generateLilyPond(sheet, { flattenRepeats }));
       execFileSync("lilypond", ["--pdf", "-o", outputs.pdf.replace(/\.pdf$/, ""), temp], {
         stdio: "inherit",
       });

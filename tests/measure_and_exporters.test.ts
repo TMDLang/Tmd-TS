@@ -49,6 +49,68 @@ verse:Vocal@|0|{
     expect(lily).toContain('\\set stanza = "2."');
   });
 
+  it('flattens repeated notation and emits one lyric stream without stanza numbering', () => {
+    const sheet = TmdParser.parse(`
+::SCORE::
+** Engraving Repeat **
+!= 120
+?= C
+<4/4>
+
+verse:Vocal@|0|{
+  <4*>
+  | 1 2 3 4 |
+  L1| la li lu le |
+  L2| sa si su se |
+}
+
+-> verse[L1] -> verse[L2] ->#
+`);
+    const options = { flattenRepeats: true };
+    const abc = TmdABCGenerator.generateABC(sheet, options);
+    const xml = TmdMusicXMLGenerator.generateMusicXML(sheet, options);
+    const lily = TmdLilyPondGenerator.generateLilyPond(sheet, options);
+
+    expect(abc).not.toContain('|:');
+    expect(abc).not.toContain(':|');
+    expect(abc).not.toContain('w: 1.');
+    expect(abc).not.toContain('w: 2.');
+    expect(xml).not.toContain('<repeat direction=');
+    expect(xml).not.toContain('<lyric number="2"');
+    expect(lily).not.toContain('\\repeat volta');
+    expect(lily).not.toContain('\\set stanza = "1."');
+    expect(lily).not.toContain('\\set stanza = "2."');
+  });
+
+  it('flattens an implicit repeat spanning multiple measures', () => {
+    const sheet = TmdParser.parse(`
+::SCORE::
+** Multi-Measure Repeat **
+!= 120
+?= C
+<4/4>
+
+verse:Vocal@|0|{
+  <4*>
+  | 1 2 3 4 | 5 6 7 1 |
+  L1| la li lu le | lo la li lu |
+  L2| sa si su se | so sa si su |
+}
+
+-> verse ->#
+`);
+    const options = { flattenRepeats: true };
+    const abc = TmdABCGenerator.generateABC(sheet, options);
+    const xml = TmdMusicXMLGenerator.generateMusicXML(sheet, options);
+    const lily = TmdLilyPondGenerator.generateLilyPond(sheet, options);
+
+    expect(abc).toContain('la li lu le');
+    expect(abc).toContain('sa si su se');
+    expect(abc).not.toContain('|:');
+    expect(xml).not.toContain('<repeat direction=');
+    expect(lily).not.toContain('\\repeat volta');
+  });
+
   it('does not infer a stanza repeat when the playback order selects one stanza', () => {
     const sheet = TmdParser.parse(`
 ::SCORE::

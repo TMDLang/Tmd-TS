@@ -93,7 +93,7 @@ function beatsEqual(a: Beat, b: Beat): boolean {
 }
 
 export class TmdMeasureRenderer {
-  public static renderMeasures(inputSheet: Sheet, instrument: string): Measure[] {
+  public static renderMeasures(inputSheet: Sheet, instrument: string, flattenRepeats = false): Measure[] {
     const sheet = TmdMacroEvaluator.expandThrowing(inputSheet);
     const timeline = TmdPlaybackRenderer.render(sheet, instrument);
     const defaultBeat: Beat =
@@ -353,7 +353,70 @@ export class TmdMeasureRenderer {
       activeState = { ...activeState, timeSignature: mBeat };
     }
 
-    return this.annotateEngraving(measures, sheet);
+    const annotated = this.annotateEngraving(measures, sheet);
+    return flattenRepeats ? this.flatten(annotated) : annotated;
+  }
+
+  private static flatten(measures: Measure[]): Measure[] {
+    if (measures.length === 0) return measures;
+    const output: Measure[] = [];
+    let index = 0;
+    while (index < measures.length) {
+      const measure = measures[index];
+      if (!measure.repeatStart || measure.foldedIntoRepeat) {
+        output.push(this.normalize(measure, output.length, false));
+        index++;
+        continue;
+      }
+      let end = index;
+      while (end < measures.length && (measures[end].repeatEndCount ?? 0) <= 1) end++;
+      if (end >= measures.length) {
+        output.push(this.normalize(measure, output.length, false));
+        index++;
+        continue;
+      }
+      const range = measures.slice(index, end + 1);
+      const stanzas = [...new Set(range.flatMap((m) => m.events.flatMap((e) =>
+        (e.stanzaLyrics ?? []).map((lyric) => lyric.stanza ?? 1))))].sort((a, b) => a - b);
+      if (stanzas.length > 1 && range.every((m) => !m.foldedIntoRepeat)) {
+        for (const stanza of stanzas) {
+          for (const m of range) output.push(this.normalize(this.selectStanza(m, stanza), output.length, false));
+        }
+      } else {
+        for (const m of range) output.push(this.normalize(m, output.length, false));
+      }
+      index = end + 1;
+    }
+    return output.map((measure, i) => this.normalize(measure, i, i === output.length - 1));
+  }
+
+  private static selectStanza(measure: Measure, stanza: number): Measure {
+    return {
+      ...measure,
+      events: measure.events.map((event) => {
+        const selected = event.stanzaLyrics?.find((lyric) => (lyric.stanza ?? 1) === stanza);
+        return selected ? { ...event, lyric: selected, stanzaLyrics: undefined } : event;
+      }),
+    };
+  }
+
+  private static normalize(measure: Measure, index: number, scoreEnd: boolean): Measure {
+    return {
+      ...measure,
+      index,
+      events: measure.events.map((event) => {
+        if (!event.lyric) return { ...event, stanzaLyrics: undefined };
+        const { stanza: _stanza, ...unnumberedLyric } = event.lyric;
+        return { ...event, lyric: unnumberedLyric, stanzaLyrics: undefined };
+      }),
+      repeatStart: false,
+      repeatCount: 0,
+      repeatEndCount: 0,
+      foldedIntoRepeat: false,
+      voltaStartNumber: undefined,
+      voltaEndNumber: undefined,
+      scoreEnd,
+    };
   }
 
   private static annotateEngraving(measures: Measure[], sheet: Sheet): Measure[] {
