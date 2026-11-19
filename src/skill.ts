@@ -19,6 +19,7 @@ It allows musicians and arrangers to describe multi-track songs, numbered musica
 
 The \`tmd\` CLI tool compiles \`.tmd\` files, verifies measure consistency (\`tmd check\`), and can export them to MIDI, MusicXML, LilyPond (.ly / PDF), ABC notation (.abc), REAPER (.rpp), ChordPro (.cho), or render offline audio to WAV.
 When running under Model Context Protocol (MCP) or Web Studio, AI agents have access to \`check_tmd\` / \`checkTmd\` tools to automatically inspect and diagnose measure beat mismatches and execution order issues.
+Before choosing a command, run \`tmd --help\`; use \`tmd <subcommand> --help\` for complete subcommand options. Use \`tmd --mcp\` when an MCP client needs the TMD tools, or \`tmd --install-mcp\` to install client configuration. Start writing from the user's current score and requirements instead of scanning unrelated \`.tmd\` files in the directory; read other scores only when explicitly requested or needed for comparison/debugging.
 
 ---
 
@@ -138,6 +139,27 @@ Bar line dividers \`|\` are optional visual separators for readability and are i
 <4*>
 | 1 2 3 4 | 5 - 5 - |
 \`\`\`
+
+### Formatter and repeat semantics
+
+The formatter adds missing outer barlines only to musical content inside an entry body, between its braces \`{ ... }\`. It must not add barlines to playback S-expressions, declarations, comments, or other text outside a section body. Automatic barline insertion is grid-aware: it is enabled for grids up to and including \`<32*>\`, and disabled for grids greater than 32 (for example \`<64*>\`). Existing explicit barlines are preserved.
+
+Repeat expansion is an engraving/export choice. \`--flatten-repeats\` expands repeat playback into a linear lyric timeline and removes stanza numbering from the realized lyric events for ABC, MusicXML, and LilyPond exports. It does not change the source score or MIDI/WAV playback. Do not use it as a general playback transform; use it only when a notation consumer needs every repeated occurrence written out.
+
+### Show-program and execution-time entries
+
+An entry with an execution-time identifier and a triple-quoted body stores display/program text rather than musical units:
+
+\`\`\`tmd
+show:Lighting@outro{
+\"\"\"
+cue: warm wash
+cue: blackout on final bar
+\"\"\"
+}
+\`\`\`
+
+The identifier after \`@\` is an execution-time label (for example \`@outro\` or \`@1\`), and the text between \`\"\"\"\` delimiters is preserved as \`showProgram\`. Do not treat it as a note track or invent a rhythmic grid for it.
 
 ---
 
@@ -360,6 +382,43 @@ A:CHORD@|0|{
 
 ## 9. Using the \`tmd\` CLI Tool
 
+The command list below is a quick reference, not the authority. Before using an unfamiliar option, run \`tmd --help\`; for a subcommand run \`tmd <subcommand> --help\`. If the installed CLI differs from this document, follow its help output and then update the skill/source specification as needed.
+
+### Global option matrix
+
+| Option | Purpose |
+|---|---|
+| \`-p\`, \`--parse-only\` | Print the parsed score summary. |
+| \`--inspect\` | Legacy shortcut for musical inspection; prefer \`tmd inspect\`. |
+| \`-f\`, \`--force\` | Export despite measure-consistency errors, only after reviewing diagnostics. |
+| \`--flatten-repeats\` | Linearize repeats for ABC/MusicXML/LilyPond notation exports; no MIDI/WAV effect. |
+| \`--play\` | Render and play through the platform audio command. |
+| \`--soundfont PATH\` | Select a SoundFont/DLS path for WAV rendering; the portable TS renderer may not support it. |
+| \`--section NAME\`, \`--instrument NAME\` | Filter MIDI/WAV/playback and applicable vocal/Braille exports. |
+| \`--version\` | Print the installed TS CLI version. |
+| \`--mcp\`, \`--install-mcp\` | Run the stdio MCP server or register it in supported client configs. |
+| \`--install-skills\` | Install the embedded skill into local agent directories. |
+| \`--lsp\` / \`lsp\` | Run the stdio Language Server Protocol daemon. |
+| \`-m/-x/-l/-a/-r/-c/-b/-w\` and their long forms (including \`--rpp-output\`, \`--cho-output\`, and \`--brl-output\`) | Export MIDI, MusicXML, LilyPond, ABC, REAPER, ChordPro, Braille, or WAV. |
+| \`--vsq-output\`, \`--vsqx-output\`, \`-u/--ust-output\` | Export VOCALOID2, VOCALOID3/4, or UTAU/OpenUtau. \`--singer\` selects the vocal singer name. |
+| \`--braille-layout\`, \`--brf-output\` | Select Music Braille layout or North American Braille ASCII output. |
+| \`--pdf-output\` | Render a LilyPond PDF through the installed LilyPond compiler. |
+
+The subcommands are \`check\`, \`format\`, \`outline\`, \`inspect\`, \`refactor\`, \`studio-url\`, and \`lsp\`. Their important options are:
+
+- \`check\`: \`--strict\`, \`--json\`, \`--markdown\` / \`--md\`.
+- \`format\`: \`-i\` / \`--in-place\`, \`-o\` / \`--output PATH\`.
+- \`outline\`: \`--json\`.
+- \`inspect\`: \`--json\`, \`--svg\`, \`--html\`, \`--locale en|zh-Hant\`.
+- \`studio-url\`: \`--base-url URL\`, \`--open\`, \`--copy\`.
+- \`refactor rename-instrument|rename-section\`: \`--from NAME\`, \`--to NAME\`, plus \`-i\` / \`--in-place\` and \`-o\` / \`--output PATH\`.
+- \`refactor extract-instrument\`: \`--instrument NAME\` and \`-o\` / \`--output PATH\`.
+- \`refactor double-grid|halve-grid|optimize-grid\`: optional \`--section NAME\`, \`--instrument NAME\`, \`-i\`, and \`-o\`.
+- \`refactor duplicate-track\`: \`--source NAME\`, \`--target NAME\`, optional \`--section NAME\`, \`--octave N\`, \`-i\`, and \`-o\`.
+- \`refactor generate-harmony\`: \`--source NAME\`, \`--target NAME\`, optional \`--section NAME\`, \`--interval N\`, \`-i\`, and \`-o\`.
+- \`refactor inline-orders\`: \`-i\` / \`--in-place\` and \`-o\` / \`--output PATH\`.
+- \`refactor transpose\`: \`-s\` / \`--semitones N\`, \`-d\` / \`--diatonic N\`, \`-k\` / \`--update-key\`, optional \`--section\`, \`--instrument\`, \`-i\`, and \`-o\`.
+
 Compile and verify TMD files:
 \`\`\`bash
 # 1. Parse and print score summary
@@ -377,6 +436,9 @@ tmd score.tmd --pdf-output score.pdf
 
 # 5. Export to ABC notation (.abc) for web sheets (abcjs)
 tmd score.tmd -a score.abc
+tmd score.tmd --flatten-repeats -a score.abc
+tmd score.tmd --flatten-repeats -x score.musicxml
+tmd score.tmd --flatten-repeats -l score.ly
 
 # 6. Export to ChordPro (.cho) lead sheet
 tmd score.tmd -c score.cho
@@ -436,7 +498,49 @@ tmd --install-mcp
 tmd score.tmd --force -m score.mid
 \`\`\`
 
-For AI self-verification, write a small section first—even if its final note count is not yet calculated—then run \`tmd check <file.tmd>\`. The checker reports syntax, S-expression/macro expansion, timeline overlap, conflicting tempo directives, measure-beat, vocal lyric 1:1 grid slot alignment (\`E-LYRIC-SLOT-MISMATCH\`, \`E-LYRIC-GROUP\`, \`E-STANZA-ZERO\`, \`E-STANZA-RANGE\`, \`E-STANZA-DUPLICATE\`, \`W-STANZA-GAP\`), chord, unused-entry, instrument, section-length, and tempo-range diagnostics; it reports expected/found beat counts and lyric slot counts but does not invent missing notes. Use its suggestions to add ties (\`-\`) or rests (\`0\`) and iterate. In particular, write \`1+3+5\`, not \`[1 3 5]\`, for simultaneous numbered notes. Follow with \`tmd format\` (which normalizes compact note sequences like \`1 234\` ➔ \`1 2 3 4\`, completes outer barlines \`| ... |\`, strips inner tuplet/chord padding \`(1 2)%(-)\` / \`[C]\`, orders note modifiers \`1'^\`, and sorts \`L1|\`..\`L64|\` stanzas), \`tmd outline\`, and \`tmd inspect --json\` when structural or musical-profile feedback is useful. Use \`tmd -p\` to inspect the parsed summary, and \`tmd --play\` or \`tmd -w preview.wav\` for an ear check. MCP exposes \`get_tmd_skill\`, \`parse_tmd\`, \`check_tmd\`, \`convert_tmd\`, and \`tmd_export_braille\`; LSP provides editor-integrated diagnostics and completion.
+### MCP tools and payloads
+
+Start the TypeScript MCP server with \`tmd --mcp\`, or register it with \`tmd --install-mcp\`. MCP responses are text content; binary exports are Base64 when no \`outputPath\` is supplied and are written as bytes when a path is supplied.
+
+- \`get_tmd_skill({})\` returns this complete skill document.
+- \`parse_tmd({ text?, filePath? })\` parses inline source or a local file and returns score metadata. Supply one of \`text\` or \`filePath\`.
+- \`check_tmd({ text?, filePath? })\` returns structured diagnostics for syntax, measure beats, lyrics, macros, timeline, and semantic rules. The CLI-only \`--strict\` option has no MCP field; treat returned warnings according to the caller's policy.
+- \`convert_tmd({ text?, filePath?, format, outputPath?, section?, instrument? })\` supports \`midi\`, \`musicxml\`, \`lilypond\`, \`abc\`, \`wav\`, \`reaper/rpp\`, \`vsq\`, \`vsqx\`, \`chordpro/cho\`, and \`braille/brl/brf\`. Use \`outputPath\` for a file; use \`section\` and \`instrument\` when the exporter supports filtering.
+- \`tmd_export_braille({ text?, tmdCode?, filePath?, encoding?, layout?, outputPath?, section?, instrument? })\` supports \`encoding: unicode|ascii\` and \`layout: partByPart|barOverBar\`; \`tmdCode\` is an alias for \`text\`.
+
+Example:
+
+\`\`\`json
+{\"text\": \"::SCORE::\\n** Demo **\\n!= 120\\n?= C\\n<4/4>\\n\\nA:Vocal@|0|{\\n <4*>\\n 1 2 3 4\\n}\\n-> A ->#\", \"format\": \"musicxml\", \"outputPath\": \"demo.musicxml\"}
+\`\`\`
+
+### AI authoring workflow
+
+1. Confirm the user's musical goal, target file, and permitted modification scope.
+2. Write or modify the smallest playable section that exercises the requested idea.
+3. Run \`tmd check <file.tmd>\` and inspect syntax, beat, lyric, macro, and playback diagnostics.
+4. Fix rhythm, grid, ties, lyrics, stanza selectors, and syntax; calculate grid slots before adding more layers.
+5. Run \`tmd format <file.tmd>\` (or \`-i\` only when in-place modification is authorized).
+6. Run \`tmd outline\` and/or \`tmd inspect\` when structure, range, density, or tonality needs review.
+7. Only after validation, export or play the score and inspect the generated artifact.
+
+Keep \`?=\` (movable-do/playback pitch center), \`key=\` (printed key-signature metadata), and playback transposition directives distinct. Before writing a dense passage, calculate the grid, measure capacity, ties, tuplets, and simultaneous-note slot rules. Treat repeat orders, \`L<n>|\` stanza selectors, and \`--flatten-repeats\` as deliberate decisions, not formatting conveniences.
+
+### Export verification matrix
+
+| Output | Verify |
+|---|---|
+| MIDI / WAV | Run \`tmd check\`; verify tempo, meter, section/instrument filters, and listen for timing, rests, ties, and unwanted repeated lyric behavior. |
+| MusicXML / LilyPond / ABC | Run \`tmd check\`; decide whether \`--flatten-repeats\` is needed, then inspect repeat markers, linear lyric order, pitches, meters, and generated notation in a compatible viewer. |
+| VOCALOID / UTAU | Run \`tmd check\`; verify vocal assignment, lyric slot count, stanza selection, timing, singer/program settings, and import the file in the target editor. |
+| Braille | Run \`tmd check\`; choose Unicode vs ASCII and part-by-part vs bar-over-bar, then inspect measure boundaries, pitches, rests, lyrics, and target reader compatibility. |
+| ChordPro | Run \`tmd check\`; verify chord names, section order, lyric alignment, and rendering in the intended ChordPro consumer. |
+
+### Swift and TypeScript platform boundary
+
+The parser, score semantics, grids, lyrics, repeats, formatter rules, and exporter intent are shared concepts, but command availability is platform-specific. This TypeScript skill documents the TS CLI, the TypeScript stdio MCP server, and Web Studio/WebMCP behavior. Do not assume a TS-only option or WebMCP tool exists in Swift; consult the Swift skill and run that installation's \`tmd --help\` before using it. Conversely, do not infer Swift-only desktop behavior from Web Studio. When syntax or CLI behavior is uncertain, check \`tmd --help\`, the relevant subcommand help, the specification, or tests before acting.
+
+For AI self-verification, write a small section first—even if its final note count is not yet calculated—then run \`tmd check <file.tmd>\`. The checker reports syntax, S-expression/macro expansion, timeline overlap, conflicting tempo directives, measure-beat, vocal lyric 1:1 grid slot alignment (\`E-LYRIC-SLOT-MISMATCH\`, \`E-LYRIC-GROUP\`, \`E-STANZA-ZERO\`, \`E-STANZA-RANGE\`, \`E-STANZA-DUPLICATE\`, \`W-STANZA-GAP\`), chord, unused-entry, instrument, section-length, and tempo-range diagnostics; it reports expected/found beat counts and lyric slot counts but does not invent missing notes. Use its suggestions to add ties (\`-\`) or rests (\`0\`) and iterate. In particular, write \`1+3+5\`, not \`[1 3 5]\`, for simultaneous numbered notes. Follow with \`tmd format\` (which normalizes compact note sequences like \`1 234\` ➔ \`1 2 3 4\`, completes outer barlines \`| ... |\`, strips inner tuplet/chord padding \`(1 2)%(-)\` / \`[C]\`, orders note modifiers \`1'^\`, and sorts \`L1|\`..\`L64|\` stanzas), \`tmd outline\`, and \`tmd inspect --json\` when structural or musical-profile feedback is useful. Use \`tmd -p\` to inspect the parsed summary, and \`tmd --play\` or \`tmd -w preview.wav\` for an ear check. LSP provides editor-integrated diagnostics and completion.
 
 ---
 
