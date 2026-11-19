@@ -82,6 +82,35 @@ verse:Vocal@|0|{
     expect(lily).not.toContain('\\set stanza = "2."');
   });
 
+  it('flattens an implicit repeat spanning multiple measures', () => {
+    const sheet = TmdParser.parse(`
+::SCORE::
+** Multi-Measure Repeat **
+!= 120
+?= C
+<4/4>
+
+verse:Vocal@|0|{
+  <4*>
+  | 1 2 3 4 | 5 6 7 1 |
+  L1| la li lu le | lo la li lu |
+  L2| sa si su se | so sa si su |
+}
+
+-> verse ->#
+`);
+    const options = { flattenRepeats: true };
+    const abc = TmdABCGenerator.generateABC(sheet, options);
+    const xml = TmdMusicXMLGenerator.generateMusicXML(sheet, options);
+    const lily = TmdLilyPondGenerator.generateLilyPond(sheet, options);
+
+    expect(abc).toContain('la li lu le');
+    expect(abc).toContain('sa si su se');
+    expect(abc).not.toContain('|:');
+    expect(xml).not.toContain('<repeat direction=');
+    expect(lily).not.toContain('\\repeat volta');
+  });
+
   it('does not infer a stanza repeat when the playback order selects one stanza', () => {
     const sheet = TmdParser.parse(`
 ::SCORE::

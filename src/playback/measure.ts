@@ -363,7 +363,7 @@ export class TmdMeasureRenderer {
     let index = 0;
     while (index < measures.length) {
       const measure = measures[index];
-      if (!measure.repeatStart || (measure.repeatEndCount ?? 0) <= 1 || measure.foldedIntoRepeat) {
+      if (!measure.repeatStart || measure.foldedIntoRepeat) {
         output.push(this.normalize(measure, output.length, false));
         index++;
         continue;
