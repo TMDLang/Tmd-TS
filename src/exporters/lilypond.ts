@@ -1,9 +1,10 @@
 import { SheetInstrumentHelper } from "../domain/index.js";
 import { MeasureEvent, PlaybackDirectiveEvent, PlaybackLyric, TmdMeasureRenderer } from "../playback/index.js";
 import { ChordSymbol, metronomeTempoForBeat, Note, PercussionStroke, PitchMapping, Sheet } from "../syntax/index.js";
+import type { NotationExportOptions } from "./options.js";
 
 export class TmdLilyPondGenerator {
-  public static generateLilyPond(rawSheet: Sheet): string {
+  public static generateLilyPond(rawSheet: Sheet, options: NotationExportOptions = {}): string {
     const { sheet, instruments } = SheetInstrumentHelper.preparedForExport(rawSheet);
     const composer = sheet.metadata["composer"] || "TMD";
     let ly = `\\version "2.24.0"\n\n`;
@@ -40,9 +41,9 @@ export class TmdLilyPondGenerator {
       const varName = identifierMap.get(inst) || "Track";
       const isDrum = SheetInstrumentHelper.containsPercussionUnits(sheet, inst);
       ly += `${varName} = ${isDrum ? "\\drummode " : ""}{\n  \\global\n`;
-      ly += TmdLilyPondGenerator.generateTrackMusic(inst, sheet, isDrum);
+      ly += TmdLilyPondGenerator.generateTrackMusic(inst, sheet, isDrum, options.flattenRepeats === true);
       ly += `}\n\n`;
-      const lyricBlocks = TmdLilyPondGenerator.generateTrackLyrics(inst, sheet);
+      const lyricBlocks = TmdLilyPondGenerator.generateTrackLyrics(inst, sheet, options.flattenRepeats === true);
       if (lyricBlocks.length > 0) {
         trackLyricsMap.set(inst, lyricBlocks);
       }
@@ -70,8 +71,9 @@ export class TmdLilyPondGenerator {
     return ly;
   }
 
-  private static generateTrackMusic(instrument: string, sheet: Sheet, percussion: boolean): string {
-    const measures = TmdMeasureRenderer.renderMeasures(sheet, instrument).filter((m) => !m.foldedIntoRepeat);
+  private static generateTrackMusic(instrument: string, sheet: Sheet, percussion: boolean, flattenRepeats: boolean): string {
+    const rendered = TmdMeasureRenderer.renderMeasures(sheet, instrument, flattenRepeats);
+    const measures = flattenRepeats ? rendered : rendered.filter((m) => !m.foldedIntoRepeat);
     let result = "  ";
     let repeatOpen = false;
     let inAlternative = false;
@@ -144,8 +146,9 @@ export class TmdLilyPondGenerator {
     return result.trim() + "\n";
   }
 
-  private static generateTrackLyrics(instrument: string, sheet: Sheet): string[] {
-    const measures = TmdMeasureRenderer.renderMeasures(sheet, instrument).filter((m) => !m.foldedIntoRepeat);
+  private static generateTrackLyrics(instrument: string, sheet: Sheet, flattenRepeats: boolean): string[] {
+    const rendered = TmdMeasureRenderer.renderMeasures(sheet, instrument, flattenRepeats);
+    const measures = flattenRepeats ? rendered : rendered.filter((m) => !m.foldedIntoRepeat);
     const hasSimultaneousStanzas = measures.some((m) =>
       m.events.some((ev) => (ev.stanzaLyrics?.length ?? 0) > 1)
     );

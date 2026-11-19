@@ -2,6 +2,7 @@ export * from './abc.js';
 export * from './braille.js';
 export * from './chordpro.js';
 export * from './lilypond.js';
+export * from './options.js';
 export * from './midi.js';
 export * from './midi_encoder.js';
 export * from './musicxml.js';

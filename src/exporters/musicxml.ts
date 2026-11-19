@@ -1,13 +1,14 @@
 import { SheetInstrumentHelper } from "../domain/index.js";
 import { Measure, PlaybackDirectiveEvent, PlaybackLyric, TmdMeasureRenderer } from "../playback/index.js";
 import { Beat, ChordSymbol, metronomeTempoForBeat, Note, PercussionStroke, PitchMapping, Sheet } from "../syntax/index.js";
+import type { NotationExportOptions } from "./options.js";
 
 function beatsEqual(a: Beat, b: Beat): boolean {
   return a.count === b.count && a.noteValue === b.noteValue;
 }
 
 export class TmdMusicXMLGenerator {
-  public static generateMusicXML(rawSheet: Sheet): string {
+  public static generateMusicXML(rawSheet: Sheet, options: NotationExportOptions = {}): string {
     const { sheet, instruments } = SheetInstrumentHelper.preparedForExport(rawSheet);
     const metaCreators = Object.keys(sheet.metadata)
       .sort()
@@ -41,7 +42,10 @@ export class TmdMusicXMLGenerator {
 
     const partMeasures = instruments.map((inst) => ({
       instrument: inst,
-      measures: TmdMeasureRenderer.renderMeasures(sheet, inst).filter((m) => !m.foldedIntoRepeat),
+      measures: (() => {
+        const rendered = TmdMeasureRenderer.renderMeasures(sheet, inst, options.flattenRepeats === true);
+        return options.flattenRepeats ? rendered : rendered.filter((m) => !m.foldedIntoRepeat);
+      })(),
     }));
     const divisions = TmdMusicXMLGenerator.resolveDivisions(partMeasures.map((p) => p.measures));
 

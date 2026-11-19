@@ -1,9 +1,10 @@
 import { SheetInstrumentHelper } from "../domain/index.js";
 import { Measure, MeasureEvent, PlaybackDirectiveEvent, PlaybackLyric, TmdMeasureRenderer } from "../playback/index.js";
 import { KeySignature, metronomeTempoForBeat, Note, PercussionStroke, PitchMapping, Sheet } from "../syntax/index.js";
+import type { NotationExportOptions } from "./options.js";
 
 export class TmdABCGenerator {
-  public static generateABC(rawSheet: Sheet): string {
+  public static generateABC(rawSheet: Sheet, options: NotationExportOptions = {}): string {
     const { sheet, instruments } = SheetInstrumentHelper.preparedForExport(rawSheet);
     let abc = "";
 
@@ -31,7 +32,7 @@ export class TmdABCGenerator {
       if (SheetInstrumentHelper.containsPercussionUnits(sheet, inst)) {
         abc += "%%MIDI channel 10\n";
       }
-      abc += TmdABCGenerator.generateTrackMusic(inst, sheet);
+      abc += TmdABCGenerator.generateTrackMusic(inst, sheet, options.flattenRepeats === true);
     });
 
     return abc;
@@ -42,8 +43,9 @@ export class TmdABCGenerator {
     return `Q:${m.abcUnit}=${m.perMinute}`;
   }
 
-  private static generateTrackMusic(instrument: string, sheet: Sheet): string {
-    const measures = TmdMeasureRenderer.renderMeasures(sheet, instrument).filter((m) => !m.foldedIntoRepeat);
+  private static generateTrackMusic(instrument: string, sheet: Sheet, flattenRepeats: boolean): string {
+    const rendered = TmdMeasureRenderer.renderMeasures(sheet, instrument, flattenRepeats);
+    const measures = flattenRepeats ? rendered : rendered.filter((m) => !m.foldedIntoRepeat);
     let result = "";
     const initialKey = sheet.declaredKey || sheet.keySignature.toString();
     let currentKeyStepAlters = PitchMapping.keySignatureStepAlters(initialKey);
