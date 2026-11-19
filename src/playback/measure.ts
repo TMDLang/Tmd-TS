@@ -362,7 +362,38 @@ export class TmdMeasureRenderer {
     }
 
     const annotated = this.annotateEngraving(measures, sheet);
-    return flattenRepeats ? this.flatten(annotated) : annotated;
+    return flattenRepeats
+      ? this.flatten(this.connectSectionBoundaryTies(annotated, sheet))
+      : annotated;
+  }
+
+  private static connectSectionBoundaryTies(measures: Measure[], sheet: Sheet): Measure[] {
+    const result = measures.map((measure) => ({ ...measure, events: [...measure.events] }));
+    for (let index = 0; index + 1 < result.length; index++) {
+      const previous = result[index];
+      const next = result[index + 1];
+      if (!previous.sectionName || previous.sectionName === next.sectionName || !next.sectionName) continue;
+      const entersEarly = sheet.entries.some((entry) =>
+        !entry.isPrototype && entry.name === next.sectionName && entry.start < 0
+      );
+      if (!entersEarly) continue;
+
+      for (let previousIndex = 0; previousIndex < previous.events.length; previousIndex++) {
+        const previousEvent = previous.events[previousIndex];
+        if (previousEvent.content.type !== 'note' ||
+            Math.abs(previousEvent.startOffset + previousEvent.duration - previous.nominalDuration) > 1e-6) continue;
+        const nextIndex = next.events.findIndex((event) =>
+          event.content.type === 'note' &&
+          event.startOffset <= 1e-6 &&
+          JSON.stringify(event.content) === JSON.stringify(previousEvent.content)
+        );
+        if (nextIndex < 0) continue;
+        result[index].events[previousIndex] = { ...previousEvent, tieStart: true };
+        const nextEvent = next.events[nextIndex];
+        result[index + 1].events[nextIndex] = { ...nextEvent, tieStop: true };
+      }
+    }
+    return result;
   }
 
   private static initialPickupDuration(sheet: Sheet, fallback: Beat): number | undefined {
