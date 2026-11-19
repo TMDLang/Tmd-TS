@@ -19,6 +19,7 @@ It allows musicians and arrangers to describe multi-track songs, numbered musica
 
 The \`tmd\` CLI tool compiles \`.tmd\` files, verifies measure consistency (\`tmd check\`), and can export them to MIDI, MusicXML, LilyPond (.ly / PDF), ABC notation (.abc), REAPER (.rpp), ChordPro (.cho), or render offline audio to WAV.
 When running under Model Context Protocol (MCP) or Web Studio, AI agents have access to \`check_tmd\` / \`checkTmd\` tools to automatically inspect and diagnose measure beat mismatches and execution order issues.
+Before choosing a command, run \`tmd --help\`; use \`tmd <subcommand> --help\` for complete subcommand options. Start writing from the user's current score and requirements instead of scanning unrelated \`.tmd\` files in the directory; read other scores only when explicitly requested or needed for comparison/debugging.
 
 ---
 
@@ -377,6 +378,9 @@ tmd score.tmd --pdf-output score.pdf
 
 # 5. Export to ABC notation (.abc) for web sheets (abcjs)
 tmd score.tmd -a score.abc
+tmd score.tmd --flatten-repeats -a score.abc
+tmd score.tmd --flatten-repeats -x score.musicxml
+tmd score.tmd --flatten-repeats -l score.ly
 
 # 6. Export to ChordPro (.cho) lead sheet
 tmd score.tmd -c score.cho
