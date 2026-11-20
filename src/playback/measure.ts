@@ -76,6 +76,7 @@ export interface Measure {
   repeatCount?: number;
   repeatEndCount?: number;
   foldedIntoRepeat?: boolean;
+  isPickup?: boolean;
   scoreEnd?: boolean;
   voltaStartNumber?: number;
   voltaEndNumber?: number;
@@ -103,6 +104,12 @@ export class TmdMeasureRenderer {
     const intervals: Interval[] = [];
     let curStart = 0.0;
     let curBeat = defaultBeat;
+
+    const pickupDuration = flattenRepeats ? this.initialPickupDuration(sheet, defaultBeat) : undefined;
+    if (pickupDuration !== undefined) {
+      intervals.push({ start: 0.0, end: pickupDuration, duration: pickupDuration, beat: curBeat });
+      curStart = pickupDuration;
+    }
 
     const timeSigDirectives = this.buildScoreTimeSignatures(sheet, defaultBeat);
     let nextDirectiveIndex = 0;
@@ -335,6 +342,7 @@ export class TmdMeasureRenderer {
         keyOffset: measureState.keyOffset,
         events: paddedEvents,
         directives: directivesInMeasure,
+        isPickup: mIdx === 0 && pickupDuration !== undefined,
       });
 
       if (rawMeasureEvents.length > 0) {
@@ -354,7 +362,53 @@ export class TmdMeasureRenderer {
     }
 
     const annotated = this.annotateEngraving(measures, sheet);
-    return flattenRepeats ? this.flatten(annotated) : annotated;
+    return flattenRepeats
+      ? this.flatten(this.connectSectionBoundaryTies(annotated, sheet))
+      : annotated;
+  }
+
+  private static connectSectionBoundaryTies(measures: Measure[], sheet: Sheet): Measure[] {
+    const result = measures.map((measure) => ({ ...measure, events: [...measure.events] }));
+    for (let index = 0; index + 1 < result.length; index++) {
+      const previous = result[index];
+      const next = result[index + 1];
+      if (!previous.sectionName || previous.sectionName === next.sectionName || !next.sectionName) continue;
+      const entersEarly = sheet.entries.some((entry) =>
+        !entry.isPrototype && entry.name === next.sectionName && entry.start < 0
+      );
+      if (!entersEarly) continue;
+
+      for (let previousIndex = 0; previousIndex < previous.events.length; previousIndex++) {
+        const previousEvent = previous.events[previousIndex];
+        if (previousEvent.content.type !== 'note' ||
+            Math.abs(previousEvent.startOffset + previousEvent.duration - previous.nominalDuration) > 1e-6) continue;
+        const nextIndex = next.events.findIndex((event) =>
+          event.content.type === 'note' &&
+          event.startOffset <= 1e-6 &&
+          JSON.stringify(event.content) === JSON.stringify(previousEvent.content)
+        );
+        if (nextIndex < 0) continue;
+        result[index].events[previousIndex] = { ...previousEvent, tieStart: true };
+        const nextEvent = next.events[nextIndex];
+        result[index + 1].events[nextIndex] = { ...nextEvent, tieStop: true };
+      }
+    }
+    return result;
+  }
+
+  private static initialPickupDuration(sheet: Sheet, fallback: Beat): number | undefined {
+    if (TmdPlaybackRenderer.globalEarliestPosition(sheet) >= -1e-6) return undefined;
+    for (const entry of sheet.entries) {
+      if (entry.isPrototype || entry.start >= 0 || entry.sections.length === 0) continue;
+      const section = entry.sections[0];
+      const beat = TmdPlaybackRenderer.entryInitialBeat(entry, sheet, fallback);
+      const expectedUnits = Math.max(1, beat.count * section.noteLength) / Math.max(1, beat.noteValue);
+      const totalUnits = section.unitGroups.reduce((sum, group) => sum + Math.max(0, group.length), 0);
+      const firstBoundary = section.barlinePositions?.find((position) => position > 0) ?? totalUnits;
+      if (firstBoundary <= 0 || firstBoundary >= expectedUnits - 1e-6) continue;
+      return (firstBoundary * 4.0) / Math.max(1, section.noteLength);
+    }
+    return undefined;
   }
 
   private static flatten(measures: Measure[]): Measure[] {

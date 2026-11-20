@@ -319,7 +319,8 @@ export class TmdMusicXMLGenerator {
       } else if (measures[mIdx + 1].sectionName !== measure.sectionName) {
         content += '        <barline location="right"><bar-style>light-light</bar-style></barline>\n';
       }
-      xml += `    <measure number="${mIdx + 1}">\n${content}    </measure>\n\n`;
+      const implicit = measure.isPickup ? ' implicit="yes"' : '';
+      xml += `    <measure number="${mIdx + 1}"${implicit}>\n${content}    </measure>\n\n`;
     }
 
     return xml;

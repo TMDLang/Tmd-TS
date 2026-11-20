@@ -111,6 +111,67 @@ verse:Vocal@|0|{
     expect(lily).not.toContain('\\repeat volta');
   });
 
+  it('preserves a score-level pickup when flattening repeats', () => {
+    const sheet = TmdParser.parse(`
+::SCORE::
+** Pickup Repeat **
+!= 120
+?= C
+<4/4>
+
+verse:Vocal@|-1|{
+  <4*>
+  | 5 | 1 2 3 4 |
+  L1| la | li lu le |
+  L2| sa | si su se |
+}
+
+-> verse[L1] -> verse[L2] ->#
+`);
+    const measures = TmdMeasureRenderer.renderMeasures(sheet, 'Vocal', true);
+    const abc = TmdABCGenerator.generateABC(sheet, { flattenRepeats: true });
+    const xml = TmdMusicXMLGenerator.generateMusicXML(sheet, { flattenRepeats: true });
+    const lily = TmdLilyPondGenerator.generateLilyPond(sheet, { flattenRepeats: true });
+
+    expect(measures[0]?.isPickup).toBe(true);
+    expect(measures[0]?.nominalDuration).toBeCloseTo(1);
+    expect(xml).toContain('<measure number="1" implicit="yes">');
+    expect(lily).toContain('\\partial 4');
+    expect(abc).toContain('G4 |');
+    expect(abc).toContain('w: la');
+    const unflattenedXML = TmdMusicXMLGenerator.generateMusicXML(sheet);
+    expect(unflattenedXML).not.toContain('implicit="yes"');
+  });
+
+  it('ties equal notes across a flattened pickup section boundary', () => {
+    const sheet = TmdParser.parse(`
+::SCORE::
+** Pickup Boundary Tie **
+!= 120
+?= C
+<4/4>
+
+Verse2:Vocal@|0|{
+  <4*>
+  | 5 - - - |
+}
+
+Chorus1:Vocal@|-1|{
+  <4*>
+  | 0 0 0 0 | 5 - - - |
+}
+
+-> Verse2 -> Chorus1 ->#
+`);
+    const measures = TmdMeasureRenderer.renderMeasures(sheet, 'Vocal', true);
+    const xml = TmdMusicXMLGenerator.generateMusicXML(sheet, { flattenRepeats: true });
+
+    expect(measures[0]?.events[0]?.tieStart).toBe(true);
+    expect(measures[1]?.events[0]?.tieStop).toBe(true);
+    expect(xml).toContain('<tie type="start"/>');
+    expect(xml).toContain('<tie type="stop"/>');
+  });
+
   it('does not infer a stanza repeat when the playback order selects one stanza', () => {
     const sheet = TmdParser.parse(`
 ::SCORE::
